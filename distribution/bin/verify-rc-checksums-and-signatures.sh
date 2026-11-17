@@ -36,11 +36,13 @@ Options:
                                 asserted against the signature's actual signing key if given.
   --workdir <dir>              Download directory (default: a fresh mktemp dir; reused if it
                                 already holds the files, so re-running after a fix is cheap).
+  --cleanup                     Remove --workdir once all checks pass. Left in place on any FAIL,
+                                so the downloaded files are still there to inspect.
   -h, --help                    Show this help.
 EOF
 }
 
-rc="" src_sha512="" bin_sha512="" signer_fingerprint="" workdir=""
+rc="" src_sha512="" bin_sha512="" signer_fingerprint="" workdir="" cleanup=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -49,6 +51,7 @@ while [[ $# -gt 0 ]]; do
     --bin-sha512) bin_sha512="$2"; shift 2 ;;
     --signer-fingerprint) signer_fingerprint="$2"; shift 2 ;;
     --workdir) workdir="$2"; shift 2 ;;
+    --cleanup) cleanup=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
   esac
@@ -145,7 +148,13 @@ done
 echo
 if [[ "$fail" -eq 0 ]]; then
   echo "All checksum and signature checks passed."
+  if [[ "$cleanup" -eq 1 ]]; then
+    cd /
+    rm -rf "$workdir"
+    echo "Removed $workdir (--cleanup)."
+  fi
 else
   echo "One or more checks FAILED, see above."
+  [[ "$cleanup" -eq 1 ]] && echo "Not removing $workdir despite --cleanup: left in place for inspection."
 fi
 exit "$fail"
