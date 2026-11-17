@@ -2356,6 +2356,18 @@ public final class QueryContextParameters
           .visibility(Visibility.HIDDEN)
           .build();
 
+  public static final QueryContextParameter<Boolean> STORE_EMPTY_COLUMNS =
+      booleanParameter("storeEmptyColumns")
+          .since("0.23.0").query(Query.SQL).engine(Engine.MSQ)
+          .description(
+              """
+              Whether ingestion stores every column in the `dimensionsSpec`, including columns that have no values.
+              When unset, `druid.indexer.task.storeEmptyColumns` applies.
+              """
+          )
+          .visibility(Visibility.HIDDEN)
+          .build();
+
   // endregion
 
   // region Other query context parameters

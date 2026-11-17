@@ -161,12 +161,11 @@ public class BrokerViewOfBrokerConfigTest
     final DefaultQueryConfig unknownDefault = new DefaultQueryConfig(ImmutableMap.of("useCahce", false));
 
     // Ignored by default.
-    new BrokerViewOfBrokerConfig(coordinatorClient, unknownDefault, QueryContextConfig.DEFAULT);
+    new BrokerViewOfBrokerConfig(coordinatorClient, unknownDefault, QueryContextConfig.DEFAULT).start();
 
-    final IAE e = Assertions.assertThrows(
-        IAE.class,
-        () -> new BrokerViewOfBrokerConfig(coordinatorClient, unknownDefault, new QueryContextConfig(true))
-    );
+    final BrokerViewOfBrokerConfig strict =
+        new BrokerViewOfBrokerConfig(coordinatorClient, unknownDefault, new QueryContextConfig(true));
+    final IAE e = Assertions.assertThrows(IAE.class, strict::start);
     Assertions.assertEquals(
         "Invalid default query context [druid.query.default.context]: "
         + "Unknown query context parameter [useCahce]. Did you mean [useCache]?",
@@ -177,18 +176,20 @@ public class BrokerViewOfBrokerConfigTest
   @Test
   public void testInvalidStaticDefaultValueIsRejected()
   {
-    final IAE e = Assertions.assertThrows(
-        IAE.class,
-        () -> new BrokerViewOfBrokerConfig(
-            coordinatorClient,
-            new DefaultQueryConfig(ImmutableMap.of("maxRowsQueuedForOrdering", 0)),
-            QueryContextConfig.DEFAULT
-        )
+    // Data servers construct this class without starting it, and don't validate the default query context.
+    final BrokerViewOfBrokerConfig view = new BrokerViewOfBrokerConfig(
+        coordinatorClient,
+        new DefaultQueryConfig(ImmutableMap.of("maxRowsQueuedForOrdering", 0)),
+        QueryContextConfig.DEFAULT
     );
+
+    final IAE e = Assertions.assertThrows(IAE.class, view::start);
     Assertions.assertEquals(
         "Invalid default query context [druid.query.default.context]: "
         + "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]",
         e.getMessage()
     );
+    // The Broker fails to start before it fetches the dynamic config.
+    Mockito.verify(coordinatorClient, Mockito.never()).getBrokerDynamicConfig();
   }
 }

@@ -94,10 +94,14 @@ public class CoordinatorBrokerConfigsResource
     try {
       BrokerDynamicConfig current = currentConfig.get();
       BrokerDynamicConfig newConfig = configBuilder.build(current);
-      QueryContextParameterValidator.validate(
-          newConfig.getQueryContext().asMap(),
-          queryContextConfig.isRejectUnknownParameters()
-      );
+
+      // Validate the context only when the update changes it.
+      if (!newConfig.getQueryContext().equals(current.getQueryContext())) {
+        QueryContextParameterValidator.validate(
+            newConfig.getQueryContext().asMap(),
+            queryContextConfig.isRejectUnknownParameters()
+        );
+      }
 
       final SetResult setResult = configManager.set(
           BrokerDynamicConfig.CONFIG_KEY,

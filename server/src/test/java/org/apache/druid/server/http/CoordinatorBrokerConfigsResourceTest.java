@@ -27,6 +27,7 @@ import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -214,6 +216,81 @@ public class CoordinatorBrokerConfigsResourceTest
         QueryContextConfig.DEFAULT,
         "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]"
     );
+  }
+
+  @Test
+  public void testSetBrokerDynamicConfigKeepsInvalidStoredQueryContext()
+  {
+    // Such as a context saved before unknown parameters were rejected
+    final QueryContext storedContext = QueryContext.of(Map.of("useCahce", false));
+    final HttpServletRequest request = EasyMock.createNiceMock(HttpServletRequest.class);
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.anyObject(String.class),
+            EasyMock.anyObject(Class.class),
+            EasyMock.anyObject(BrokerDynamicConfig.class)
+        )
+    ).andReturn(new AtomicReference<>(BrokerDynamicConfig.builder().withQueryContext(storedContext).build())).once();
+
+    final Capture<BrokerDynamicConfig> savedConfig = EasyMock.newCapture();
+    EasyMock.expect(
+        configManager.set(
+            EasyMock.anyObject(String.class),
+            EasyMock.capture(savedConfig),
+            EasyMock.anyObject(AuditInfo.class)
+        )
+    ).andReturn(SetResult.ok()).once();
+    brokerDynamicConfigSyncer.queueBroadcastConfigToBrokers();
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(configManager, auditManager, brokerDynamicConfigSyncer, request);
+
+    final CoordinatorBrokerConfigsResource resource = new CoordinatorBrokerConfigsResource(
+        configManager,
+        auditManager,
+        brokerDynamicConfigSyncer,
+        new QueryContextConfig(true)
+    );
+
+    // An update that doesn't change the query context
+    final Response response =
+        resource.setBrokerDynamicConfig(BrokerDynamicConfig.builder().withQueryBlocklist(List.of()), request);
+
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(storedContext, savedConfig.getValue().getQueryContext());
+    EasyMock.verify(configManager, auditManager, brokerDynamicConfigSyncer);
+  }
+
+  @Test
+  public void testSetBrokerDynamicConfigRejectsChangedQueryContextIfStoredContextIsInvalid()
+  {
+    // The whole new context is validated, including stored parameters that the update keeps.
+    final QueryContext storedContext = QueryContext.of(Map.of("useCahce", false));
+    final HttpServletRequest request = EasyMock.createNiceMock(HttpServletRequest.class);
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.anyObject(String.class),
+            EasyMock.anyObject(Class.class),
+            EasyMock.anyObject(BrokerDynamicConfig.class)
+        )
+    ).andReturn(new AtomicReference<>(BrokerDynamicConfig.builder().withQueryContext(storedContext).build())).once();
+    EasyMock.replay(configManager, auditManager, brokerDynamicConfigSyncer, request);
+
+    final Response response = new CoordinatorBrokerConfigsResource(
+        configManager,
+        auditManager,
+        brokerDynamicConfigSyncer,
+        new QueryContextConfig(true)
+    ).setBrokerDynamicConfig(
+        BrokerDynamicConfig.builder().withQueryContext(QueryContext.of(Map.of("useCahce", false, "priority", 1))),
+        request
+    );
+
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
+        Map.of("error", "Unknown query context parameter [useCahce]. Did you mean [useCache]?"),
+        response.getEntity()
+    );
+    EasyMock.verify(configManager, auditManager, brokerDynamicConfigSyncer);
   }
 
   /**
