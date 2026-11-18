@@ -366,7 +366,11 @@ public class WorkerRunRefTest
     }
 
     @Override
-    public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
+    public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(
+        StageId stageId,
+        long timeChunk,
+        int spaceReductionFactor
+    )
     {
       return null;
     }

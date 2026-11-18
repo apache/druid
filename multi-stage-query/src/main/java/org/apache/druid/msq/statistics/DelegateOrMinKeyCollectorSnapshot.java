@@ -97,6 +97,24 @@ public class DelegateOrMinKeyCollectorSnapshot<T extends KeyCollectorSnapshot> i
   }
 
   @Override
+  public int spaceReductionFactorOrZero()
+  {
+    return snapshot == null ? 0 : snapshot.spaceReductionFactorOrZero();
+  }
+
+  @Override
+  public KeyCollectorSnapshot downsampleTo(final int spaceReductionFactor)
+  {
+    if (snapshot == null) {
+      return this;
+    }
+
+    final KeyCollectorSnapshot downsampled = snapshot.downsampleTo(spaceReductionFactor);
+    //noinspection ObjectEquality
+    return downsampled == snapshot ? this : new DelegateOrMinKeyCollectorSnapshot<>(downsampled, null);
+  }
+
+  @Override
   public String toString()
   {
     return "DelegateOrMinKeyCollectorSnapshot{" +

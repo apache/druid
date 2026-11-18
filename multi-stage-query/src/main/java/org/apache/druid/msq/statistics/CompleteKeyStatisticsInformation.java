@@ -38,6 +38,8 @@ public class CompleteKeyStatisticsInformation
 
   private boolean complete;
 
+  private int maxSpaceReductionFactor;
+
   public CompleteKeyStatisticsInformation(
       final SortedMap<Long, Set<Integer>> timeChunks,
       boolean multipleValues,
@@ -69,6 +71,25 @@ public class CompleteKeyStatisticsInformation
     }
     this.multipleValues = this.multipleValues || partialKeyStatisticsInformation.hasMultipleValues();
     this.bytesRetained += bytesRetained;
+    this.maxSpaceReductionFactor =
+        Math.max(maxSpaceReductionFactor, partialKeyStatisticsInformation.getSpaceReductionFactor());
+  }
+
+  /**
+   * Returns the factor that workers can safely downsample their snapshots to before sending them to the controller,
+   * or 0 for no downsampling.
+   *
+   * The collector that merges the snapshots ends with a factor at least as high as the highest any worker reported,
+   * and drops every key a lower factor would drop, so keys the workers drop first are keys it would drop anyway.
+   * Workers report one factor for all their time chunks, so this applies only when there is a single time chunk.
+   * Otherwise a chunk could be downsampled further than its own merged collector will be.
+   */
+  public int getSpaceReductionFactorForFetch()
+  {
+    if (!complete || timeSegmentVsWorkerMap.size() != 1) {
+      return 0;
+    }
+    return maxSpaceReductionFactor;
   }
 
   public SortedMap<Long, Set<Integer>> getTimeSegmentVsWorkerMap()

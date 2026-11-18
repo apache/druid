@@ -676,9 +676,13 @@ public class WorkerImpl implements Worker
   }
 
   @Override
-  public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
+  public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(
+      StageId stageId,
+      long timeChunk,
+      int spaceReductionFactor
+  )
   {
-    return fetchStatisticsSnapshot(stageId).getSnapshotForTimeChunk(timeChunk);
+    return fetchStatisticsSnapshot(stageId).getSnapshotForTimeChunk(timeChunk).downsampleTo(spaceReductionFactor);
   }
 
   @Override
