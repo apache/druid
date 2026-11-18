@@ -250,7 +250,7 @@ Druid uses the following logic
 #### Add QoS filtering for Coordinator endpoints
 
 Added configurable QoS filtering to the Coordinator to prevent a burst of slow API requests from exhausting the thread pool and blocking health checks .
-Added a new configuration: `druid.coordinator.server.maxConcurrentRequests` (default: `max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8))`, set <= 0 to disable).
+Added a new configuration: `druid.coordinator.server.maxConcurrentRequests` (default: `max(1, max(serverHttpNumThreads - 4, serverHttpNumThreads * 0.8))`, set `<= 0` to disable).
 Leader-status endpoints are excluded from the cap so load balancers and monitors remain unaffected.
 
 [#19271](https://github.com/apache/druid/pull/19271)
