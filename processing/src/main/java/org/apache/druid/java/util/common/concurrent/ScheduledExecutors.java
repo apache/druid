@@ -23,11 +23,11 @@ import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.context.RequestHeaders;
 import org.joda.time.Duration;
 
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -221,7 +221,7 @@ public class ScheduledExecutors
    */
   public static ScheduledExecutorService fixed(int corePoolSize, String nameFormat)
   {
-    return Executors.newScheduledThreadPool(corePoolSize, Execs.makeThreadFactory(nameFormat));
+    return RequestHeaders.scheduled(corePoolSize, Execs.makeThreadFactory(nameFormat));
   }
 
   /**
@@ -240,7 +240,7 @@ public class ScheduledExecutors
       long keepAliveTimeInMillis
   )
   {
-    ScheduledThreadPoolExecutor scheduledExecutor = new ScheduledThreadPoolExecutor(
+    ScheduledThreadPoolExecutor scheduledExecutor = RequestHeaders.scheduled(
         corePoolSize,
         Execs.makeThreadFactory(nameFormat)
     );

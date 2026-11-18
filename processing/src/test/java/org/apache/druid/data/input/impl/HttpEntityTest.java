@@ -25,6 +25,8 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpServer;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +44,9 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class HttpEntityTest
@@ -63,6 +67,37 @@ public class HttpEntityTest
     Mockito.when(url.openConnection()).thenReturn(urlConnection);
     Mockito.when(urlConnection.getInputStream()).thenReturn(inputStreamMock);
     Mockito.when(inputStreamMock.skip(ArgumentMatchers.anyLong())).then(AdditionalAnswers.returnsFirstArg());
+  }
+
+  @Test
+  public void testOperationHeadersAndExplicitOverrides() throws Exception
+  {
+    final List<String> received = new ArrayList<>();
+    final HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext("/", exchange -> {
+      received.add(exchange.getRequestHeaders().getFirst("X-Druid-Trace-Id"));
+      exchange.sendResponseHeaders(200, -1);
+      exchange.close();
+    });
+    server.start();
+    try {
+      final URI endpoint = URI.create("http://127.0.0.1:" + server.getAddress().getPort());
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(
+          new RequestHeaderContextConfig(),
+          Map.of("traceId", "task-trace")
+      )) {
+        HttpEntity.openInputStream(endpoint, null, null, 0, null).close();
+        HttpEntity.openInputStream(endpoint, null, null, 0, Map.of("x-druid-trace-id", "explicit")).close();
+      }
+      HttpEntity.openInputStream(endpoint, null, null, 0, Map.of()).close();
+      Assertions.assertEquals("task-trace", received.get(0));
+      Assertions.assertEquals("explicit", received.get(1));
+      Assertions.assertNull(received.get(2));
+      Assertions.assertTrue(RequestHeaders.current().isEmpty());
+    }
+    finally {
+      server.stop(0);
+    }
   }
 
   @Test

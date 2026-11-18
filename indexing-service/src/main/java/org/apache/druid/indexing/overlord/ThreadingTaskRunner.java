@@ -54,6 +54,8 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.DruidNode;
@@ -94,6 +96,9 @@ public class ThreadingTaskRunner
     implements TaskLogStreamer, QuerySegmentWalker
 {
   private static final EmittingLogger LOGGER = new EmittingLogger(ThreadingTaskRunner.class);
+
+  @Inject
+  private RequestHeaderContextConfig requestHeaderConfig = new RequestHeaderContextConfig();
 
   private final TaskToolboxFactory toolboxFactory;
   private final TaskLogPusher taskLogPusher;
@@ -162,6 +167,14 @@ public class ThreadingTaskRunner
                       {
                         @Override
                         public TaskStatus call()
+                        {
+                          try (RequestHeaders.Scope ignored = RequestHeaders.open(requestHeaderConfig, task.getContext())) {
+                            RequestHeaders.currentContext().forEach(task::addToContext);
+                            return runWithHeaders();
+                          }
+                        }
+
+                        private TaskStatus runWithHeaders()
                         {
                           final TaskStorageDirTracker.StorageSlot storageSlot;
                           try {
@@ -361,7 +374,9 @@ public class ThreadingTaskRunner
             public Void call()
             {
               LOGGER.info("Stopping thread for task: %s", taskInfo.getTaskId());
-              taskInfo.getTask().stopGracefully(taskConfig);
+              try (RequestHeaders.Scope ignored = RequestHeaders.open(requestHeaderConfig, taskInfo.getTask().getContext())) {
+                taskInfo.getTask().stopGracefully(taskConfig);
+              }
 
               try {
                 taskInfo.getResult().get(

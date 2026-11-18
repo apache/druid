@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.AbstractFuture;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.JvmUtils;
 
@@ -275,6 +276,21 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     );
   }
 
+  /** Keeps fork/join work in its originating operation, including tasks created when a merge yields. */
+  @SuppressWarnings("serial")
+  private abstract static class HeaderAction extends RecursiveAction
+  {
+    private final Runnable operation = RequestHeaders.wrap(this::computeWithHeaders);
+
+    @Override
+    protected final void compute()
+    {
+      operation.run();
+    }
+
+    protected abstract void computeWithHeaders();
+  }
+
   /**
    * This {@link RecursiveAction} is the initial task of the parallel merge-combine process. Capacity and input sequence
    * count permitting, it will partition the input set of {@link Sequence} to do 2 layer parallel merge.
@@ -295,7 +311,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * {@link ResultBatch} into a {@link BlockingQueue} with a {@link QueuePusher}.
    */
   @SuppressWarnings("serial")
-  private static class MergeCombinePartitioningAction<T> extends RecursiveAction
+  private static class MergeCombinePartitioningAction<T> extends HeaderAction
   {
     private final List<Sequence<T>> sequences;
     private final Ordering<T> orderingFn;
@@ -343,7 +359,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     }
 
     @Override
-    protected void compute()
+    protected void computeWithHeaders()
     {
       List<BatchedResultsCursor<T>> sequenceCursors = new ArrayList<>(sequences.size());
       try {
@@ -529,7 +545,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * per amount yielded in order to 'smooth' out the continual adjustment.
    */
   @SuppressWarnings("serial")
-  private static class MergeCombineAction<T> extends RecursiveAction
+  private static class MergeCombineAction<T> extends HeaderAction
   {
     private final PriorityQueue<BatchedResultsCursor<T>> pQueue;
     private final Ordering<T> orderingFn;
@@ -569,7 +585,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
     @SuppressWarnings("unchecked")
     @Override
-    protected void compute()
+    protected void computeWithHeaders()
     {
       if (cancellationGizmo.isCanceled()) {
         cleanup();
@@ -723,7 +739,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * short lived if all inputs are already available.
    */
   @SuppressWarnings("serial")
-  private static class PrepareMergeCombineInputsAction<T> extends RecursiveAction
+  private static class PrepareMergeCombineInputsAction<T> extends HeaderAction
   {
     private final List<BatchedResultsCursor<T>> partition;
     private final Ordering<T> orderingFn;
@@ -763,7 +779,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
     @SuppressWarnings("unchecked")
     @Override
-    protected void compute()
+    protected void computeWithHeaders()
     {
       PriorityQueue<BatchedResultsCursor<T>> cursors = new PriorityQueue<>(partition.size());
       try {

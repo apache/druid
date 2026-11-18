@@ -28,6 +28,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.storage.s3.S3StorageDruidModule.AsyncHttpClientType;
 import org.apache.druid.storage.s3.output.S3ExportStorageProvider;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -87,6 +88,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -303,6 +305,11 @@ public class ServerSideEncryptingAmazonS3
           requestBuilder.grantFullControl(headerValue);
         }
       }
+      final Map<String, String> headers = RequestHeaders.current();
+      requestBuilder.overrideConfiguration(overrides -> {
+        headers.forEach(overrides::putHeader);
+        overrides.putExecutionAttribute(S3RequestHeaderInterceptor.HEADERS, headers);
+      });
       PutObjectRequest decoratedRequest = serverSideEncryption.decorate(requestBuilder).build();
 
       UploadFileRequest uploadFileRequest = UploadFileRequest.builder()
@@ -434,6 +441,8 @@ public class ServerSideEncryptingAmazonS3
 
     clientBuilder.credentialsProvider(credentialsProvider);
     asyncClientBuilder.credentialsProvider(credentialsProvider);
+    clientBuilder.overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()));
+    asyncClientBuilder.overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()));
 
     // Build and wrap in ServerSideEncryptingAmazonS3
     return ServerSideEncryptingAmazonS3.builder()
@@ -518,6 +527,8 @@ public class ServerSideEncryptingAmazonS3
     if (awsClientConfig != null) {
       stsBuilder.overrideConfiguration(retryOverride(awsClientConfig));
     }
+
+    stsBuilder.overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()));
 
     AssumeRoleRequest.Builder assumeRoleRequestBuilder =
         AssumeRoleRequest.builder().roleArn(assumeRoleArn).roleSessionName(roleSessionName).durationSeconds(3600);

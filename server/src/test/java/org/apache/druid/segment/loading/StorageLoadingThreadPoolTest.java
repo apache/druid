@@ -20,9 +20,16 @@
 package org.apache.druid.segment.loading;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 class StorageLoadingThreadPoolTest
 {
@@ -38,6 +45,29 @@ class StorageLoadingThreadPoolTest
                               .virtualStorageUseVirtualThreads(false)
                               .virtualStorage(true)
                               .build();
+  }
+
+  @Test
+  void testDownloadsCarryHeadersOnVirtualAndPlatformThreads() throws Exception
+  {
+    for (final SegmentLoaderConfig config : List.of(oneVirtualThreadConfig(), fixedThreadConfig())) {
+      final StorageLoadingThreadPool pool = StorageLoadingThreadPool.createFromConfig(config);
+      try {
+        final Future<Map<String, String>> download;
+        try (RequestHeaders.Scope ignored = RequestHeaders.open(
+            new RequestHeaderContextConfig(),
+            Map.of("traceId", "download-trace")
+        )) {
+          download = pool.getExecutorService().submit(RequestHeaders::current);
+        }
+        Assertions.assertEquals(Map.of("X-Druid-Trace-Id", "download-trace"), download.get(10, TimeUnit.SECONDS));
+        Assertions.assertTrue(pool.getExecutorService().submit(RequestHeaders::current).get(10, TimeUnit.SECONDS).isEmpty());
+        Assertions.assertTrue(RequestHeaders.current().isEmpty());
+      }
+      finally {
+        pool.stop();
+      }
+    }
   }
 
   @Test

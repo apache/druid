@@ -37,6 +37,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.junit.jupiter.api.Assertions;
@@ -79,16 +80,28 @@ public class ThreadingTaskRunnerTest
   @Test
   public void testTaskStatusWhenTaskThrowsExceptionWhileRunning() throws ExecutionException, InterruptedException
   {
-    Future<TaskStatus> statusFuture = runner.run(new NoopTask(null, null, null, 1L, 0L, Map.of())
+    Future<TaskStatus> statusFuture = runner.run(new NoopTask(null, null, null, 1L, 0L, Map.of("traceId", "failed-trace"))
     {
       @Override
       public TaskStatus runTask(TaskToolbox toolbox)
       {
+        Assertions.assertEquals("failed-trace", RequestHeaders.current().get("X-Druid-Trace-Id"));
         throw new RuntimeException("Task failure test");
       }
     });
 
     final TaskStatus status = statusFuture.get();
+    Assertions.assertTrue(RequestHeaders.current().isEmpty());
+    final TaskStatus next = runner.run(new NoopTask(null, null, null, 1L, 0L, Map.of())
+    {
+      @Override
+      public TaskStatus runTask(TaskToolbox toolbox)
+      {
+        Assertions.assertTrue(RequestHeaders.current().isEmpty());
+        return TaskStatus.success(getId());
+      }
+    }).get();
+    Assertions.assertEquals(TaskState.SUCCESS, next.getStatusCode());
     Assertions.assertEquals(TaskState.FAILED, status.getStatusCode());
     Assertions.assertEquals(
         "Failed with exception [Task failure test]. See indexer logs for details.",

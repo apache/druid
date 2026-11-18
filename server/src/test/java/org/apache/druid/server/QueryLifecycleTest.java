@@ -51,6 +51,8 @@ import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -170,6 +172,57 @@ public class QueryLifecycleTest
   {
     injector.injectMembers(this);
     return queryLifecycleFactory.factorize();
+  }
+
+  @Test
+  public void testInitializeInheritsOperationMetadataWithoutReplacingQueryContext()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).times(2);
+    replayAll();
+
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(
+        new RequestHeaderContextConfig(),
+        Map.of("traceId", "operation-trace")
+    )) {
+      final QueryLifecycle inherited = createLifecycle();
+      inherited.initialize(query);
+      Assertions.assertEquals("operation-trace", inherited.getQuery().getContext().get("traceId"));
+      final QueryLifecycle explicit = createLifecycle();
+      explicit.initialize(query.withOverriddenContext(Map.of("traceId", "explicit-trace")));
+      Assertions.assertEquals("explicit-trace", explicit.getQuery().getContext().get("traceId"));
+    }
+    Assertions.assertTrue(RequestHeaders.current().isEmpty());
+  }
+
+  @Test
+  public void testInheritedHeadersRequireQueryContextAuthorization()
+  {
+    EasyMock.expect(queryConfig.getContext()).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ)).andReturn(Access.OK);
+    EasyMock.expect(authorizer.authorize(
+        authenticationResult,
+        new Resource("traceId", ResourceType.QUERY_CONTEXT),
+        Action.WRITE
+    )).andAnswer(() -> {
+      Assertions.assertEquals("operation-trace", RequestHeaders.current().get("X-Druid-Trace-Id"));
+      return Access.DENIED;
+    });
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest);
+    replayAll();
+
+    authConfig = AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build();
+    final QueryLifecycle lifecycle = createLifecycle();
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(
+        new RequestHeaderContextConfig(),
+        Map.of("traceId", "operation-trace")
+    )) {
+      lifecycle.initialize(query);
+    }
+    Assertions.assertFalse(lifecycle.authorize(authenticationResult).allowBasicAccess());
+    Assertions.assertTrue(RequestHeaders.current().isEmpty());
   }
 
   @AfterEach

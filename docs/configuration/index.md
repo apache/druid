@@ -358,7 +358,7 @@ The `switching` request logger routes native query request logs to one request l
 ### Request header propagation
 
 Druid copies configured HTTP headers into native query, SQL query, and HTTP-submitted task context after authentication.
-Configure the same mapping on participating services:
+Configure the same mapping on participating services, including task processes:
 
 ```properties
 druid.request.headers.headerToContextKey={"X-Correlation-Id":"correlationId"}
@@ -371,15 +371,21 @@ druid.request.headers.headerToContextKey={"X-Correlation-Id":"correlationId"}
 A captured header replaces the matching context value. Missing, blank, or invalid header values leave existing context
 values unchanged. Query-context authorization applies to captured query keys.
 
-Native query fan-out and cancellation requests forward the configured headers from query context. Audit entries include
-captured values in `request.requestMetadata`, omitted when empty. Use non-sensitive metadata suitable for logs and audits.
+Native query fan-out and cancellation requests forward the configured headers from query context. Druid also makes these
+headers available during request handling, native query execution (including lazy results), and task execution.
+Druid executor utilities and asynchronous query processing retain the originating operation's headers and restore the
+previous thread state when work finishes. This includes broker parallel merges, asynchronous frame processing,
+and query-driven storage downloads. Druid HTTP clients, HTTP ingestion requests, and S3 clients forward the headers
+without replacing explicitly supplied request headers. Audit entries include captured values in `request.requestMetadata`,
+omitted when empty. Use non-sensitive metadata suitable for task payloads, logs, audits, and downstream services.
 
 Druid does not generate IDs. An authentication extension can use the existing `Authenticator.getFilter()` API to generate
 an ID when the header is missing and expose it as a request header before capture. There is no separate ID-generator hook.
 
-Captured values remain in serialized task context. Extensions and clients can use
-`RequestHeaderContextConfig.fromContext(...)` with query or task context to reconstruct the configured headers, then
-attach them to outbound requests. Task execution and calls to other services require this explicit integration.
+Captured values remain in serialized task context. Extensions using other clients can read `RequestHeaders.current()`
+to attach the current operation's headers, or use `RequestHeaderContextConfig.fromContext(...)` with query or task
+context. Custom executors and callbacks require explicit context propagation using `RequestHeaders.wrap(...)` or
+`RequestHeaders.bind(...)`. Druid does not automatically instrument third-party clients or executors.
 
 ### Audit logging
 

@@ -21,6 +21,7 @@ package org.apache.druid.server.initialization.jetty;
 
 import com.google.inject.Inject;
 import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 
 import javax.annotation.Nullable;
 import javax.servlet.DispatcherType;
@@ -54,8 +55,11 @@ public class RequestHeaderContextFilterHolder implements ServletFilterHolder
   public Filter getFilter()
   {
     return (request, response, chain) -> {
-      request.setAttribute(ATTRIBUTE, config.capture(((HttpServletRequest) request)::getHeader));
-      chain.doFilter(request, response);
+      final Map<String, String> captured = config.capture(((HttpServletRequest) request)::getHeader);
+      request.setAttribute(ATTRIBUTE, captured);
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(config, Map.copyOf(captured))) {
+        chain.doFilter(request, response);
+      }
     };
   }
 

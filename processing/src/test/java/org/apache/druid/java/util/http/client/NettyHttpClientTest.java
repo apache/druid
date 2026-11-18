@@ -21,6 +21,7 @@ package org.apache.druid.java.util.http.client;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import com.sun.net.httpserver.HttpServer;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
@@ -28,16 +29,24 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,6 +57,36 @@ import java.util.concurrent.TimeUnit;
  */
 public class NettyHttpClientTest
 {
+  @Test
+  public void testOperationHeadersPreserveExplicitValuesAndDoNotMutateReusedRequests() throws Exception
+  {
+    final List<List<String>> received = Collections.synchronizedList(new ArrayList<>());
+    final HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext("/", exchange -> {
+      received.add(List.copyOf(exchange.getRequestHeaders().getOrDefault("X-Trace", List.of())));
+      exchange.sendResponseHeaders(204, -1);
+      exchange.close();
+    });
+    server.start();
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClient client = HttpClientInit.createClient(HttpClientConfig.builder().build(), lifecycle);
+      final Request request = new Request(HttpMethod.GET, URI.create("http://127.0.0.1:" + server.getAddress().getPort()).toURL());
+      final RequestHeaderContextConfig config = new RequestHeaderContextConfig(Map.of("X-Trace", "traceId"));
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(config, Map.of("traceId", "operation"))) {
+        client.go(request, StatusResponseHandler.getInstance()).get(10, TimeUnit.SECONDS);
+        client.go(request.copy().setHeader("x-trace", "explicit"), StatusResponseHandler.getInstance()).get(10, TimeUnit.SECONDS);
+      }
+      client.go(request, StatusResponseHandler.getInstance()).get(10, TimeUnit.SECONDS);
+      Assertions.assertEquals(List.of(List.of("operation"), List.of("explicit"), List.of()), received);
+      Assertions.assertTrue(request.getHeaders().isEmpty());
+    }
+    finally {
+      lifecycle.stop();
+      server.stop(0);
+    }
+  }
+
   /**
    * A response handler whose {@link #handleResponse} throws, simulating a handler that rejects the response (for
    * example because of an unexpected status code or content type) before any content has been processed.

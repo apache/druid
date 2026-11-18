@@ -45,6 +45,8 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.QueryContextParameters;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
@@ -89,6 +91,13 @@ import java.util.concurrent.TimeUnit;
 public class QueryLifecycle
 {
   private static final Logger log = new Logger(QueryLifecycle.class);
+
+  private RequestHeaderContextConfig requestHeaderConfig = new RequestHeaderContextConfig();
+
+  void setRequestHeaderConfig(final RequestHeaderContextConfig config)
+  {
+    this.requestHeaderConfig = config;
+  }
 
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final QuerySegmentWalker texasRanger;
@@ -249,6 +258,14 @@ public class QueryLifecycle
     final Map<String, Object> finalContext =
         configSnapshot.resolveContext(baseQuery, effectiveClientProvidedQueryContextKeys);
     QueryContextParameters.QUERY_ID.set(finalContext, queryId);
+    RequestHeaders.currentContext().forEach((key, value) -> {
+      if (requestHeaderConfig.getHeaderToContextKey().containsValue(key)) {
+        finalContext.putIfAbsent(key, value);
+        queryContextKeysToAuthorize.add(key);
+      }
+    });
+    final Map<String, String> headers = requestHeaderConfig.fromContext(finalContext);
+    finalContext.putAll(requestHeaderConfig.capture(headers::get));
 
     this.baseQuery = baseQuery.withOverriddenContext(finalContext);
     this.toolChest = conglomerate.getToolChest(this.baseQuery);
@@ -281,14 +298,16 @@ public class QueryLifecycle
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );
-    return doAuthorize(
-        AuthorizationUtils.authenticationResultFromRequest(req),
-        AuthorizationUtils.authorizeAllResourceActions(
-            req,
-            resourcesToAuthorize,
-            authorizerMapper
-        )
-    );
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(requestHeaderConfig, baseQuery.getContext())) {
+      return doAuthorize(
+          AuthorizationUtils.authenticationResultFromRequest(req),
+          AuthorizationUtils.authorizeAllResourceActions(
+              req,
+              resourcesToAuthorize,
+              authorizerMapper
+          )
+      );
+    }
   }
 
   /**
@@ -319,14 +338,16 @@ public class QueryLifecycle
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );
-    return doAuthorize(
-        authenticationResult,
-        AuthorizationUtils.authorizeAllResourceActions(
-            authenticationResult,
-            resourcesToAuthorize,
-            authorizerMapper
-        )
-    );
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(requestHeaderConfig, baseQuery.getContext())) {
+      return doAuthorize(
+          authenticationResult,
+          AuthorizationUtils.authorizeAllResourceActions(
+              authenticationResult,
+              resourcesToAuthorize,
+              authorizerMapper
+          )
+      );
+    }
   }
 
   private void preAuthorized(
@@ -419,12 +440,13 @@ public class QueryLifecycle
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
-    @SuppressWarnings("unchecked")
-    final Sequence<T> res = QueryPlus.wrap((Query<T>) baseQuery)
-                                     .withIdentity(authenticationResult.getIdentity())
-                                     .run(texasRanger, responseContext);
-
-    return new QueryResponse<>(res == null ? Sequences.empty() : res, responseContext);
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(requestHeaderConfig, baseQuery.getContext())) {
+      @SuppressWarnings("unchecked")
+      final Sequence<T> res = QueryPlus.wrap((Query<T>) baseQuery)
+                                       .withIdentity(authenticationResult.getIdentity())
+                                       .run(texasRanger, responseContext);
+      return new QueryResponse<>(RequestHeaders.wrap(res == null ? Sequences.empty() : res), responseContext);
+    }
   }
 
   /**

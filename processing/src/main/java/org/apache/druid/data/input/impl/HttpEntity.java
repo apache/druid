@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.query.context.RequestHeaders;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -89,6 +90,11 @@ public class HttpEntity extends RetryingInputEntity
       throws IOException
   {
     final URLConnection urlConnection = object.toURL().openConnection();
+    RequestHeaders.current().forEach((header, value) -> {
+      if (requestHeaders == null || requestHeaders.keySet().stream().noneMatch(header::equalsIgnoreCase)) {
+        urlConnection.setRequestProperty(header, value);
+      }
+    });
     if (requestHeaders != null && requestHeaders.size() > 0) {
       for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
         urlConnection.addRequestProperty(entry.getKey(), entry.getValue());

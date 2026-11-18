@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
@@ -33,11 +35,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.opentest4j.TestAbortedException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -120,6 +124,25 @@ public class PrioritizedExecutorServiceTest
    *
    * @throws Exception
    */
+  @Test
+  public void testPrioritizedTasksRetainRequestHeaders() throws Exception
+  {
+    final RequestHeaderContextConfig headers = new RequestHeaderContextConfig(Map.of("X-Trace", "traceId"));
+    final ListenableFuture<String> result;
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(headers, Map.of("traceId", "priority-trace"))) {
+      result = exec.submit(new AbstractPrioritizedCallable<String>(5)
+      {
+        @Override
+        public String call()
+        {
+          return RequestHeaders.current().get("X-Trace");
+        }
+      });
+    }
+    Assertions.assertEquals("priority-trace", result.get(10, TimeUnit.SECONDS));
+    Assertions.assertTrue(RequestHeaders.current().isEmpty());
+  }
+
   @Test
   public void testSubmit() throws Exception
   {

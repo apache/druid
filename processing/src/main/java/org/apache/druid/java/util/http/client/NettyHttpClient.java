@@ -53,6 +53,7 @@ import org.apache.druid.java.util.http.client.pool.ResourceContainer;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.query.context.RequestHeaders;
 import org.joda.time.Duration;
 
 import java.net.URL;
@@ -198,6 +199,12 @@ public class NettyHttpClient extends AbstractHttpClient
         String key = entry.getKey();
         for (String obj : entry.getValue()) {
           httpRequest.headers().add(key, obj);
+        }
+      }
+
+      for (final Map.Entry<String, String> entry : RequestHeaders.current().entrySet()) {
+        if (!httpRequest.headers().contains(entry.getKey())) {
+          httpRequest.headers().set(entry.getKey(), entry.getValue());
         }
       }
 

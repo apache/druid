@@ -27,6 +27,7 @@ import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
 import org.apache.druid.server.log.RequestLogger;
@@ -38,6 +39,9 @@ import javax.annotation.Nullable;
 @LazySingleton
 public class QueryLifecycleFactory
 {
+  @Inject
+  private RequestHeaderContextConfig requestHeaderConfig = new RequestHeaderContextConfig();
+
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final QuerySegmentWalker texasRanger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
@@ -83,7 +87,7 @@ public class QueryLifecycleFactory
         ? new QueryConfigSnapshot(queryConfigProvider.getContext(), null)
         : brokerViewOfBrokerConfig.snapshotForQuery();
 
-    return new QueryLifecycle(
+    final QueryLifecycle lifecycle = new QueryLifecycle(
         conglomerate,
         texasRanger,
         queryMetricsFactory,
@@ -96,5 +100,7 @@ public class QueryLifecycleFactory
         System.currentTimeMillis(),
         System.nanoTime()
     );
+    lifecycle.setRequestHeaderConfig(requestHeaderConfig);
+    return lifecycle;
   }
 }
