@@ -221,6 +221,7 @@ public class QueryTestRunner
       final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
                                                 .systemDefaultContext(QueryContext.empty())
                                                 .queryContext(QueryContext.of(queryContext))
+                                                .rejectUnknownParameters(true)
                                                 .parameters(builder.parameters)
                                                 .auth(builder.authenticationResult)
                                                 .build();
@@ -283,6 +284,7 @@ public class QueryTestRunner
                                                   .auth(builder.authenticationResult)
                                                   .systemDefaultContext(QueryContext.empty())
                                                   .queryContext(QueryContext.of(queryContext))
+                                                  .rejectUnknownParameters(true)
                                                   .build();
 
         // Pass the string form, as clients do, so that the suite also exercises parsing it.
@@ -339,8 +341,7 @@ public class QueryTestRunner
 
     private PlannerCaptureHook getCaptureHook()
     {
-      if (builder.getQueryContext().containsKey(PlannerCaptureHook.NEED_CAPTURE_HOOK)
-          || builder.expectedLogicalPlan != null) {
+      if (builder.captureHook || builder.expectedLogicalPlan != null) {
         return new PlannerCaptureHook();
       }
       return null;

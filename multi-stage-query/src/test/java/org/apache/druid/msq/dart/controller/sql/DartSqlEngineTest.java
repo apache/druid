@@ -21,6 +21,7 @@ package org.apache.druid.msq.dart.controller.sql;
 
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.jupiter.api.Assertions;
@@ -83,7 +84,8 @@ public class DartSqlEngineTest
         SERVER_CONFIG,
         new DefaultQueryConfig(dartDefaults),
         null,
-        null
+        null,
+        QueryContextConfig.DEFAULT
     );
   }
 }
