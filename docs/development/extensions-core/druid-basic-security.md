@@ -606,7 +606,6 @@ Example output:
   ]
 }
 ```
-**Note:** The `simplifyPermissions` flag has been removed. Permissions are now always returned in the flat `resource` / `action` format. The `resourceNamePattern` field is no longer included in permission responses.
 
 `POST(/druid-ext/basic-security/authorization/db/{authorizerName}/users/{userName})`<br />
 Create a new user with name \{userName}
@@ -689,7 +688,6 @@ Example output:
   ]
 }
 ```
-**Note:** The `simplifyPermissions` flag has been removed. Permissions are now always returned in the flat `resource` / `action` format. The `resourceNamePattern` field is no longer included in permission responses.
 
 `POST(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`<br />
 Create a new role with name \{roleName}.
