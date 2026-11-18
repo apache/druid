@@ -170,7 +170,13 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     if (plan.bundles().isEmpty()) {
       return CursorPrefetch.none();
     }
-    final PendingDownloads pending = acquireHoldsAndSubmitRuns(plan.bundles());
+    final PendingDownloads pending;
+    try {
+      pending = acquireHoldsAndSubmitRuns(plan.bundles());
+    }
+    catch (Throwable t) {
+      return CursorPrefetch.failed(t);
+    }
     final CursorPrefetch prefetch = new CursorPrefetch(pending.canceler());
     completeOnDownloadExecutor(
         pending,

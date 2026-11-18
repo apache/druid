@@ -1198,6 +1198,61 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
   }
 
   @Test
+  void testPrefetchHandleHoldAcquisitionFailureIsReportedThroughHandle() throws IOException
+  {
+    // The matched projection's bundle is held, then the parent __base bundle's reservation finds no room. The warm-up
+    // cannot start, so prefetch() returns a failed handle rather than throwing, and the hold already taken is released.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_no_room")) {
+      final PartialQueryableIndex index = opened.index();
+      final ListeningExecutorService exec = directExec();
+      final List<String> acquired = new ArrayList<>();
+      final AtomicInteger holdReleases = new AtomicInteger();
+      final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
+      {
+        @Override
+        public Closeable acquire(String bundleName)
+        {
+          acquired.add(bundleName);
+          if (Projections.BASE_TABLE_PROJECTION_NAME.equals(bundleName)) {
+            throw DruidException.forPersona(DruidException.Persona.USER)
+                                .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                                .build("No room for bundle[%s]", bundleName);
+          }
+          return holdReleases::incrementAndGet;
+        }
+
+        @Override
+        public <T> AsyncResource<T> submitDownload(Callable<T> task)
+        {
+          return AsyncResources.fromFutureUnmanaged(exec.submit(task));
+        }
+      };
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          acquirer
+      );
+      final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
+                                                     .setGroupingColumns(List.of("dim1"))
+                                                     .setAggregators(List.of(
+                                                         new LongSumAggregatorFactory("_metric1_sum", "metric1")
+                                                     ))
+                                                     .setPhysicalColumns(Set.of("dim1", "metric1"))
+                                                     .build();
+
+      final CursorPrefetch prefetch = factory.prefetch(aggSpec);
+      Assertions.assertEquals(List.of(PROJECTION_NAME, Projections.BASE_TABLE_PROJECTION_NAME), acquired);
+      Assertions.assertTrue(prefetch.isReady(), "a warm-up that could not start is complete");
+      final DruidException e = Assertions.assertThrows(DruidException.class, prefetch::get);
+      Assertions.assertEquals(DruidException.Category.CAPACITY_EXCEEDED, e.getCategory());
+      Assertions.assertEquals(1, holdReleases.get(), "the hold taken before the failure is released");
+      prefetch.close();
+      Assertions.assertEquals(1, holdReleases.get(), "closing the failed handle releases nothing more");
+    }
+  }
+
+  @Test
   void testPrefetchHandleAlreadyResidentStillMaterializesOnDownloadExecutor() throws Exception
   {
     // Nothing to download, so the empty collect is ready inline; the materialization must still hop to the download

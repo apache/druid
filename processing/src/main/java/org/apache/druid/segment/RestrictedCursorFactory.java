@@ -71,15 +71,6 @@ public class RestrictedCursorFactory implements CursorFactory
     return delegate.prefetch(delegateSpec(spec));
   }
 
-  /**
-   * The spec passed to the delegate: the caller's spec with {@link #policy} applied. Used by every delegating method
-   * here.
-   */
-  private CursorBuildSpec delegateSpec(CursorBuildSpec spec)
-  {
-    return policy.visit(spec);
-  }
-
   @Override
   public RowSignature getRowSignature()
   {
@@ -91,5 +82,10 @@ public class RestrictedCursorFactory implements CursorFactory
   public ColumnCapabilities getColumnCapabilities(String column)
   {
     return delegate.getColumnCapabilities(column);
+  }
+
+  private CursorBuildSpec delegateSpec(CursorBuildSpec spec)
+  {
+    return policy.visit(spec);
   }
 }

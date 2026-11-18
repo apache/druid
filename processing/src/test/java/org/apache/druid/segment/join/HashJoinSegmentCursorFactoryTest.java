@@ -347,13 +347,13 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
     try {
       Assertions.assertEquals(base.getPendingSpec(), base.getPrefetchSpec());
       Assertions.assertFalse(prefetch.isReady());
-      prefetch.close();
-      Assertions.assertTrue(base.prefetchCanceled.get(), "closing the prefetch before it's ready cancels the base");
     }
     catch (Throwable t) {
       prefetch.close();
       throw t;
     }
+    prefetch.close();
+    Assertions.assertTrue(base.prefetchCanceled.get(), "closing the prefetch before it's ready cancels the base");
   }
 
   @Test

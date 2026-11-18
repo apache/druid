@@ -89,6 +89,16 @@ class CursorPrefetchTest
   }
 
   @Test
+  void testFailedIsReadyAndThrowsFromGet()
+  {
+    final CursorPrefetch prefetch = CursorPrefetch.failed(new IllegalStateException("no room"));
+    Assertions.assertTrue(prefetch.isReady());
+    final IllegalStateException e = Assertions.assertThrows(IllegalStateException.class, prefetch::get);
+    Assertions.assertEquals("no room", e.getMessage());
+    prefetch.close();
+  }
+
+  @Test
   void testCursorFactoryDefaultIsReadyNoOp()
   {
     final CursorFactory resident = new CursorFactory()

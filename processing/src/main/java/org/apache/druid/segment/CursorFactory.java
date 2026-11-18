@@ -58,6 +58,10 @@ public interface CursorFactory extends ColumnInspector
    * Optional preloading for a given {@link CursorBuildSpec}, which starts doing the loading that a later
    * {@link #makeCursorHolderAsync(CursorBuildSpec)} would otherwise do on demand. See {@link CursorPrefetch} for the
    * lifecycle of the returned handle, in particular that it must stay open for the warmed-up parts to stay resident.
+   * <p>
+   * A warm-up that cannot be started, for instance because the segment cache has no room for what it would load, is
+   * reported through the returned handle rather than thrown. This method throws only for a spec that the factory
+   * cannot serve at all (which {@link #makeCursorHolderAsync(CursorBuildSpec)} would reject the same way).
    */
   default CursorPrefetch prefetch(CursorBuildSpec spec)
   {

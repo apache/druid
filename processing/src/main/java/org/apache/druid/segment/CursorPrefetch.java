@@ -73,4 +73,15 @@ public class CursorPrefetch extends SettableAsyncResource<CursorPrefetch.Stats>
     prefetch.set(Stats.NONE, null);
     return prefetch;
   }
+
+  /**
+   * An already-complete prefetch whose warm-up could not be started, so it pins nothing; {@link #get()} throws
+   * {@code failure}.
+   */
+  public static CursorPrefetch failed(Throwable failure)
+  {
+    final CursorPrefetch prefetch = new CursorPrefetch(null);
+    prefetch.setException(failure);
+    return prefetch;
+  }
 }

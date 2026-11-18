@@ -109,19 +109,11 @@ public class UnnestCursorFactory implements CursorFactory
     return baseCursorFactory.prefetch(delegateSpec(spec));
   }
 
-  /**
-   * The spec passed to the base cursor factory for {@code spec}, computing the filter split itself.
-   */
   private CursorBuildSpec delegateSpec(CursorBuildSpec spec)
   {
     return delegateSpec(spec, computeFilterSplit(spec));
   }
 
-  /**
-   * The spec passed to the base cursor factory: the caller's spec rewritten for the unnest input column, with only
-   * the base-table half of its filters (see {@link #computeFilterSplit}). Shared by every holder path, which also need
-   * {@code filterSplit} for the post-unnest half.
-   */
   private CursorBuildSpec delegateSpec(CursorBuildSpec spec, UnnestFilterSplit filterSplit)
   {
     return transformCursorBuildSpec(spec, unnestColumn, filterSplit.getBaseTableFilter());

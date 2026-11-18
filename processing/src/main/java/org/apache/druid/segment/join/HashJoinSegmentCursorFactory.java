@@ -120,9 +120,6 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
     return baseCursorFactory.prefetch(delegateSpec(spec));
   }
 
-  /**
-   * The spec passed to the base cursor factory for {@code spec}; see {@link #planCursor}.
-   */
   private CursorBuildSpec delegateSpec(CursorBuildSpec spec)
   {
     return planCursor(spec).baseBuildSpec;
