@@ -412,6 +412,10 @@ public class EmbeddedClusterApis implements EmbeddedResource
    * published the segments may stop serving them, for example when a task is
    * killed before it finishes handoff. Until a Historical loads such a segment,
    * its rows are missing from query results.
+   * <p>
+   * This reads {@code sys.server_segments} and not {@code sys.segments}, because
+   * {@code sys.segments} reports a published segment as available and not
+   * realtime even while only a realtime task serves it.
    *
    * @param timeoutMillis maximum time to wait
    */
@@ -433,7 +437,16 @@ public class EmbeddedClusterApis implements EmbeddedResource
 
     waitForResult(
         () -> runSql(
-            "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s' AND is_available = 1 AND is_realtime = 0",
+            // A segment may be on several Historicals, so count each segment once. The planner does not support
+            // COUNT(DISTINCT) on system tables.
+            "SELECT COUNT(*) FROM ("
+            + "SELECT ss.segment_id"
+            + " FROM sys.server_segments ss"
+            + " INNER JOIN sys.servers sv ON ss.server = sv.server"
+            + " INNER JOIN sys.segments sg ON ss.segment_id = sg.segment_id"
+            + " WHERE sv.server_type = 'historical' AND sg.datasource = '%s'"
+            + " GROUP BY ss.segment_id"
+            + ")",
             escapedDataSource
         ),
         result -> parseCountOrZero(result) >= numSegments
