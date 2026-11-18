@@ -490,14 +490,22 @@ public class SystemSchema extends AbstractTableSchema
               numRows = 0L;
             }
 
-            long isRealtime = val.isRealtime() ? 1 : 0;
-
             // set of segments returned from Coordinator include published and realtime segments
             // so realtime segments are not published and vice versa
             boolean isPublished = !val.isRealtime();
 
             // is_active is true for published segments that are not overshadowed or else they should be realtime
             boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();
+
+            // The Coordinator reports every published segment as not realtime, even one that is still served only
+            // by realtime tasks because it has not been handed off yet. The Broker knows which servers serve the
+            // segment, so prefer what it knows.
+            final long isRealtime;
+            if (availableSegmentMetadata != null && numReplicas > 0) {
+              isRealtime = availableSegmentMetadata.isRealtime();
+            } else {
+              isRealtime = val.isRealtime() ? 1 : 0;
+            }
 
             return new Object[]{
                 segment.getId(),
