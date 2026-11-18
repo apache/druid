@@ -22,9 +22,14 @@ package org.apache.druid.client;
 import com.google.inject.Inject;
 import jakarta.validation.constraints.NotNull;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
 
@@ -42,6 +47,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
 {
   private final CoordinatorClient coordinatorClient;
   private final DefaultQueryConfig defaultQueryConfig;
+  private final QueryContextConfig queryContextConfig;
 
   /**
    * The dynamic config plus the merge of {@link DefaultQueryConfig#getContext()} and
@@ -55,12 +61,37 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   @Inject
   public BrokerViewOfBrokerConfig(
       final CoordinatorClient coordinatorClient,
-      final DefaultQueryConfig defaultQueryConfig
+      final DefaultQueryConfig defaultQueryConfig,
+      final QueryContextConfig queryContextConfig
   )
   {
     this.coordinatorClient = coordinatorClient;
     this.defaultQueryConfig = defaultQueryConfig;
+    this.queryContextConfig = queryContextConfig;
     this.querySnapshot = new QueryConfigSnapshot(QueryContext.of(defaultQueryConfig.getContext()).asMap(), null);
+  }
+
+  /**
+   * Validates the default query context before fetching the dynamic config. This is a lifecycle method rather than a
+   * constructor check because Guice also constructs this class on data servers, through the {@code @Nullable}
+   * parameter of {@link org.apache.druid.server.QueryLifecycleFactory}, but only the Broker manages its lifecycle.
+   * Data servers don't validate query contexts.
+   */
+  @Override
+  @LifecycleStart
+  public void start()
+  {
+    try {
+      QueryContextParameterValidator.validate(
+          defaultQueryConfig.getContext(),
+          queryContextConfig.isRejectUnknownParameters()
+      );
+    }
+    catch (BadQueryContextException e) {
+      throw new IAE(e, "Invalid default query context [druid.query.default.context]: %s", e.getMessage());
+    }
+
+    super.start();
   }
 
   @Override

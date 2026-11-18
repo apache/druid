@@ -138,7 +138,7 @@ public class BrokerClientImplTest
         false,
         false,
         false,
-        null,
+        query.getContext(),
         null
     );
 
