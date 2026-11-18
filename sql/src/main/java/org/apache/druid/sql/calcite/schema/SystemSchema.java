@@ -490,16 +490,19 @@ public class SystemSchema extends AbstractTableSchema
               numRows = 0L;
             }
 
-            // set of segments returned from Coordinator include published and realtime segments
-            // so realtime segments are not published and vice versa
+            // The Coordinator returns the published segments and, if centralized datasource schema is enabled, the
+            // unpublished segments that it sees being served. It sets the realtime flag only on an unpublished
+            // segment that no Historical serves, so a segment with the flag set is not published. The reverse does
+            // not strictly hold: an unpublished segment that a Historical serves also has the flag unset, and is
+            // treated as published here.
             boolean isPublished = !val.isRealtime();
 
-            // is_active is true for published segments that are not overshadowed or else they should be realtime
+            // is_active is true for published segments that are not overshadowed, and for unpublished realtime segments
             boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();
 
-            // The Coordinator reports every published segment as not realtime, even one that is still served only
-            // by realtime tasks because it has not been handed off yet. The Broker knows which servers serve the
-            // segment, so prefer what it knows.
+            // The flag from the Coordinator does not say who serves a published segment: it is unset even for one
+            // that has not been handed off yet and is served only by realtime tasks. The Broker knows which servers
+            // serve the segment, so prefer what it knows.
             final long isRealtime;
             if (availableSegmentMetadata != null && numReplicas > 0) {
               isRealtime = availableSegmentMetadata.isRealtime();
