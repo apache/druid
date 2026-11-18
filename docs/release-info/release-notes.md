@@ -436,7 +436,7 @@ The MariaDB JDBC connector has been upgraded from from 2.7.3 to 3.5.10, which ha
 - For `druid.metadata.storage.connector.connectURI` with `org.mariadb.jdbc.Driver`, use `jdbc:mariadb:`. A legacy `jdbc:mysql:` URI remains usable only if it includes `permitMysqlScheme`. For example, `jdbc:mysql://<host>/druid?permitMysqlScheme`, because metadata storage passes the URI directly to the driver.
 - For MariaDB-backed SQL input sources and JDBC lookups with the default `druid.access.jdbc.enforceAllowedProperties=true`, use `jdbc:mariadb:`. Druid's JDBC property validation does not route `jdbc:mysql:` to the Connector/J 3.x parser, and `permitMysqlScheme` is not in the default `druid.access.jdbc.allowedProperties`, Adding the option alone is not sufficient.
 - Users who continue supplying Connector/J 2.x do not need to change existing `jdbc:mysql:` or `jdbc:mariadb:` URIs. MySQL Connector/J users are unaffected.
-- Images rebuilt from distribution/docker/Dockerfile.mariadb now install Connector/J 3.5.10 and must follow the 3.x guidance above.
+- Images rebuilt from `distribution/docker/Dockerfile.mariadb` now install Connector/J 3.5.10 and must follow the 3.x guidance above.
 
 [#20036](https://github.com/apache/druid/pull/20036)
 
