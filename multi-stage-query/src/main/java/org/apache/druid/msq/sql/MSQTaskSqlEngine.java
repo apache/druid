@@ -549,7 +549,7 @@ public class MSQTaskSqlEngine implements SqlEngine
     try {
       return QueryKitUtils.getSegmentGranularityFromContext(
           plannerContext.getJsonMapper(),
-          plannerContext.queryContextMap()
+          plannerContext.queryContext().asMap()
       );
     }
     catch (Exception e) {

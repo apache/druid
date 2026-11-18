@@ -34,9 +34,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerHook;
 
 import java.io.Closeable;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -89,21 +87,20 @@ public abstract class AbstractStatement implements Closeable
     this.queryPlus = queryPlus;
     this.authContextKeys = queryPlus.authContextKeys();
 
-    final QueryContext engineContext = sqlToolbox.engine.initContext(queryPlus.context());
-    final Map<String, Object> overrides = new HashMap<>();
+    QueryContext context = sqlToolbox.engine.initContext(queryPlus.context());
+
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
     // so, overwrite any user specified context to avoid exceptions down the line
-    if (engineContext.containsKey(QueryContextParameters.BY_SEGMENT.getName())) {
-      if (engineContext.get(QueryContextParameters.BY_SEGMENT.getName()) != null) {
-        log.warn("'bySegment' results are not supported for SQL queries, ignoring query context parameter");
-      }
-      // A null override removes the key
-      overrides.put(QueryContextParameters.BY_SEGMENT.getName(), null);
+    if (context.has(QueryContextParameters.BY_SEGMENT)) {
+      log.warn("'bySegment' results are not supported for SQL queries, ignoring query context parameter");
+      context = context.override(QueryContextParameters.BY_SEGMENT, null);
     }
-    if (engineContext.get(QueryContextParameters.SQL_QUERY_ID.getName()) == null) {
-      overrides.put(QueryContextParameters.SQL_QUERY_ID.getName(), UUID.randomUUID().toString());
+
+    if (!context.has(QueryContextParameters.SQL_QUERY_ID)) {
+      context = context.override(QueryContextParameters.SQL_QUERY_ID, UUID.randomUUID().toString());
     }
-    this.queryContext = engineContext.override(overrides);
+
+    this.queryContext = context;
   }
 
   public String sqlQueryId()

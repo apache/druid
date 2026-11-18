@@ -458,15 +458,6 @@ public class PlannerContext
   }
 
   /**
-   * Return the query context as an immutable map. The map is a snapshot: it does not reflect values recorded later
-   * with {@link #setQueryContextParameter}. Use that method to modify the context during planning.
-   */
-  public Map<String, Object> queryContextMap()
-  {
-    return queryContext.asMap();
-  }
-
-  /**
    * Return an immutable set of context keys need to be authorization checked, this usually comes from user-provided query context, including SET parameters.
    */
   public Set<String> authContextKeys()
@@ -835,11 +826,7 @@ public class PlannerContext
       context = context.override(QueryContextParameters.SQL_QUERY_ID, sqlQueryId);
     }
 
-    if (plannerConfig != null) {
-      plannerConfig = plannerConfig.withOverrides(context.asMap());
-    } else {
-      plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(context.asMap());
-    }
+    plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(context.asMap());
 
     return context;
   }

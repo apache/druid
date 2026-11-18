@@ -243,19 +243,14 @@ public class QueryContext
     return context.isEmpty();
   }
 
+  /**
+   * Returns the context as an unmodifiable map.
+   * Any attempt to modify the returned map throws {@link UnsupportedOperationException};
+   * to change values, create a new context with {@link #override(Map)} or {@link #override(QueryContextParameter, Object)}.
+   */
   public Map<String, Object> asMap()
   {
     return context;
-  }
-
-  /**
-   * Check if the given string key is set. If the client will then fetch the value,
-   * consider using one of the {@code get<Type>(String key)} methods instead:
-   * they each return {@code null} if the value is not set.
-   */
-  public boolean containsKey(String key)
-  {
-    return context.containsKey(key);
   }
 
   /**
@@ -287,7 +282,7 @@ public class QueryContext
   public <T> T get(final QueryContextParameter<T> parameter)
   {
     final T defaultValue = parameter.getLiteralDefault();
-    if (!containsKey(parameter.getName())) {
+    if (!context.containsKey(parameter.getName())) {
       return defaultValue;
     }
 
@@ -318,7 +313,7 @@ public class QueryContext
    */
   public <T> T getOrDefault(final QueryContextParameter<T> parameter, final T defaultValue)
   {
-    if (!containsKey(parameter.getName())) {
+    if (!context.containsKey(parameter.getName())) {
       return defaultValue;
     }
     // Parse even an explicit null so that non-nullable parameters reject it.
@@ -335,12 +330,7 @@ public class QueryContext
   @Nullable
   public String getString(String key)
   {
-    return getString(key, null);
-  }
-
-  public String getString(String key, String defaultValue)
-  {
-    return QueryContexts.parseString(context, key, defaultValue);
+    return QueryContexts.parseString(context, key, null);
   }
 
   /**

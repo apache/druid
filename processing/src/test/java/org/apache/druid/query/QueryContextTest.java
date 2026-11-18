@@ -232,7 +232,6 @@ public class QueryContextTest
     assertEquals("val", context.get("key"));
     assertEquals("val", context.getString("key"));
     assertNull(context.getString("non-exist"));
-    assertEquals("foo", context.getString("non-exist", "foo"));
 
     assertThrows(BadQueryContextException.class, () -> context.getString("key2"));
   }

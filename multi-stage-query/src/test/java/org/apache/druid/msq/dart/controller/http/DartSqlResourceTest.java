@@ -237,7 +237,7 @@ public class DartSqlResourceTest extends MSQTestBase
           @Override
           public String queryId()
           {
-            return getQueryContext().getString(QueryContextParameters.DART_QUERY_ID.getName());
+            return getQueryContext().get(QueryContextParameters.DART_QUERY_ID);
           }
 
           @Override
