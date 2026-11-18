@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.indexing;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.testing.embedded.StreamIngestResource;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -39,7 +40,12 @@ public class KafkaIndexFaultToleranceTest extends StreamIndexFaultToleranceTest
   @Override
   protected SupervisorSpec createSupervisorSpec(String dataSource, String topic)
   {
-    return createKafkaSupervisor(kafkaResource).withId("supe_" + dataSource).build(dataSource, topic);
+    // Handoff cannot complete while the Coordinator or the Historical is down. Use a completion timeout longer than
+    // a restart, so that the supervisor does not kill publishing tasks that are waiting for handoff.
+    return createKafkaSupervisor(kafkaResource)
+        .withIoConfig(ioConfig -> ioConfig.withCompletionTimeout(Period.seconds(60)))
+        .withId("supe_" + dataSource)
+        .build(dataSource, topic);
   }
 
   @Test
