@@ -91,7 +91,7 @@ Common query context parameters listed in [Query context reference](../querying/
 * A null in the query context, or SET x = NULL, no longer clears a default configured with `druid.query.default.context` or the Broker dynamic configuration. The default applies as if the key were not set. Previously the null reached readers, which used the built-in default. To override a configured default, set an explicit value.
 * `maxSubqueryBytes` is a typed string parameter that accepts auto, disabled or a non-negative number of bytes, as the subquery guardrail does. Invalid values such as `SET maxSubqueryBytes = TRUE` now fail during validation, and numbers such as `1e9` are now accepted.
 
-[#20555][https://github.com/apache/druid/pull/20555/]
+[#20555](https://github.com/apache/druid/pull/20555/)
 
 ### Druid JDBC driver
 
@@ -391,7 +391,7 @@ Druid uses the following logic
 
 [#19709](https://github.com/apache/druid/pull/19709)
 
-### Quality of service filtering for Coordinator
+#### Quality of service filtering for Coordinator
 
 You can now enable QoS filtering for the Coordinator to prevent a burst of slow API requests from exhausting the thread pool and blocking health checks.
 
