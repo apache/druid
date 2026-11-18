@@ -233,7 +233,7 @@ Once everything is ready, then push the branch to `origin`.
 If doing a quarterly release, it will also be necessary to prepare master for the release _after_ the release you are working on, by setting the version to the next release snapshot:
 
 ```bash
-$ mvn versions:set -DnewVersion=38.0.0-SNAPSHOT
+$ mvn -N versions:set-property -Dproperty=revision -DnewVersion=38.0.0-SNAPSHOT -DgenerateBackupPoms=false
 ```
 
 You should also prepare the web-console for the next release, by bumping the [package.json](../web-console/package.json) and [package-lock.json](../web-console/package-lock.json) version:
@@ -375,15 +375,16 @@ Before you tag, [check the `licenses.yaml` versions](#refresh-licensesyaml-versi
 Once the release branch is good for an RC, you can build a new tag with:
 
 ```bash
-$ mvn -Pwebsite-docs -DreleaseVersion=37.0.0 -DdevelopmentVersion=38.0.0-SNAPSHOT -Dtag=druid-37.0.0-rc1 -DpushChanges=false -DskipTests -Darguments=-DskipTests clean release:clean release:prepare
+$ git checkout --detach 37.0.0
+$ mvn -N versions:set-property -Dproperty=revision -DnewVersion=37.0.0 -DgenerateBackupPoms=false
+$ git commit -am "Prepare release druid-37.0.0-rc1"
+$ git tag druid-37.0.0-rc1
 $ git push origin tag druid-37.0.0-rc1
 ```
 
 In this example it will create a tag, `druid-37.0.0-rc1`. If this release passes vote then we can add the final `druid-37.0.0` release tag later. 
-We added `website-docs` profile, because otherwise, website module is not updated with rc version. 
+The Druid version is set only by the `revision` property in the root `pom.xml`, so do not use `mvn versions:set` or `release:prepare`, which would replace `${revision}` in every `pom.xml`.
 
-
-**Retain the release.properties file! You will need it when uploading the Maven artifacts for the final release.**
 
 ### Do a clean clone (so the source distribution does not pick up extra files)
 
@@ -504,8 +505,7 @@ Before opening the release vote thread, we create a staged maven repository cont
 
 You can generate a staged maven repo for the RC with the following steps:	
 
-- Copy the `release.properties` that was generated when the RC tag was created back to your repo root (You'll need to change scm.tag in that file to match the specific rc tag you created if you did not specify `-Dtag` when creating the release). If you still have the working copy that build the `tag` available, you may use that.	
-- Run `mvn release:perform`	
+- From the working copy checked out at the RC tag, run `mvn clean deploy -Papache-release -DskipTests -Daether.connector.basic.parallelPut=false -Dgpg.keyname=<your GPG key fingerprint>`	
 
 This will create a staged Maven repo here (login with Apache credentials): https://repository.apache.org/#stagingRepositories	
 
