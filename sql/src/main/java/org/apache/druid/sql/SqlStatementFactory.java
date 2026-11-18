@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql;
 
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 
 import javax.annotation.Nullable;
@@ -62,7 +63,7 @@ public class SqlStatementFactory
     userContext.putAll(headers);
     return new HttpStatement(
         lifecycleToolbox,
-        sqlQueryPlus.withContext(sqlQueryPlus.context(), userContext),
+        sqlQueryPlus.withContext(sqlQueryPlus.context(), QueryContext.of(userContext)),
         req
     );
   }

@@ -125,25 +125,6 @@ public class PrioritizedExecutorServiceTest
    * @throws Exception
    */
   @Test
-  public void testPrioritizedTasksRetainRequestHeaders() throws Exception
-  {
-    final RequestHeaderContextConfig headers = new RequestHeaderContextConfig(Map.of("X-Trace", "traceId"));
-    final ListenableFuture<String> result;
-    try (RequestHeaders.Scope ignored = RequestHeaders.open(headers, Map.of("traceId", "priority-trace"))) {
-      result = exec.submit(new AbstractPrioritizedCallable<String>(5)
-      {
-        @Override
-        public String call()
-        {
-          return RequestHeaders.current().get("X-Trace");
-        }
-      });
-    }
-    Assertions.assertEquals("priority-trace", result.get(10, TimeUnit.SECONDS));
-    Assertions.assertTrue(RequestHeaders.current().isEmpty());
-  }
-
-  @Test
   public void testSubmit() throws Exception
   {
     final ConcurrentLinkedQueue<Integer> order = new ConcurrentLinkedQueue<>();
@@ -160,18 +141,25 @@ public class PrioritizedExecutorServiceTest
         }
     );
 
-    exec.submit(
-        new AbstractPrioritizedCallable<Void>(-1)
-        {
-          @Override
-          public Void call()
+    final ListenableFuture<Void> traced;
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(
+        new RequestHeaderContextConfig(Map.of("X-Trace", "traceId")),
+        Map.of("traceId", "priority-trace")
+    )) {
+      traced = exec.submit(
+          new AbstractPrioritizedCallable<Void>(-1)
           {
-            order.add(-1);
-            finishLatch.countDown();
-            return null;
+            @Override
+            public Void call()
+            {
+              Assertions.assertEquals("priority-trace", RequestHeaders.current().get("X-Trace"));
+              order.add(-1);
+              finishLatch.countDown();
+              return null;
+            }
           }
-        }
-    );
+      );
+    }
     exec.submit(
         new AbstractPrioritizedCallable<Void>(0)
         {
@@ -198,6 +186,7 @@ public class PrioritizedExecutorServiceTest
     );
 
     latch.countDown();
+    traced.get(10, TimeUnit.SECONDS);
     finishLatch.await();
 
     Assertions.assertTrue(order.size() == 3);

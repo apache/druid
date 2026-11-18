@@ -200,8 +200,8 @@ public class SqlStatementTest
   public void testCapturedHeadersInHttpContext()
   {
     final SqlQueryPlus supplied = SqlQueryPlus.builder("SELECT 1")
-                                            .systemDefaultContext(Map.of("defaultOnly", "default"))
-                                            .queryContext(Map.of("traceId", "body", "unrelated", "preserved"))
+                                            .systemDefaultContext(QueryContext.of(Map.of("defaultOnly", "default")))
+                                            .queryContext(QueryContext.of(Map.of("traceId", "body", "unrelated", "preserved")))
                                             .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
                                             .build();
     final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);

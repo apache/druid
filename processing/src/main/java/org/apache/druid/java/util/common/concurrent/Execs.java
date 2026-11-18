@@ -70,6 +70,9 @@ public class Execs
 
   public static ExecutorService multiThreaded(int threads, @NotNull String nameFormat, @Nullable Integer priority)
   {
+    if (!RequestHeaders.isEnabled()) {
+      return Executors.newFixedThreadPool(threads, makeThreadFactory(nameFormat, priority));
+    }
     return new ThreadPoolExecutor(
         threads,
         threads,
@@ -94,6 +97,9 @@ public class Execs
 
   public static ScheduledExecutorService scheduledSingleThreaded(@NotNull String nameFormat, @Nullable Integer priority)
   {
+    if (!RequestHeaders.isEnabled()) {
+      return Executors.newSingleThreadScheduledExecutor(makeThreadFactory(nameFormat, priority));
+    }
     return RequestHeaders.scheduled(1, makeThreadFactory(nameFormat, priority));
   }
 
@@ -163,6 +169,33 @@ public class Execs
     } else {
       queue = new SynchronousQueue<>();
     }
+    final RejectedExecutionHandler handler = new RejectedExecutionHandler()
+    {
+      @Override
+      public void rejectedExecution(Runnable r, ThreadPoolExecutor executor)
+      {
+        if (executor.isShutdown()) {
+          throw new RejectedExecutionException("Executor is shutdown, rejecting task");
+        }
+        try {
+          executor.getQueue().put(r);
+        }
+        catch (InterruptedException e) {
+          throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
+        }
+      }
+    };
+    if (!RequestHeaders.isEnabled()) {
+      return new ThreadPoolExecutor(
+          nThreads,
+          nThreads,
+          0L,
+          TimeUnit.MILLISECONDS,
+          queue,
+          makeThreadFactory(nameFormat, priority),
+          handler
+      );
+    }
     return new ThreadPoolExecutor(
         nThreads,
         nThreads,
@@ -170,22 +203,7 @@ public class Execs
         TimeUnit.MILLISECONDS,
         queue,
         makeThreadFactory(nameFormat, priority),
-        new RejectedExecutionHandler()
-        {
-          @Override
-          public void rejectedExecution(Runnable r, ThreadPoolExecutor executor)
-          {
-            if (executor.isShutdown()) {
-              throw new RejectedExecutionException("Executor is shutdown, rejecting task");
-            }
-            try {
-              executor.getQueue().put(r);
-            }
-            catch (InterruptedException e) {
-              throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
-            }
-          }
-        }
+        handler
     )
     {
       @Override

@@ -23,6 +23,7 @@ import com.sun.net.httpserver.HttpServer;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.data.input.s3.S3InputSourceConfig;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.query.context.RequestHeaderContextConfig;
 import org.apache.druid.query.context.RequestHeaders;
 import org.easymock.Capture;
@@ -67,6 +68,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -114,6 +116,18 @@ public class ServerSideEncryptingAmazonS3Test
   @Test
   public void testSignedSyncAndAsyncRequestsRetainTraceAcrossRetries() throws Exception
   {
+    for (final boolean propagationEnabled : new boolean[]{true, false}) {
+      checkSignedRequests(propagationEnabled);
+    }
+  }
+
+  private void checkSignedRequests(final boolean propagationEnabled) throws Exception
+  {
+    final boolean previous = RequestHeaders.isEnabled();
+    final Properties properties = new Properties();
+    if (!propagationEnabled) {
+      properties.setProperty("druid.request.headers.headerToContextKey", "{}");
+    }
     final List<String> received = Collections.synchronizedList(new ArrayList<>());
     final List<String> signatures = Collections.synchronizedList(new ArrayList<>());
     final AtomicInteger attempts = new AtomicInteger();
@@ -142,6 +156,8 @@ public class ServerSideEncryptingAmazonS3Test
                                             .forcePathStyle(true)
                                             .overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()))
                                             .build()) {
+      new StartupInjectorBuilder().withProperties(properties).forTests().build();
+      Assertions.assertEquals(propagationEnabled, RequestHeaders.isEnabled());
       try (RequestHeaders.Scope ignored = RequestHeaders.open(headers, Map.of("traceId", "sync-trace"))) {
         sync.headObject(request -> request.bucket("bucket").key("key"));
       }
@@ -156,15 +172,26 @@ public class ServerSideEncryptingAmazonS3Test
       }
       sync.headObject(request -> request.bucket("bucket").key("key"));
       Assertions.assertEquals(5, received.size());
-      Assertions.assertEquals(List.of("sync-trace", "sync-trace", "async-trace", "explicit"), received.subList(0, 4));
+      if (RequestHeaders.isEnabled()) {
+        Assertions.assertEquals(List.of("sync-trace", "sync-trace", "async-trace"), received.subList(0, 3));
+      } else {
+        Assertions.assertEquals(Collections.nCopies(3, null), received.subList(0, 3));
+      }
+      Assertions.assertEquals("explicit", received.get(3));
       Assertions.assertNull(received.get(4));
       for (int i = 0; i < 4; i++) {
-        Assertions.assertTrue(signatures.get(i).contains("x-druid-trace-id"));
+        Assertions.assertEquals(RequestHeaders.isEnabled() || i == 3, signatures.get(i).contains("x-druid-trace-id"));
       }
       Assertions.assertTrue(RequestHeaders.current().isEmpty());
     }
     finally {
       server.stop(0);
+      if (previous) {
+        properties.remove("druid.request.headers.headerToContextKey");
+      } else {
+        properties.setProperty("druid.request.headers.headerToContextKey", "{}");
+      }
+      new StartupInjectorBuilder().withProperties(properties).forTests().build();
     }
   }
 

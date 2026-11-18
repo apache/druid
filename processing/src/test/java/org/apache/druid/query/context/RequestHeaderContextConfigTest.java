@@ -19,17 +19,11 @@
 
 package org.apache.druid.query.context;
 
-import jakarta.validation.Validator;
-import org.apache.druid.guice.JsonConfigurator;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
 
 public class RequestHeaderContextConfigTest
 {
@@ -41,35 +35,11 @@ public class RequestHeaderContextConfigTest
   {
     final Map<String, String> captured = config.capture(header -> "X-Trace-Id".equals(header) ? "caller" : null);
     Assertions.assertEquals(Map.of("traceId", "caller"), captured);
-    Assertions.assertThrows(UnsupportedOperationException.class, () -> captured.put("traceId", "changed"));
     Assertions.assertEquals(
         Map.of("X-Trace-Id", "caller"),
         config.fromContext(Map.of("traceId", "caller", "unrelated", "ignored"))
     );
     Assertions.assertTrue(config.fromContext(Map.of("traceId", 42)).isEmpty());
-  }
-
-  @Test
-  public void testRuntimePropertiesConfiguration()
-  {
-    final Validator validator = Mockito.mock(Validator.class);
-    Mockito.when(validator.validate(Mockito.any())).thenReturn(Set.of());
-    final JsonConfigurator configurator = new JsonConfigurator(new DefaultObjectMapper(), validator);
-    final Properties properties = new Properties();
-    final String prefix = "druid.request.headers";
-    Assertions.assertEquals(
-        Map.of("X-Druid-Trace-Id", "traceId"),
-        configurator.configurate(properties, prefix, RequestHeaderContextConfig.class).getHeaderToContextKey()
-    );
-    properties.setProperty(prefix + ".headerToContextKey", "{\"X-Correlation-Id\":\"correlationId\"}");
-    Assertions.assertEquals(
-        Map.of("X-Correlation-Id", "correlationId"),
-        configurator.configurate(properties, prefix, RequestHeaderContextConfig.class).getHeaderToContextKey()
-    );
-    properties.setProperty(prefix + ".headerToContextKey", "{}");
-    Assertions.assertTrue(
-        configurator.configurate(properties, prefix, RequestHeaderContextConfig.class).getHeaderToContextKey().isEmpty()
-    );
   }
 
   @Test

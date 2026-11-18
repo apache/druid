@@ -20,6 +20,8 @@
 package org.apache.druid.query.context;
 
 import com.google.common.util.concurrent.ForwardingFuture;
+import com.google.inject.Inject;
+import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.java.util.common.concurrent.DecoratedExecutorService;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -30,6 +32,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -42,11 +45,28 @@ import java.util.concurrent.TimeUnit;
 /** Immutable operation headers, restored on worker threads and cleared when the operation finishes. */
 public final class RequestHeaders
 {
+  // Defaults support clients that do not use Druid's startup injector.
+  private static volatile boolean enabled = true;
   private static final ThreadLocal<Snapshot> CURRENT = new ThreadLocal<>();
   private static final Scope NOOP = () -> {};
 
   private RequestHeaders()
   {
+  }
+
+  /** Initializes the process-wide policy from shared startup properties before service executors are provisioned. */
+  @Inject
+  private static void initialize(final Properties properties, final JsonConfigurator configurator)
+  {
+    enabled = !configurator.configurate(properties, "druid.request.headers", RequestHeaderContextConfig.class)
+                           .getHeaderToContextKey()
+                           .isEmpty();
+  }
+
+  /** Whether configured request header propagation is enabled for this process. */
+  public static boolean isEnabled()
+  {
+    return enabled;
   }
 
   public static Map<String, String> current()
@@ -63,6 +83,9 @@ public final class RequestHeaders
 
   public static Scope open(final RequestHeaderContextConfig config, @Nullable final Map<String, Object> context)
   {
+    if (!enabled) {
+      return NOOP;
+    }
     final Map<String, String> headers = config.fromContext(context == null ? Map.of() : context);
     return restore(
         headers.isEmpty() ? null : new Snapshot(Map.copyOf(headers), Map.copyOf(config.capture(headers::get)))
@@ -91,6 +114,9 @@ public final class RequestHeaders
   /** Bind callbacks at registration, before an asynchronous completion submits them on another thread. */
   public static Executor bind(final Executor executor)
   {
+    if (!enabled) {
+      return executor;
+    }
     final Snapshot snapshot = CURRENT.get();
     return command -> executor.execute(wrap(command, snapshot));
   }
@@ -103,6 +129,9 @@ public final class RequestHeaders
   private static Runnable wrap(final Runnable runnable, @Nullable final Snapshot snapshot)
   {
     Objects.requireNonNull(runnable, "runnable");
+    if (!enabled) {
+      return runnable;
+    }
     final Runnable wrapped = () -> {
       try (Scope ignored = restore(snapshot)) {
         runnable.run();
@@ -132,6 +161,9 @@ public final class RequestHeaders
   public static <T> Callable<T> wrap(final Callable<T> callable)
   {
     Objects.requireNonNull(callable, "callable");
+    if (!enabled) {
+      return callable;
+    }
     final Snapshot snapshot = CURRENT.get();
     return () -> {
       try (Scope ignored = restore(snapshot)) {
@@ -143,6 +175,9 @@ public final class RequestHeaders
   /** Capture at submission, including empty context, so a reused worker cannot retain another operation's headers. */
   public static ExecutorService wrap(final ExecutorService executor)
   {
+    if (!enabled) {
+      return executor;
+    }
     return new DecoratedExecutorService(executor, new DecoratedExecutorService.Decorator()
     {
       @Override
@@ -161,12 +196,15 @@ public final class RequestHeaders
 
   public static ScheduledThreadPoolExecutor scheduled(final int threads, final ThreadFactory threadFactory)
   {
-    return new HeaderScheduler(threads, threadFactory);
+    return enabled ? new HeaderScheduler(threads, threadFactory) : new ScheduledThreadPoolExecutor(threads, threadFactory);
   }
 
   /** Sequences execute lazily, potentially after the servlet or task submission scope has closed. */
   public static <T> Sequence<T> wrap(final Sequence<T> sequence)
   {
+    if (!enabled) {
+      return sequence;
+    }
     final Snapshot snapshot = CURRENT.get();
     return new Sequence<>()
     {

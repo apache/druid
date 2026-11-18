@@ -36,7 +36,7 @@ class S3RequestHeaderInterceptor implements ExecutionInterceptor
   @Override
   public void beforeExecution(final Context.BeforeExecution context, final ExecutionAttributes attributes)
   {
-    if (attributes.getAttribute(HEADERS) == null) {
+    if (RequestHeaders.isEnabled() && attributes.getAttribute(HEADERS) == null) {
       attributes.putAttribute(HEADERS, RequestHeaders.current());
     }
   }
@@ -45,7 +45,7 @@ class S3RequestHeaderInterceptor implements ExecutionInterceptor
   public SdkHttpRequest modifyHttpRequest(final Context.ModifyHttpRequest context, final ExecutionAttributes attributes)
   {
     final Map<String, String> headers = attributes.getAttribute(HEADERS);
-    if (headers == null || headers.isEmpty()) {
+    if (!RequestHeaders.isEnabled() || headers == null || headers.isEmpty()) {
       return context.httpRequest();
     }
     final SdkHttpRequest.Builder request = context.httpRequest().toBuilder();

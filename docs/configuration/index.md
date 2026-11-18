@@ -358,7 +358,7 @@ The `switching` request logger routes native query request logs to one request l
 ### Request header propagation
 
 Druid copies configured HTTP headers into native query, SQL query, and HTTP-submitted task context after authentication.
-Configure the same mapping on participating services, including task processes:
+Configure the same mapping in `common.runtime.properties` for participating services, including task processes:
 
 ```properties
 druid.request.headers.headerToContextKey={"X-Correlation-Id":"correlationId"}
@@ -366,7 +366,9 @@ druid.request.headers.headerToContextKey={"X-Correlation-Id":"correlationId"}
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.headers.headerToContextKey`|JSON object mapping HTTP header names to query and task context keys. Header names are case-insensitive. Custom mappings replace the default; `{}` disables propagation.|`{"X-Druid-Trace-Id":"traceId"}`|
+|`druid.request.headers.headerToContextKey`|JSON object mapping HTTP header names to query and task context keys. Header names are case-insensitive. Custom mappings replace the default; `{}` disables configured header capture and propagation.|`{"X-Druid-Trace-Id":"traceId"}`|
+
+Restart services and task processes after changing the mapping.
 
 A captured header replaces the matching context value. Missing, blank, or invalid header values leave existing context
 values unchanged. Query-context authorization applies to captured query keys.

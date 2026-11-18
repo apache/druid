@@ -74,6 +74,9 @@ public class RequestHeaderContextConfig
 
   public Map<String, String> capture(final Function<String, String> headerGetter)
   {
+    if (!RequestHeaders.isEnabled()) {
+      return Map.of();
+    }
     final Map<String, String> values = new HashMap<>();
     headerToContextKey.forEach((header, key) -> {
       final String value = headerGetter.apply(header);
@@ -87,6 +90,9 @@ public class RequestHeaderContextConfig
   /** Reconstruct only configured headers from serialized query or task context. */
   public Map<String, String> fromContext(final Map<String, Object> context)
   {
+    if (!RequestHeaders.isEnabled()) {
+      return Map.of();
+    }
     final Map<String, String> headers = new HashMap<>();
     headerToContextKey.forEach((header, key) -> {
       final Object value = context.get(key);

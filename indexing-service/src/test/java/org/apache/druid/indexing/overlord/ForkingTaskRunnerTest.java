@@ -758,11 +758,13 @@ public class ForkingTaskRunnerTest
   }
 
   @Test
-  public void testTaskCommandIncludesServerPriorityIfConfigured() throws Exception
+  public void testTaskCommandIncludesServerPriorityAndSharedProperties() throws Exception
   {
     final TaskConfig taskConfig = makeDefaultTaskConfigBuilder().build();
     final WorkerConfig workerConfig = new WorkerConfig();
     final ObjectMapper mapper = new DefaultObjectMapper();
+    final Properties properties = new Properties();
+    properties.setProperty("druid.request.headers.headerToContextKey", "{}");
     final Task task = new TestSeekableStreamIndexTask(
         "id2",
         null,
@@ -788,7 +790,7 @@ public class ForkingTaskRunnerTest
         new ForkingTaskRunnerConfig(),
         taskConfig,
         workerConfig,
-        new Properties(),
+        properties,
         new NoopTaskLogs(),
         mapper,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
@@ -826,6 +828,7 @@ public class ForkingTaskRunnerTest
     Assertions.assertNotNull(observedCommandRef);
     final List<String> observedCommand = observedCommandRef.get();
     Assertions.assertTrue(observedCommand.contains("-Ddruid.server.priority=2"));
+    Assertions.assertTrue(observedCommand.contains("-Ddruid.request.headers.headerToContextKey={}"));
     assertEquals(TaskState.SUCCESS, status.getStatusCode());
   }
 

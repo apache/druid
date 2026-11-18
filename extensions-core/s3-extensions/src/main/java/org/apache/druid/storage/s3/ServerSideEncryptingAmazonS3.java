@@ -306,10 +306,12 @@ public class ServerSideEncryptingAmazonS3
         }
       }
       final Map<String, String> headers = RequestHeaders.current();
-      requestBuilder.overrideConfiguration(overrides -> {
-        headers.forEach(overrides::putHeader);
-        overrides.putExecutionAttribute(S3RequestHeaderInterceptor.HEADERS, headers);
-      });
+      if (!headers.isEmpty()) {
+        requestBuilder.overrideConfiguration(overrides -> {
+          headers.forEach(overrides::putHeader);
+          overrides.putExecutionAttribute(S3RequestHeaderInterceptor.HEADERS, headers);
+        });
+      }
       PutObjectRequest decoratedRequest = serverSideEncryption.decorate(requestBuilder).build();
 
       UploadFileRequest uploadFileRequest = UploadFileRequest.builder()
@@ -441,8 +443,10 @@ public class ServerSideEncryptingAmazonS3
 
     clientBuilder.credentialsProvider(credentialsProvider);
     asyncClientBuilder.credentialsProvider(credentialsProvider);
-    clientBuilder.overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()));
-    asyncClientBuilder.overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()));
+    if (RequestHeaders.isEnabled()) {
+      clientBuilder.overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()));
+      asyncClientBuilder.overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()));
+    }
 
     // Build and wrap in ServerSideEncryptingAmazonS3
     return ServerSideEncryptingAmazonS3.builder()
@@ -528,7 +532,9 @@ public class ServerSideEncryptingAmazonS3
       stsBuilder.overrideConfiguration(retryOverride(awsClientConfig));
     }
 
-    stsBuilder.overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()));
+    if (RequestHeaders.isEnabled()) {
+      stsBuilder.overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()));
+    }
 
     AssumeRoleRequest.Builder assumeRoleRequestBuilder =
         AssumeRoleRequest.builder().roleArn(assumeRoleArn).roleSessionName(roleSessionName).durationSeconds(3600);

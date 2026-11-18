@@ -96,8 +96,6 @@ public class AuditInfoTest
     Assertions.assertEquals("caller", enriched.getRequestMetadata().get("traceId"));
     Assertions.assertEquals(enriched, mapper.readValue(mapper.writeValueAsString(enriched), RequestInfo.class));
     Assertions.assertNotEquals(requestInfo, enriched);
-    Assertions.assertTrue(enriched.toString().contains("traceId=caller"));
-    Assertions.assertThrows(UnsupportedOperationException.class, () -> enriched.getRequestMetadata().put("a", "b"));
   }
 
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.context;
 
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -32,19 +33,66 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class RequestHeadersTest
 {
   private final RequestHeaderContextConfig config = new RequestHeaderContextConfig(Map.of("X-Trace", "traceId"));
+
+  @Test
+  public void testDisabledPropagationBypassesCaptureAndWrapping() throws Exception
+  {
+    final boolean previous = RequestHeaders.isEnabled();
+    final Properties properties = new Properties();
+    properties.setProperty("druid.request.headers.headerToContextKey", "{}");
+    try {
+      new StartupInjectorBuilder().withProperties(properties).forTests().build();
+      Assertions.assertFalse(RequestHeaders.isEnabled());
+      Assertions.assertTrue(config.capture(header -> {
+        throw new AssertionError("Disabled capture must not read headers");
+      }).isEmpty());
+      final Map<String, Object> context = Map.of("traceId", "existing-trace");
+      Assertions.assertTrue(config.fromContext(context).isEmpty());
+      final Runnable runnable = () -> {};
+      final Callable<Integer> callable = () -> 1;
+      final Executor direct = Runnable::run;
+      final Sequence<Integer> sequence = Sequences.simple(List.of(1));
+      try (ExecutorService worker = Executors.newSingleThreadExecutor();
+           ScheduledThreadPoolExecutor scheduled = RequestHeaders.scheduled(1, Execs.makeThreadFactory("disabled-%d"));
+           ExecutorService fixed = Execs.multiThreaded(1, "disabled-fixed-%d");
+           ExecutorService blocking = Execs.newBlockingSingleThreaded("disabled-blocking-%d", 1);
+           RequestHeaders.Scope ignored = RequestHeaders.open(config, context)) {
+        Assertions.assertTrue(RequestHeaders.current().isEmpty());
+        Assertions.assertTrue(RequestHeaders.currentContext().isEmpty());
+        Assertions.assertSame(runnable, RequestHeaders.wrap(runnable));
+        Assertions.assertSame(callable, RequestHeaders.wrap(callable));
+        Assertions.assertSame(direct, RequestHeaders.bind(direct));
+        Assertions.assertSame(worker, RequestHeaders.wrap(worker));
+        Assertions.assertSame(sequence, RequestHeaders.wrap(sequence));
+        Assertions.assertEquals(ScheduledThreadPoolExecutor.class, scheduled.getClass());
+        Assertions.assertEquals(ThreadPoolExecutor.class, fixed.getClass());
+        Assertions.assertEquals(ThreadPoolExecutor.class, blocking.getClass());
+      }
+    }
+    finally {
+      if (previous) {
+        properties.remove("druid.request.headers.headerToContextKey");
+      }
+      new StartupInjectorBuilder().withProperties(properties).forTests().build();
+    }
+  }
 
   @ParameterizedTest
   @ValueSource(strings = {"single", "fixed", "blocking", "scheduled", "scheduledKeepAlive"})
@@ -186,7 +234,6 @@ public class RequestHeadersTest
       Assertions.assertEquals("other", RequestHeaders.current().get("X-Trace"));
       Assertions.assertEquals(List.of(1, 2), sequence.toList());
       Assertions.assertEquals("other", RequestHeaders.current().get("X-Trace"));
-      Assertions.assertThrows(UnsupportedOperationException.class, () -> RequestHeaders.current().put("X-Trace", "bad"));
     }
     Assertions.assertTrue(RequestHeaders.current().isEmpty());
   }

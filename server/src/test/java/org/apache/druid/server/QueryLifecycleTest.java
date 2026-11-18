@@ -177,7 +177,7 @@ public class QueryLifecycleTest
   @Test
   public void testInitializeInheritsOperationMetadataWithoutReplacingQueryContext()
   {
-    EasyMock.expect(queryConfig.getContext()).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).times(2);
     replayAll();
 
@@ -198,7 +198,7 @@ public class QueryLifecycleTest
   @Test
   public void testInheritedHeadersRequireQueryContextAuthorization()
   {
-    EasyMock.expect(queryConfig.getContext()).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ)).andReturn(Access.OK);
