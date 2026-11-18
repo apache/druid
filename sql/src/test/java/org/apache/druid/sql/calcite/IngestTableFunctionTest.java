@@ -35,6 +35,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -245,6 +246,149 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .verify();
   }
 
+  private String toJson(final Object value)
+  {
+    try {
+      return queryFramework().queryJsonMapper().writeValueAsString(value);
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * EXTERN with the input source given by the {@code inputSource} SQL expression, and the
+   * other arguments given as literals.
+   */
+  private String externSqlWithInputSource(final String inputSource, final ExternalDataSource externalDataSource)
+  {
+    return StringUtils.format(
+        "TABLE(extern(%s, %s, %s))",
+        inputSource,
+        Calcites.escapeStringLiteral(toJson(externalDataSource.getInputFormat())),
+        Calcites.escapeStringLiteral(toJson(externalDataSource.getSignature()))
+    );
+  }
+
+  /**
+   * EXTERN with the input source given as a bound parameter.
+   */
+  @Test
+  public void testHttpExternWithParameter()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSqlWithInputSource("?", httpDataSource))
+        .parameters(Collections.singletonList(new SqlParameter(SqlType.VARCHAR, toJson(httpDataSource.getInputSource()))))
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", httpDataSource.getSignature())
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(httpDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("httpExtern")
+        .verify();
+  }
+
+  /**
+   * A CAST of a bound parameter is accepted, since the value is not a literal in the SQL text.
+   */
+  @Test
+  public void testHttpExternWithCastParameter()
+  {
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME",
+            externSqlWithInputSource("CAST(? AS VARCHAR)", httpDataSource)
+        )
+        .parameters(Collections.singletonList(new SqlParameter(SqlType.VARCHAR, toJson(httpDataSource.getInputSource()))))
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", httpDataSource.getSignature())
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(httpDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("httpExtern")
+        .verify();
+  }
+
+  @Test
+  public void testHttpExternCastLiteralRejected()
+  {
+    final String inputSource = StringUtils.format(
+        "CAST(%s AS VARCHAR)",
+        Calcites.escapeStringLiteral(toJson(httpDataSource.getInputSource()))
+    );
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSqlWithInputSource(inputSource, httpDataSource))
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageContains(
+                "Argument [inputSource] of table function [EXTERN] must be a literal, not an expression. Remove the CAST."
+            )
+        )
+        .verify();
+  }
+
+  @Test
+  public void testHttpExternByNameCastLiteralRejected()
+  {
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO dst SELECT *\n" +
+            "FROM TABLE(extern(inputSource => %s,\n" +
+            "                  inputFormat => CAST(%s AS VARCHAR),\n" +
+            "                  signature => %s))\n" +
+            "PARTITIONED BY ALL TIME",
+            Calcites.escapeStringLiteral(toJson(httpDataSource.getInputSource())),
+            Calcites.escapeStringLiteral(toJson(httpDataSource.getInputFormat())),
+            Calcites.escapeStringLiteral(toJson(httpDataSource.getSignature()))
+        )
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageContains(
+                "Argument [inputFormat] of table function [EXTERN] must be a literal, not an expression. Remove the CAST."
+            )
+        )
+        .verify();
+  }
+
+  /**
+   * Expressions other than a CAST were never accepted.
+   */
+  @Test
+  public void testHttpExternExpressionRejected()
+  {
+    final String json = toJson(httpDataSource.getInputSource());
+    final String inputSource = StringUtils.format(
+        "%s || %s",
+        Calcites.escapeStringLiteral(json.substring(0, 10)),
+        Calcites.escapeStringLiteral(json.substring(10))
+    );
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSqlWithInputSource(inputSource, httpDataSource))
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(e -> {
+          Assertions.assertInstanceOf(DruidException.class, e);
+          Assertions.assertTrue(
+              e.getMessage().contains("All arguments of call to macro EXTERN should be literal"),
+              e.getMessage()
+          );
+        })
+        .verify();
+  }
+
   /**
    * HTTP with parameters by name. Logical plan and native query are identical
    * to the basic EXTERN.
@@ -408,6 +552,163 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .build()
          )
         .expectLogicalPlanFrom("httpExtern")
+        .verify();
+  }
+
+  @Test
+  public void testHttpFnWithCastParameter()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+             "                password => 'secret',\n" +
+             "                uris => ARRAY['http://foo.com/bar.csv'],\n" +
+             "                format => CAST(? AS VARCHAR)))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .parameters(Collections.singletonList(new SqlParameter(SqlType.VARCHAR, "csv")))
+        .expectTarget("dst", httpDataSource.getSignature())
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(httpDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("httpExtern")
+        .verify();
+  }
+
+  @Test
+  public void testHttpFnWithCastArrayParameter()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+             "                password => 'secret',\n" +
+             "                uris => CAST(? AS VARCHAR ARRAY),\n" +
+             "                format => 'csv'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .parameters(Collections.singletonList(new SqlParameter(SqlType.ARRAY, new String[] {"http://foo.com/bar.csv"})))
+        .expectTarget("dst", httpDataSource.getSignature())
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(httpDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("httpExtern")
+        .verify();
+  }
+
+  @Test
+  public void testHttpFnCastLiteralRejected()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+             "                password => CAST('secret' AS VARCHAR),\n" +
+             "                uris => ARRAY['http://foo.com/bar.csv'],\n" +
+             "                format => 'csv'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageContains(
+                "Argument [password] of table function [http] must be a literal, not an expression. Remove the CAST."
+            )
+        )
+        .verify();
+  }
+
+  /**
+   * The CASTs that validation adds to coerce argument types are not rejected.
+   */
+  @Test
+  public void testHttpFnWithImplicitCast()
+  {
+    final ExternalDataSource implicitCastDataSource = new ExternalDataSource(
+        new HttpInputSource(
+            Collections.singletonList(toURI("http://foo.com/bar.csv")),
+            "123",
+            new DefaultPasswordProvider("secret"),
+            SystemFields.none(),
+            null,
+            new HttpInputSourceConfig(null, null)
+        ),
+        new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null),
+        httpDataSource.getSignature()
+    );
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 123,\n" +
+             "                password => 'secret',\n" +
+             "                uris => ARRAY['http://foo.com/bar.csv'],\n" +
+             "                format => 'csv'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", implicitCastDataSource.getSignature())
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(implicitCastDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
+  @Test
+  public void testHttpFnInfixCastLiteralRejected()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+             "                password => 'secret',\n" +
+             "                uris => ARRAY['http://foo.com/bar.csv'],\n" +
+             "                format => 'csv'::VARCHAR))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageContains(
+                "Argument [format] of table function [http] must be a literal, not an expression. Remove the CAST."
+            )
+        )
+        .verify();
+  }
+
+  @Test
+  public void testHttpFnArrayElementCastLiteralRejected()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+             "                password => 'secret',\n" +
+             "                uris => ARRAY[CAST('http://foo.com/bar.csv' AS VARCHAR)],\n" +
+             "                format => 'csv'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageContains(
+                "Argument [uris] of table function [http] must be a literal, not an expression. Remove the CAST."
+            )
+        )
         .verify();
   }
 
@@ -788,6 +1089,94 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .build()
          )
         .expectLogicalPlanFrom("localExtern")
+        .verify();
+  }
+
+  @Test
+  public void testInlineFnWithCastParameter()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(inline(data => ARRAY['a,b,1', 'c,d,2'],\n" +
+             "                  format => CAST(? AS VARCHAR)))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .parameters(Collections.singletonList(new SqlParameter(SqlType.VARCHAR, "csv")))
+        .expectTarget("dst", externalDataSource.getSignature())
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("insertFromExternal")
+        .verify();
+  }
+
+  @Test
+  public void testInlineFnCastLiteralRejected()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(inline(data => ARRAY['a,b,1', 'c,d,2'],\n" +
+             "                  format => CAST('csv' AS VARCHAR)))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageContains(
+                "Argument [format] of table function [inline] must be a literal, not an expression. Remove the CAST."
+            )
+        )
+        .verify();
+  }
+
+  @Test
+  public void testLocalFilesFnWithCastParameter()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(localfiles(files => ARRAY['/tmp/foo.csv', '/tmp/bar.csv'],\n" +
+             "                  format => CAST(? AS VARCHAR)))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .parameters(Collections.singletonList(new SqlParameter(SqlType.VARCHAR, "csv")))
+        .expectTarget("dst", localDataSource.getSignature())
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(localDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("localExtern")
+        .verify();
+  }
+
+  @Test
+  public void testLocalFilesFnCastLiteralRejected()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(localfiles(files => ARRAY['/tmp/foo.csv', '/tmp/bar.csv'],\n" +
+             "                  format => CAST('csv' AS VARCHAR)))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageContains(
+                "Argument [format] of table function [localfiles] must be a literal, not an expression. Remove the CAST."
+            )
+        )
         .verify();
   }
 
