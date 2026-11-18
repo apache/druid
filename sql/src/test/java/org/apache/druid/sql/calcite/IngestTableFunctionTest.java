@@ -672,6 +672,48 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .verify();
   }
 
+  /**
+   * Array elements of different lengths are coerced to a common VARCHAR(n) type, which adds a CAST to each element.
+   * Those CASTs are not rejected.
+   */
+  @Test
+  public void testHttpFnWithUrisOfDifferentLengths()
+  {
+    final ExternalDataSource differentLengthDataSource = new ExternalDataSource(
+        new HttpInputSource(
+            Arrays.asList(toURI("http://example.com/foo.csv"), toURI("http://example.com/a-longer-name.csv")),
+            "bob",
+            new DefaultPasswordProvider("secret"),
+            SystemFields.none(),
+            null,
+            new HttpInputSourceConfig(null, null)
+        ),
+        httpDataSource.getInputFormat(),
+        httpDataSource.getSignature()
+    );
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+             "                password => 'secret',\n" +
+             "                uris => ARRAY['http://example.com/foo.csv', 'http://example.com/a-longer-name.csv'],\n" +
+             "                format => 'csv'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", differentLengthDataSource.getSignature())
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(differentLengthDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
   @Test
   public void testHttpFnInfixCastLiteralRejected()
   {
@@ -700,6 +742,26 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "FROM TABLE(http(userName => 'bob',\n" +
              "                password => 'secret',\n" +
              "                uris => ARRAY[CAST('http://foo.com/bar.csv' AS VARCHAR)],\n" +
+             "                format => 'csv'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageContains(
+                "Argument [uris] of table function [http] must be a literal, not an expression. Remove the CAST."
+            )
+        )
+        .verify();
+  }
+
+  @Test
+  public void testHttpFnDifferentLengthArrayElementCastLiteralRejected()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+             "                password => 'secret',\n" +
+             "                uris => ARRAY['http://foo.com/a-longer-name.csv', CAST('http://foo.com/bar.csv' AS VARCHAR)],\n" +
              "                format => 'csv'))\n" +
              "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
              "PARTITIONED BY ALL TIME")
