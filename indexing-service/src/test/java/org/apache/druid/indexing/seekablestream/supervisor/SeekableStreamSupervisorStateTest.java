@@ -442,6 +442,57 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void testDiscoveredPublishingTasksWithDifferentStartExclusivityStayInSeparateGroups()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    final Map<String, String> startingPartitions = Map.of(SHARD_ID, "3");
+
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(
+        0,
+        "inclusive",
+        startingPartitions,
+        Set.of(),
+        "inclusive-sequence"
+    );
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(
+        0,
+        "inclusive-replica",
+        startingPartitions,
+        Set.of(),
+        "inclusive-sequence"
+    );
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(
+        0,
+        "exclusive",
+        startingPartitions,
+        Set.of(SHARD_ID),
+        "exclusive-sequence"
+    );
+    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(
+        0,
+        "exclusive-replica",
+        startingPartitions,
+        Set.of(SHARD_ID),
+        "exclusive-sequence"
+    );
+
+    final CopyOnWriteArrayList<SeekableStreamSupervisor.TaskGroup> taskGroups =
+        supervisor.getPendingCompletionTaskGroups(0);
+    Assertions.assertEquals(2, taskGroups.size());
+    Assertions.assertEquals(Set.of("inclusive", "inclusive-replica"), taskGroups.get(0).taskIds());
+    Assertions.assertEquals(Set.of("exclusive", "exclusive-replica"), taskGroups.get(1).taskIds());
+
+    verifyAll();
+  }
+
+  @Test
   public void testAddDiscoveredTaskToPendingCompletionMultipleTaskGroups() throws Exception
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
