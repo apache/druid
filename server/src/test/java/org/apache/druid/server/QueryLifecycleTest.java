@@ -40,6 +40,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContextTest;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -192,7 +193,7 @@ public class QueryLifecycleTest
   @Test
   public void testRunSimple_preauthorizedAsSuperuser()
   {
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
@@ -213,7 +214,7 @@ public class QueryLifecycleTest
   {
     Throwable exception = Assertions.assertThrows(DruidException.class, () -> {
 
-      EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+      EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
       EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
       EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
           .andReturn(toolChest)
@@ -288,7 +289,7 @@ public class QueryLifecycleTest
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .aggregators(new CountAggregatorFactory("chocula"))
                                         .build();
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
@@ -322,7 +323,7 @@ public class QueryLifecycleTest
                                              .dataSource(DATASOURCE)
                                              .intervals(ImmutableList.of(Intervals.ETERNITY))
                                              .build();
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
@@ -351,7 +352,7 @@ public class QueryLifecycleTest
                                              .dataSource(DATASOURCE)
                                              .intervals(ImmutableList.of(Intervals.ETERNITY))
                                              .build();
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
@@ -375,7 +376,7 @@ public class QueryLifecycleTest
   public void testRunSimple_withoutPolicy()
   {
     AuthorizationResult authorizationResult = AuthorizationResult.ALLOW_NO_RESTRICTION;
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
@@ -413,7 +414,7 @@ public class QueryLifecycleTest
           .intervals(ImmutableList.of(Intervals.ETERNITY))
           .aggregators(new CountAggregatorFactory("chocula"))
           .build();
-      EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+      EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
       EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
       EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
       EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).anyTimes();
@@ -443,7 +444,7 @@ public class QueryLifecycleTest
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .aggregators(new CountAggregatorFactory("chocula"))
                                         .build();
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ))
@@ -483,7 +484,7 @@ public class QueryLifecycleTest
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .aggregators(new CountAggregatorFactory("chocula"))
                                         .build();
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ))
@@ -517,7 +518,7 @@ public class QueryLifecycleTest
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .aggregators(new CountAggregatorFactory("chocula"))
                                         .build();
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ))
@@ -543,7 +544,7 @@ public class QueryLifecycleTest
   @Test
   public void testAuthorizeQueryContext_authorized()
   {
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(
@@ -601,7 +602,7 @@ public class QueryLifecycleTest
   @Test
   public void testAuthorizeQueryContext_notAuthorized()
   {
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(
@@ -645,7 +646,7 @@ public class QueryLifecycleTest
   @Test
   public void testAuthorizeQueryContext_unsecuredKeys()
   {
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ))
@@ -691,7 +692,7 @@ public class QueryLifecycleTest
   @Test
   public void testAuthorizeQueryContext_securedKeys()
   {
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(
@@ -742,7 +743,7 @@ public class QueryLifecycleTest
   @Test
   public void testAuthorizeQueryContext_securedKeysNotAuthorized()
   {
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(
@@ -791,7 +792,7 @@ public class QueryLifecycleTest
   @Test
   public void testAuthorizeLegacyQueryContext_authorized()
   {
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(
@@ -879,7 +880,7 @@ public class QueryLifecycleTest
         null
     );
 
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
@@ -900,7 +901,7 @@ public class QueryLifecycleTest
         authConfig,
         policyEnforcer,
         new QueryConfigSnapshot(
-            ImmutableMap.of(),
+            QueryContext.empty(),
             BrokerDynamicConfig.builder().withQueryBlocklist(ImmutableList.of(rule)).build()
         ),
         System.currentTimeMillis(),
@@ -929,7 +930,7 @@ public class QueryLifecycleTest
         null
     );
 
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
@@ -952,7 +953,7 @@ public class QueryLifecycleTest
         authConfig,
         policyEnforcer,
         new QueryConfigSnapshot(
-            ImmutableMap.of(),
+            QueryContext.empty(),
             BrokerDynamicConfig.builder().withQueryBlocklist(ImmutableList.of(rule)).build()
         ),
         System.currentTimeMillis(),

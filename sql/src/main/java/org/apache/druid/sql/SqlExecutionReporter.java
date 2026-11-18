@@ -31,6 +31,7 @@ import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -147,10 +148,13 @@ public class SqlExecutionReporter
       statsMap.put("sqlQuery/bytes", bytesWritten);
       statsMap.put("success", success);
       statsMap.put(DruidMetrics.STATUS_CODE, statusCode);
-      Map<String, Object> queryContext = stmt.queryContext;
+      final Map<String, Object> queryContext;
       if (plannerContext != null) {
         statsMap.put("identity", plannerContext.getAuthenticationResult().getIdentity());
+        queryContext = new HashMap<>(stmt.queryContext.asMap());
         queryContext.put("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
+      } else {
+        queryContext = stmt.queryContext.asMap();
       }
       if (e != null) {
         statsMap.put("exception", e.toString());

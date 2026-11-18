@@ -117,7 +117,7 @@ public class ExpressionTestHelper
       null, /* Don't need engine */
       null, /* Don't need authentication result */
       Collections.emptySet(),
-      Collections.emptyMap(),
+      QueryContext.empty(),
       null
   );
 
@@ -128,7 +128,7 @@ public class ExpressionTestHelper
       null, /* Don't need engine */
       null, /* Don't need authentication result */
       Collections.emptySet(),
-      QueryContext.ofMap(QueryContextParameters.SQL_USE_EXTRACTION_FNS, true),
+      QueryContext.of(QueryContextParameters.SQL_USE_EXTRACTION_FNS, true),
       null
   );
 

@@ -195,7 +195,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
 
       final ControllerHolder controllerHolder = new ControllerHolder(
           controller,
-          controller.getQueryContext().getString(QueryContextParameters.SQL_QUERY_ID.getName(), controller.queryId()),
+          controller.getQueryContext().getOrDefault(QueryContextParameters.SQL_QUERY_ID, controller.queryId()),
           null,
           null,
           DateTimes.nowUtc()

@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContextTestUtils;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.quidem.DruidQTestInfo;
@@ -218,8 +219,8 @@ public class QueryTestRunner
       final Map<String, Object> queryContext =
           QueryContextTestUtils.asJsonContext(builder.config.jsonMapper(), builder.queryContext);
       final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
-                                                .systemDefaultContext(Map.of())
-                                                .queryContext(queryContext)
+                                                .systemDefaultContext(QueryContext.empty())
+                                                .queryContext(QueryContext.of(queryContext))
                                                 .rejectUnknownParameters(true)
                                                 .parameters(builder.parameters)
                                                 .auth(builder.authenticationResult)
@@ -281,13 +282,13 @@ public class QueryTestRunner
         final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
                                                   .parameters(builder.parameters)
                                                   .auth(builder.authenticationResult)
-                                                  .systemDefaultContext(Map.of())
-                                                  .queryContext(queryContext)
+                                                  .systemDefaultContext(QueryContext.empty())
+                                                  .queryContext(QueryContext.of(queryContext))
                                                   .rejectUnknownParameters(true)
                                                   .build();
 
         // Pass the string form, as clients do, so that the suite also exercises parsing it.
-        final Map<String, Object> theQueryContext = new HashMap<>(sqlQuery.context());
+        final Map<String, Object> theQueryContext = new HashMap<>(sqlQuery.context().asMap());
         theQueryContext.put(QueryContextParameters.VECTORIZE.getName(), vectorize);
         theQueryContext.put(QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS.getName(), vectorize);
 
@@ -297,7 +298,7 @@ public class QueryTestRunner
 
         results.add(runQuery(
             sqlStatementFactory,
-            sqlQuery.withContext(Map.of(), theQueryContext),
+            sqlQuery.withContext(QueryContext.empty(), QueryContext.of(theQueryContext)),
             vectorize
         ));
       }
@@ -321,7 +322,7 @@ public class QueryTestRunner
             }
         );
         return new QueryResults(
-            query.context(),
+            query.context().asMap(),
             vectorize,
             stmt.prepareResult().getReturnedRowType(),
             resultListRef.get(),
@@ -331,7 +332,7 @@ public class QueryTestRunner
       }
       catch (RuntimeException e) {
         return new QueryResults(
-            query.context(),
+            query.context().asMap(),
             vectorize,
             e
         );

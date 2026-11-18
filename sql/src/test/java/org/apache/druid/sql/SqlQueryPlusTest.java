@@ -64,7 +64,7 @@ public class SqlQueryPlusTest
         Assertions.assertThrows(
             DruidException.class,
             () -> SqlQueryPlus.builder("SELECT 1")
-                              .queryContext(Map.of("sqlQueryId", 1))
+                              .queryContext(QueryContext.of(Map.of("sqlQueryId", 1)))
                               .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
                               .build()
         ),
@@ -94,13 +94,13 @@ public class SqlQueryPlusTest
   {
     // System defaults are validated where they are configured, and the JDBC context when the connection opens.
     final SqlQueryPlus.Builder builder = SqlQueryPlus.builder("SELECT 1")
-                                                     .systemDefaultContext(Map.of("myTraceId", "abc-123"))
+                                                     .systemDefaultContext(QueryContext.of(Map.of("myTraceId", "abc-123")))
                                                      .rejectUnknownParameters(true)
                                                      .auth(CalciteTests.REGULAR_USER_AUTH_RESULT);
     Assertions.assertEquals("abc-123", builder.build().context().get("myTraceId"));
     Assertions.assertEquals(
-        Map.of("myTraceId", "abc-123"),
-        builder.queryContext(Map.of("myTraceId", "abc-123")).buildJdbc().context()
+        QueryContext.of(Map.of("myTraceId", "abc-123")),
+        builder.queryContext(QueryContext.of(Map.of("myTraceId", "abc-123"))).buildJdbc().context()
     );
   }
 
@@ -112,7 +112,7 @@ public class SqlQueryPlusTest
                                            .build();
     Assertions.assertEquals(
         1_048_576,
-        QueryContext.of(query.context()).get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING)
+        query.context().get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING)
     );
 
     final SqlQueryPlus withSpace = SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = '1 MiB'; SELECT 1")
@@ -120,7 +120,7 @@ public class SqlQueryPlusTest
                                                .build();
     Assertions.assertEquals(
         1_048_576,
-        QueryContext.of(withSpace.context()).get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING)
+        withSpace.context().get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING)
     );
 
     final DruidException e = Assertions.assertThrows(
@@ -141,7 +141,7 @@ public class SqlQueryPlusTest
     final SqlQueryPlus query = SqlQueryPlus.builder("SET useCache = 0; SET populateCache = 1; SELECT 1")
                                            .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
                                            .build();
-    final QueryContext context = QueryContext.of(query.context());
+    final QueryContext context = query.context();
     Assertions.assertFalse(context.get(QueryContextParameters.USE_CACHE));
     Assertions.assertTrue(context.get(QueryContextParameters.POPULATE_CACHE));
   }
@@ -169,7 +169,7 @@ public class SqlQueryPlusTest
     final SqlQueryPlus query = SqlQueryPlus.builder("SET useCache = 'FALSE'; SET populateCache = '1'; SELECT 1")
                                            .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
                                            .build();
-    final QueryContext context = QueryContext.of(query.context());
+    final QueryContext context = query.context();
     Assertions.assertFalse(context.get(QueryContextParameters.USE_CACHE));
     Assertions.assertTrue(context.get(QueryContextParameters.POPULATE_CACHE));
   }
@@ -236,8 +236,9 @@ public class SqlQueryPlusTest
   @Test
   public void testUserProvidedContextOverridesSystemDefault()
   {
-    Map<String, Object> systemDefaultContext = Map.of("key", "system-default", "key2", "system-default2");
-    Map<String, Object> userProvidedContext = Map.of("key", "user-provided-value");
+    final QueryContext systemDefaultContext =
+        QueryContext.of(Map.of("key", "system-default", "key2", "system-default2"));
+    final QueryContext userProvidedContext = QueryContext.of(Map.of("key", "user-provided-value"));
     final SqlQueryPlus.Builder sqlQueryPlusBuilder =
         SqlQueryPlus.builder("SELECT COUNT(*) AS cnt, 'foo' AS foo")
                     .systemDefaultContext(systemDefaultContext)
@@ -245,34 +246,35 @@ public class SqlQueryPlusTest
                     .auth(CalciteTests.REGULAR_USER_AUTH_RESULT);
 
     Assertions.assertEquals(
-        Map.of("key", "user-provided-value", "key2", "system-default2"),
+        QueryContext.of(Map.of("key", "user-provided-value", "key2", "system-default2")),
         sqlQueryPlusBuilder.build().context()
     );
     Assertions.assertEquals(
-        Map.of("key", "user-provided-value", "key2", "system-default2"),
+        QueryContext.of(Map.of("key", "user-provided-value", "key2", "system-default2")),
         sqlQueryPlusBuilder.buildJdbc().context()
     );
 
     Assertions.assertEquals(
-        Map.of("key", "user-provided-value", "key2", "system-default2"),
+        QueryContext.of(Map.of("key", "user-provided-value", "key2", "system-default2")),
         sqlQueryPlusBuilder.build().withContext(systemDefaultContext, userProvidedContext).context()
     );
     Assertions.assertEquals(
-        Map.of("key", "system-default", "key2", "system-default2"),
-        sqlQueryPlusBuilder.build().withContext(systemDefaultContext, Map.of()).context()
+        QueryContext.of(Map.of("key", "system-default", "key2", "system-default2")),
+        sqlQueryPlusBuilder.build().withContext(systemDefaultContext, QueryContext.empty()).context()
     );
     Assertions.assertEquals(
-        Map.of("key", "user-provided-value"),
-        sqlQueryPlusBuilder.build().withContext(Map.of(), userProvidedContext).context()
+        QueryContext.of(Map.of("key", "user-provided-value")),
+        sqlQueryPlusBuilder.build().withContext(QueryContext.empty(), userProvidedContext).context()
     );
   }
 
   @Test
   public void testNullUserValueFallsBackToSystemDefault()
   {
-    final Map<String, Object> systemDefaultContext = Map.of("key", "system-default");
-    final Map<String, Object> nullUserContext = new HashMap<>();
-    nullUserContext.put("key", null);
+    final QueryContext systemDefaultContext = QueryContext.of(Map.of("key", "system-default"));
+    final Map<String, Object> nullUserContextMap = new HashMap<>();
+    nullUserContextMap.put("key", null);
+    final QueryContext nullUserContext = QueryContext.of(nullUserContextMap);
 
     // A null in the request context
     final SqlQueryPlus.Builder builder = SqlQueryPlus.builder("SELECT 1")
@@ -291,7 +293,7 @@ public class SqlQueryPlusTest
         systemDefaultContext,
         SqlQueryPlus.builder("SET key = NULL; SELECT 1")
                     .systemDefaultContext(systemDefaultContext)
-                    .queryContext(Map.of("key", "user-provided-value"))
+                    .queryContext(QueryContext.of(Map.of("key", "user-provided-value")))
                     .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
                     .build()
                     .context()

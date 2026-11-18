@@ -26,7 +26,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.BadQueryContextException;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -39,7 +39,6 @@ import org.joda.time.DateTimeZone;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -71,7 +70,7 @@ public class SqlQueryPlus
   @Nullable
   private final SqlNode sqlNode;
   private final boolean allowSetStatements;
-  private final Map<String, Object> stmtContext;
+  private final QueryContext stmtContext;
   private final Set<String> authContextKeys;
   private final List<ParameterBinding> parameters;
   private final AuthenticationResult authResult;
@@ -80,7 +79,7 @@ public class SqlQueryPlus
       String sql,
       SqlNode sqlNode,
       boolean allowSetStatements,
-      Map<String, Object> stmtContext,
+      QueryContext stmtContext,
       Set<String> authContextKeys,
       List<ParameterBinding> parameters,
       AuthenticationResult authResult
@@ -89,9 +88,7 @@ public class SqlQueryPlus
     this.sql = Preconditions.checkNotNull(sql);
     this.sqlNode = sqlNode;
     this.allowSetStatements = allowSetStatements;
-    this.stmtContext = stmtContext == null
-                       ? Collections.emptyMap()
-                       : Collections.unmodifiableMap(stmtContext);
+    this.stmtContext = stmtContext == null ? QueryContext.empty() : stmtContext;
     this.authContextKeys = authContextKeys == null
                            ? Collections.emptySet()
                            : Collections.unmodifiableSet(authContextKeys);
@@ -125,7 +122,7 @@ public class SqlQueryPlus
     return sqlNode;
   }
 
-  public Map<String, Object> context()
+  public QueryContext context()
   {
     return stmtContext;
   }
@@ -162,14 +159,16 @@ public class SqlQueryPlus
     return authResult;
   }
 
-  public SqlQueryPlus withContext(Map<String, Object> defaultContext, Map<String, Object> userProvidedContext)
+  public SqlQueryPlus withContext(@Nullable QueryContext defaultContext, @Nullable QueryContext userProvidedContext)
   {
+    final QueryContext defaults = defaultContext == null ? QueryContext.empty() : defaultContext;
+    final QueryContext userContext = userProvidedContext == null ? QueryContext.empty() : userProvidedContext;
     return new SqlQueryPlus(
         sql,
         sqlNode,
         allowSetStatements,
-        QueryContexts.withDefaults(defaultContext, userProvidedContext),
-        userProvidedContext == null ? Set.of() : userProvidedContext.keySet(),
+        defaults.overrideDefaults(userContext),
+        userContext.asMap().keySet(),
         parameters,
         authResult
     );
@@ -243,8 +242,8 @@ public class SqlQueryPlus
   public static class Builder
   {
     private String sql;
-    private Map<String, Object> systemDefaultContext;
-    private Map<String, Object> queryContext;
+    private QueryContext systemDefaultContext = QueryContext.empty();
+    private QueryContext queryContext = QueryContext.empty();
     private boolean rejectUnknownParameters;
     private List<ParameterBinding> parameters;
     private AuthenticationResult authResult;
@@ -258,18 +257,18 @@ public class SqlQueryPlus
     /**
      * Sets the system-wide default contexts. This context is used to fill in missing values and doesn't go thorough authorization check.
      */
-    public Builder systemDefaultContext(Map<String, Object> systemDefaultContext)
+    public Builder systemDefaultContext(@Nullable QueryContext systemDefaultContext)
     {
-      this.systemDefaultContext = systemDefaultContext;
+      this.systemDefaultContext = systemDefaultContext == null ? QueryContext.empty() : systemDefaultContext;
       return this;
     }
 
     /**
      * Sets the user-provided query context. This context is used for authorization checks.
      */
-    public Builder queryContext(Map<String, Object> queryContext)
+    public Builder queryContext(@Nullable QueryContext queryContext)
     {
-      this.queryContext = queryContext;
+      this.queryContext = queryContext == null ? QueryContext.empty() : queryContext;
       return this;
     }
 
@@ -316,27 +315,22 @@ public class SqlQueryPlus
     {
       final StatementAndSetContext statementAndSetContext = DruidSqlParser.parse(sql, true);
 
-      final Map<String, Object> userProvidedContext;
-      if (statementAndSetContext.getSetContext().isEmpty()) {
-        userProvidedContext = queryContext == null ? Map.of() : queryContext;
-      } else {
-        userProvidedContext = QueryContexts.override(queryContext, statementAndSetContext.getSetContext());
-      }
+      // A SET statement overrides the request context; SET key = NULL unsets the key
+      final QueryContext userProvidedContext = queryContext.override(statementAndSetContext.getSetContext());
       // Before anything reads the context. System defaults are validated where they are configured.
       try {
-        QueryContextParameterValidator.validate(userProvidedContext, rejectUnknownParameters);
+        QueryContextParameterValidator.validate(userProvidedContext.asMap(), rejectUnknownParameters);
       }
       catch (BadQueryContextException e) {
         throw InvalidSqlInput.exception(e, "%s", e.getMessage());
       }
 
-      final Map<String, Object> stmtContext = QueryContexts.withDefaults(systemDefaultContext, userProvidedContext);
       return new SqlQueryPlus(
           sql,
           statementAndSetContext.getMainStatement(),
           true,
-          stmtContext,
-          userProvidedContext.keySet(),
+          systemDefaultContext.overrideDefaults(userProvidedContext),
+          userProvidedContext.asMap().keySet(),
           parameters,
           authResult
       );
@@ -355,8 +349,8 @@ public class SqlQueryPlus
           sql,
           null,
           false,
-          QueryContexts.withDefaults(systemDefaultContext, queryContext),
-          queryContext == null ? Set.of() : queryContext.keySet(),
+          systemDefaultContext.overrideDefaults(queryContext),
+          queryContext.asMap().keySet(),
           parameters,
           authResult
       );

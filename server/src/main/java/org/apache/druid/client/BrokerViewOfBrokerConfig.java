@@ -33,8 +33,6 @@ import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
 
-import java.util.Map;
-
 /**
  * Broker view of broker dynamic configuration.
  *
@@ -68,7 +66,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
     this.coordinatorClient = coordinatorClient;
     this.defaultQueryConfig = defaultQueryConfig;
     this.queryContextConfig = queryContextConfig;
-    this.querySnapshot = new QueryConfigSnapshot(QueryContext.of(defaultQueryConfig.getContext()).asMap(), null);
+    this.querySnapshot = new QueryConfigSnapshot(defaultQueryConfig.getContext(), null);
   }
 
   /**
@@ -83,7 +81,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   {
     try {
       QueryContextParameterValidator.validate(
-          defaultQueryConfig.getContext(),
+          defaultQueryConfig.getContext().asMap(),
           queryContextConfig.isRejectUnknownParameters()
       );
     }
@@ -115,7 +113,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   {
     super.setDynamicConfig(updatedConfig);
     querySnapshot = new QueryConfigSnapshot(
-        QueryContext.of(defaultQueryConfig.getContext()).override(updatedConfig.getQueryContext()).asMap(),
+        defaultQueryConfig.getContext().override(updatedConfig.getQueryContext()),
         updatedConfig
     );
   }
@@ -125,7 +123,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
    * {@link BrokerDynamicConfig#getQueryContext()}. Dynamic values take precedence over static defaults.
    */
   @Override
-  public Map<String, Object> getContext()
+  public QueryContext getContext()
   {
     return querySnapshot.getResolvedDefaultQueryContext();
   }
@@ -141,7 +139,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
     final BrokerDynamicConfig dynamicConfig = snapshot.getDynamicConfig();
     return new ContextWithOverrides(
         snapshot.getResolvedDefaultQueryContext(),
-        dynamicConfig == null ? Map.of() : dynamicConfig.getQueryContext().asMap()
+        dynamicConfig == null ? QueryContext.empty() : dynamicConfig.getQueryContext()
     );
   }
 
