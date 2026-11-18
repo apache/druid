@@ -602,7 +602,7 @@ Anyone can vote on a release. When voting, you should list out what exactly you 
 ```plaintext
 +1 (binding)
 
-- Proper NOTICE, LICENSE, DISCLAIMER files are present in both src and bin packages.
+- Proper NOTICE and LICENSE files are present in both src and bin packages.
 - Verified .asc signatures and .sha512 checksums of both src and bin packages.
 - Source tarball git.version file is present and correct.
 - Source tarball builds and tests pass.
