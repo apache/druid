@@ -497,9 +497,6 @@ public class SystemSchema extends AbstractTableSchema
             // treated as published here.
             boolean isPublished = !val.isRealtime();
 
-            // is_active is true for published segments that are not overshadowed, and for unpublished realtime segments
-            boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();
-
             // The flag from the Coordinator does not say who serves a published segment: it is unset even for one
             // that has not been handed off yet and is served only by realtime tasks. The Broker knows which servers
             // serve the segment, so prefer what it knows.
@@ -509,6 +506,9 @@ public class SystemSchema extends AbstractTableSchema
             } else {
               isRealtime = val.isRealtime() ? 1 : 0;
             }
+
+            // is_active is documented as (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1
+            final boolean isActive = (isPublished && !val.isOvershadowed()) || isRealtime == 1;
 
             return new Object[]{
                 segment.getId(),
