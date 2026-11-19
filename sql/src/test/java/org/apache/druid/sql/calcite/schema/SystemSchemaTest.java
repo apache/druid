@@ -723,11 +723,11 @@ public class SystemSchemaTest extends CalciteTestBase
     final SegmentsTable segmentsTable =
         new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false),
-        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false),
-        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false),
-        new SegmentStatusInCluster(segment1, true, 2, null, false),
-        new SegmentStatusInCluster(segment2, false, 0, null, false)
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false, true),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false, true),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false, true),
+        new SegmentStatusInCluster(segment1, true, 2, null, false, true),
+        new SegmentStatusInCluster(segment2, false, 0, null, false, true)
     ));
 
     EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
@@ -889,11 +889,11 @@ public class SystemSchemaTest extends CalciteTestBase
     final SegmentsTable segmentsTable =
         new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false),
-        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false),
-        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false),
-        new SegmentStatusInCluster(segment1, true, 2, null, false),
-        new SegmentStatusInCluster(segment2, false, 0, null, false)
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false, true),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false, true),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false, true),
+        new SegmentStatusInCluster(segment1, true, 2, null, false, true),
+        new SegmentStatusInCluster(segment2, false, 0, null, false, true)
     ));
 
     EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
@@ -966,8 +966,8 @@ public class SystemSchemaTest extends CalciteTestBase
     final SegmentsTable segmentsTable =
         new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
     final List<SegmentStatusInCluster> publishedSegments = List.of(
-        new SegmentStatusInCluster(segment1, true, 2, null, false),
-        new SegmentStatusInCluster(segment2, false, 0, null, false)
+        new SegmentStatusInCluster(segment1, true, 2, null, false, true),
+        new SegmentStatusInCluster(segment2, false, 0, null, false, true)
     );
     final AtomicBoolean closed = new AtomicBoolean(false);
 

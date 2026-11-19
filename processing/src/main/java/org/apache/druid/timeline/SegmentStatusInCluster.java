@@ -60,7 +60,9 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
    */
   private final Long numRows;
   /**
-   * If the segment is realtime.
+   * If the segment is unpublished and served only by realtime tasks. Always false for a published segment. This
+   * differs from {@code is_realtime} in {@code sys.segments}, which does not depend on whether the segment is
+   * published.
    */
   private final boolean realtime;
   /**
@@ -78,26 +80,13 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
   )
   {
     // Jackson will overwrite dataSegment if needed (even though the field is final)
-    this(null, overshadowed, replicationFactor, numRows, realtime, published);
+    // Coordinators on older versions do not send "published"; in that case it is the opposite of "realtime".
+    // That default is wrong for an unused segment that a Historical still serves, which is neither.
+    this(null, overshadowed, replicationFactor, numRows, realtime, published == null ? !realtime : published);
   }
 
   /**
-   * Creates a status whose published flag is the opposite of {@code realtime}.
-   */
-  public SegmentStatusInCluster(
-      DataSegment dataSegment,
-      boolean overshadowed,
-      Integer replicationFactor,
-      Long numRows,
-      boolean realtime
-  )
-  {
-    this(dataSegment, overshadowed, replicationFactor, numRows, realtime, null);
-  }
-
-  /**
-   * @param published whether the segment is published. Null if the sender does not say, as with a Coordinator on
-   *                  an older version. The segment is then taken to be published if it is not realtime.
+   * Creates a status for the given segment.
    */
   public SegmentStatusInCluster(
       DataSegment dataSegment,
@@ -105,7 +94,7 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
       Integer replicationFactor,
       Long numRows,
       boolean realtime,
-      @Nullable Boolean published
+      boolean published
   )
   {
     this.dataSegment = dataSegment;
@@ -113,7 +102,7 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
     this.replicationFactor = replicationFactor;
     this.numRows = numRows;
     this.realtime = realtime;
-    this.published = published == null ? !realtime : published;
+    this.published = published;
   }
 
   @JsonProperty

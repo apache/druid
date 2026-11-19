@@ -261,6 +261,12 @@ public class MetadataResource
           .getSegmentMetadataSnapshot()
           .values()
           .stream()
+          // The snapshot covers every datasource, so apply the datasource filter here too. Without it, the used
+          // segments of the other datasources are not in segmentAlreadySeen and would be returned as not published.
+          .filter(availableSegmentMetadata ->
+                      dataSources == null
+                      || dataSources.isEmpty()
+                      || dataSources.contains(availableSegmentMetadata.getSegment().getDataSource()))
           .filter(availableSegmentMetadata ->
                       !segmentAlreadySeen.contains(availableSegmentMetadata.getSegment().getId()))
           .map(availableSegmentMetadata ->

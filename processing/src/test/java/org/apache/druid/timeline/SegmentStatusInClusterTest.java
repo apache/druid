@@ -67,7 +67,7 @@ public class SegmentStatusInClusterTest
                                          .size(1)
                                          .totalRows(TOTAL_ROWS)
                                          .build();
-    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, null, REALTIME);
+    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, null, REALTIME, !REALTIME);
   }
 
   @Test
