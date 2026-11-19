@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
@@ -29,7 +28,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.TimestampParser;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -39,7 +39,6 @@ import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.NotYetSupported.Scope;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
-import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.joda.time.DateTime;
@@ -387,6 +386,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
       testBuilder()
           .skipVectorize(true)
+          .captureHook(true)
           .queryContext(queryContext)
           .sql(testCase.getQueryString())
           .expectedResults(new TextualResultsVerifier(testCase.getExpectedResults(), null))
@@ -401,10 +401,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
   protected Map<String, Object> getQueryContext()
   {
-    return ImmutableMap.of(
-        PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
-        QueryContexts.ENABLE_DEBUG, true
-    );
+    return QueryContext.builder()
+        .put(QueryContextParameters.DEBUG, true)
+        .toMap();
   }
 
   // testcases_start

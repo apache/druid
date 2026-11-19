@@ -19,12 +19,12 @@
 
 package org.apache.druid.testing.embedded.query;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -54,7 +54,7 @@ public class SqlQueryCancelTest extends QueryTestBase
         false,
         false,
         false,
-        ImmutableMap.of(BaseQuery.SQL_QUERY_ID, queryId),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, queryId),
         List.of()
     );
 
@@ -82,7 +82,7 @@ public class SqlQueryCancelTest extends QueryTestBase
         false,
         false,
         false,
-        ImmutableMap.of(BaseQuery.SQL_QUERY_ID, validQueryId),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, validQueryId),
         List.of()
     );
 

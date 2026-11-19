@@ -30,6 +30,7 @@ import org.apache.druid.segment.StringDimensionHandler;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.Objects;
 
 public class StringDictionaryEncodedColumnFormat implements ColumnFormat
 {
@@ -146,5 +147,28 @@ public class StringDictionaryEncodedColumnFormat implements ColumnFormat
         otherFormat.getLogicalType(),
         otherFormat.getClass().getName()
     );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final StringDictionaryEncodedColumnFormat that = (StringDictionaryEncodedColumnFormat) o;
+    return hasMultipleValues == that.hasMultipleValues
+           && hasNulls == that.hasNulls
+           && hasBitmapIndexes == that.hasBitmapIndexes
+           && hasSpatialIndexes == that.hasSpatialIndexes
+           && Objects.equals(columnFormatSpec, that.columnFormatSpec);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(hasMultipleValues, hasNulls, hasBitmapIndexes, hasSpatialIndexes, columnFormatSpec);
   }
 }

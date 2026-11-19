@@ -22,17 +22,16 @@ package org.apache.druid.query.union;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.SegmentMapFunction;
@@ -163,25 +162,25 @@ public class UnionQuery implements Query<Object>
   @Override
   public Query<Object> withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.of(BaseQuery.QUERY_ID, id));
+    return withOverriddenContext(QueryContextParameters.QUERY_ID, id);
   }
 
   @Override
   public String getId()
   {
-    return context().getString(BaseQuery.QUERY_ID);
+    return context().get(QueryContextParameters.QUERY_ID);
   }
 
   @Override
   public Query<Object> withSubQueryId(String subQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(BaseQuery.SUB_QUERY_ID, subQueryId));
+    return withOverriddenContext(QueryContextParameters.SUB_QUERY_ID, subQueryId);
   }
 
   @Override
   public String getSubQueryId()
   {
-    return context().getString(BaseQuery.SUB_QUERY_ID);
+    return context().get(QueryContextParameters.SUB_QUERY_ID);
   }
 
   @Override
@@ -262,6 +261,12 @@ public class UnionQuery implements Query<Object>
 
     @Override
     public SegmentMapFunction createSegmentMapFunction(Query query)
+    {
+      throw methodNotSupported();
+    }
+
+    @Override
+    public Set<String> getReservedColumns()
     {
       throw methodNotSupported();
     }

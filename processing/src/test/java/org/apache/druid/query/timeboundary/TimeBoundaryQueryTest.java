@@ -25,7 +25,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -55,14 +55,14 @@ public class TimeBoundaryQueryTest
                                           .dataSource("foo")
                                           .intervals("2013/2014")
                                           .context(
-                                              ImmutableMap.of(
-                                                  QueryContexts.PRIORITY_KEY,
+                                              QueryContext.ofMap(
+                                                  QueryContextParameters.PRIORITY,
                                                   1,
-                                                  QueryContexts.USE_CACHE_KEY,
+                                                  QueryContextParameters.USE_CACHE,
                                                   true,
-                                                  QueryContexts.POPULATE_CACHE_KEY,
+                                                  QueryContextParameters.POPULATE_CACHE,
                                                   true,
-                                                  QueryContexts.FINALIZE_KEY,
+                                                  QueryContextParameters.FINALIZE,
                                                   true
                                               )
                                           ).build();
@@ -80,10 +80,10 @@ public class TimeBoundaryQueryTest
     );
 
     final QueryContext queryContext = query.context();
-    Assertions.assertEquals(1, (int) queryContext.getInt(QueryContexts.PRIORITY_KEY));
-    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY));
-    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.POPULATE_CACHE_KEY));
-    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY));
+    Assertions.assertEquals(1, (int) queryContext.getInt(QueryContextParameters.PRIORITY.getName()));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.USE_CACHE.getName()));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.POPULATE_CACHE.getName()));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.FINALIZE.getName()));
   }
 
   @Test
@@ -94,13 +94,13 @@ public class TimeBoundaryQueryTest
                                           .intervals("2013/2014")
                                           .context(
                                               ImmutableMap.of(
-                                                  QueryContexts.PRIORITY_KEY,
+                                                  QueryContextParameters.PRIORITY.getName(),
                                                   "1",
-                                                  QueryContexts.USE_CACHE_KEY,
+                                                  QueryContextParameters.USE_CACHE.getName(),
                                                   "true",
-                                                  QueryContexts.POPULATE_CACHE_KEY,
+                                                  QueryContextParameters.POPULATE_CACHE.getName(),
                                                   "true",
-                                                  QueryContexts.FINALIZE_KEY,
+                                                  QueryContextParameters.FINALIZE.getName(),
                                                   "true"
                                               )
                                           ).build();
@@ -119,9 +119,9 @@ public class TimeBoundaryQueryTest
 
 
     final QueryContext queryContext = query.context();
-    Assertions.assertEquals("1", queryContext.get(QueryContexts.PRIORITY_KEY));
-    Assertions.assertEquals("true", queryContext.get(QueryContexts.USE_CACHE_KEY));
-    Assertions.assertEquals("true", queryContext.get(QueryContexts.POPULATE_CACHE_KEY));
-    Assertions.assertEquals("true", queryContext.get(QueryContexts.FINALIZE_KEY));
+    Assertions.assertEquals("1", queryContext.get(QueryContextParameters.PRIORITY.getName()));
+    Assertions.assertEquals("true", queryContext.get(QueryContextParameters.USE_CACHE.getName()));
+    Assertions.assertEquals("true", queryContext.get(QueryContextParameters.POPULATE_CACHE.getName()));
+    Assertions.assertEquals("true", queryContext.get(QueryContextParameters.FINALIZE.getName()));
   }
 }

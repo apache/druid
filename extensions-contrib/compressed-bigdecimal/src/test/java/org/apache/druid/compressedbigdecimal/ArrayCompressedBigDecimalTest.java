@@ -505,7 +505,7 @@ public class ArrayCompressedBigDecimalTest
   }
 
   /**
-   * Test method for {@link  ArrayCompressedBigDecimal#setArrayEntry
+   * Test method for {@link  ArrayCompressedBigDecimal#setArrayEntry}
    */
   @Test
   public void testSetArrayEntry()
@@ -580,7 +580,7 @@ public class ArrayCompressedBigDecimalTest
   }
 
   /**
-   * Test method for {@link CompressedBigDecimalObjectStrategy
+   * Test method for {@link CompressedBigDecimalObjectStrategy}
    */
   @Test
   public void testCompressedBigDecimalObjectStrategy()

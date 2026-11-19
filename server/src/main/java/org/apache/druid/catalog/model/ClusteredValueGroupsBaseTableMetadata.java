@@ -26,18 +26,12 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.segment.AutoTypeColumnSchema;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -132,12 +126,21 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
           TYPE_NAME
       );
     }
-    final Map<String, DimensionSchema> customSchemas = indexColumnSchemas();
+    final Map<String, DimensionSchema> customSchemas = BaseTableColumns.indexColumnSchemas(columnSchemas);
+    for (String customized : customSchemas.keySet()) {
+      if (clusteringColumns.contains(customized)) {
+        throw InvalidInput.exception(
+            "columnSchemas cannot customize clustering column [%s]: the physical representation of clustering columns"
+            + " is fixed by the clustered segment format",
+            customized
+        );
+      }
+    }
     final Set<String> declaredNames = new HashSet<>();
     final List<DimensionSchema> specColumns = new ArrayList<>(columns.size());
     for (ColumnSpec column : columns) {
       declaredNames.add(column.name());
-      specColumns.add(toDimensionSchema(column, customSchemas.get(column.name())));
+      specColumns.add(BaseTableColumns.toDimensionSchema(column, customSchemas.get(column.name()), TYPE_NAME));
     }
     for (String clusteringColumn : clusteringColumns) {
       if (!declaredNames.contains(clusteringColumn)) {
@@ -164,124 +167,6 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
                                                       .columns(specColumns)
                                                       .clusteringColumns(clusteringColumns)
                                                       .build();
-  }
-
-  private Map<String, DimensionSchema> indexColumnSchemas()
-  {
-    final Map<String, DimensionSchema> customSchemas = new HashMap<>();
-    for (DimensionSchema schema : columnSchemas) {
-      if (schema == null) {
-        throw InvalidInput.exception("columnSchemas must not contain null entries");
-      }
-      if (customSchemas.put(schema.getName(), schema) != null) {
-        throw InvalidInput.exception("columnSchemas contains duplicate entries for column [%s]", schema.getName());
-      }
-    }
-    return customSchemas;
-  }
-
-  private DimensionSchema toDimensionSchema(ColumnSpec column, @Nullable DimensionSchema customSchema)
-  {
-    ColumnType druidType = Columns.druidType(column);
-    if (druidType == null) {
-      // A column declared without a type defaults to STRING (mirroring Columns.convertSignature), but a declared
-      // type that does not parse must be rejected rather than silently defaulted: the declared type is the physical
-      // segment schema here.
-      if (column.dataType() != null) {
-        throw InvalidInput.exception(
-            "column [%s] has an unrecognized type [%s]; declare a SQL type (such as [%s]) or a Druid type string"
-            + " (such as [%s] or [%s])",
-            column.name(),
-            column.dataType(),
-            Columns.SQL_BIGINT,
-            ColumnType.LONG_ARRAY.asTypeString(),
-            ColumnType.NESTED_DATA.asTypeString()
-        );
-      }
-      druidType = ColumnType.STRING;
-    }
-    if (customSchema != null) {
-      validateColumnSchemaCustomization(column, customSchema, druidType);
-      return customSchema;
-    }
-    if (druidType.isPrimitive() || druidType.isPrimitiveArray()) {
-      // The declared type is retained in the ingestion schema (primitive arrays are cast, rather than left to an
-      // untyped auto column whose type is inferred from the ingested values; note that the auto schema stores
-      // FLOAT ARRAY as DOUBLE ARRAY).
-      return DimensionSchema.getDefaultSchemaForBuiltInType(column.name(), druidType);
-    }
-    if (druidType.is(ValueType.COMPLEX)) {
-      return DimensionHandlerUtils.getComplexDimensionSchema(column.name(), druidType);
-    }
-    throw InvalidInput.exception(
-        "column [%s] has unsupported type [%s] for a clustered base table",
-        column.name(),
-        druidType
-    );
-  }
-
-  private void validateColumnSchemaCustomization(
-      ColumnSpec column,
-      DimensionSchema customSchema,
-      ColumnType declaredType
-  )
-  {
-    if (ColumnHolder.TIME_COLUMN_NAME.equals(column.name())) {
-      throw InvalidInput.exception(
-          "columnSchemas cannot customize [%s]: the time column is always stored as a long",
-          ColumnHolder.TIME_COLUMN_NAME
-      );
-    }
-    if (clusteringColumns.contains(column.name())) {
-      throw InvalidInput.exception(
-          "columnSchemas cannot customize clustering column [%s]: the physical representation of clustering columns"
-          + " is fixed by the clustered segment format",
-          column.name()
-      );
-    }
-    // The schema's type must match the declared logical type, so the physical schema cannot silently contradict the
-    // SQL schema that INSERT/REPLACE queries are validated and coerced against.
-    ColumnType expectedType = declaredType;
-    if (customSchema instanceof AutoTypeColumnSchema) {
-      // An uncast auto column stores values as they are ingested (inferring the physical type) rather than coercing
-      // them to the declared type; only a column declared COMPLEX<json> may store arbitrary shapes.
-      if (((AutoTypeColumnSchema) customSchema).getCastToType() == null
-          && !ColumnType.NESTED_DATA.equals(declaredType)) {
-        throw InvalidInput.exception(
-            "columnSchemas entry [%s] is an auto column schema without a castToType; an uncast auto column stores"
-            + " values as they are ingested rather than coercing them to the column's declared type [%s], set"
-            + " castToType to match the declared type",
-            column.name(),
-            declaredType
-        );
-      }
-      // The auto schema stores FLOAT as DOUBLE.
-      expectedType = autoColumnType(declaredType);
-    }
-    if (!expectedType.equals(customSchema.getColumnType())) {
-      throw InvalidInput.exception(
-          "columnSchemas entry [%s] of type [%s] does not match the column's declared type [%s]; column schemas"
-          + " customize the physical representation of a declared column, not its type",
-          column.name(),
-          customSchema.getColumnType(),
-          declaredType
-      );
-    }
-  }
-
-  /**
-   * The type the auto schema stores for a declared type: {@link AutoTypeColumnSchema} coerces FLOAT to DOUBLE (the
-   * default derivation for declared FLOAT ARRAY columns relies on the same coercion).
-   */
-  private static ColumnType autoColumnType(ColumnType declaredType)
-  {
-    if (ColumnType.FLOAT.equals(declaredType)) {
-      return ColumnType.DOUBLE;
-    }
-    if (ColumnType.FLOAT_ARRAY.equals(declaredType)) {
-      return ColumnType.DOUBLE_ARRAY;
-    }
-    return declaredType;
   }
 
   @Override

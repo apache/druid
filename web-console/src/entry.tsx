@@ -16,15 +16,11 @@
  * limitations under the License.
  */
 
-import 'regenerator-runtime/runtime';
-import './bootstrap/ace';
-
 import { OverlaysProvider } from '@blueprintjs/core';
 import { QueryRunner } from 'druid-query-toolkit';
 import { createRoot } from 'react-dom/client';
 
 import { bootstrapJsonParse } from './bootstrap/json-parser';
-import { bootstrapReactTable } from './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
 import type { QueryContext } from './druid-models';
 import type { WebConsoleConfig } from './druid-models/web-console-config/web-console-config';
@@ -41,7 +37,6 @@ import {
 
 import './entry.scss';
 
-bootstrapReactTable();
 bootstrapJsonParse();
 
 const container = document.getElementsByClassName('app-container')[0];

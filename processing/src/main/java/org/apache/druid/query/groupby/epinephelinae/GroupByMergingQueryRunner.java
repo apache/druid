@@ -25,7 +25,6 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
@@ -54,6 +53,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -92,7 +92,6 @@ import java.util.concurrent.TimeoutException;
 public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
 {
   private static final Logger log = new Logger(GroupByMergingQueryRunner.class);
-  private static final String CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION = "mergeRunnersUsingChainedExecution";
 
   private final GroupByQueryConfig config;
   private final DruidProcessingConfig processingConfig;
@@ -139,18 +138,19 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
 
-    // CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION is here because realtime servers use nested mergeRunners calls
+    // MERGE_RUNNERS_USING_CHAINED_EXECUTION is here because realtime servers use nested mergeRunners calls
     // (one for the entire query and one for each sink). We only want the outer call to actually do merging with a
     // merge buffer, otherwise the query will allocate too many merge buffers. This is potentially sub-optimal as it
     // will involve materializing the results for each sink before starting to feed them into the outer merge buffer.
     // I'm not sure of a better way to do this without tweaking how realtime servers do queries.
-    final boolean forceChainedExecution = query.context().getBoolean(
-        CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
-        false
+    final boolean forceChainedExecution = query.context().getOrDefault(
+        QueryContextParameters.MERGE_RUNNERS_USING_CHAINED_EXECUTION
     );
     final QueryPlus<ResultRow> queryPlusForRunners = queryPlus
         .withQuery(
-            query.withOverriddenContext(ImmutableMap.of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
+            query.withOverriddenContext(
+                QueryContext.ofMap(QueryContextParameters.MERGE_RUNNERS_USING_CHAINED_EXECUTION, true)
+            )
         )
         .withoutThreadUnsafeState();
 
@@ -405,6 +405,9 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       // Nested per-segment future timeout
       if (cause instanceof TimeoutException) {
         throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query timeout, cancelling pending results for query [%s]. Per-segment timeout exceeded.", query.getId()));
+      }
+      if (cause instanceof DruidException) {
+        throw (DruidException) cause;
       }
       throw new RuntimeException(e);
     }

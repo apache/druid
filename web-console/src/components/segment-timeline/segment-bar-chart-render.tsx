@@ -27,7 +27,7 @@ import { axisBottom, axisLeft } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
 import { select } from 'd3-selection';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { Rule } from '../../druid-models';
 import { getDatasourceColor, RuleUtil } from '../../druid-models';
@@ -249,7 +249,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
   const [shiftOffset, setShiftOffset] = useState<number | undefined>();
 
   const now = useClock(minute.canonicalLength);
-  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [svgElement, setSvgElement] = useState<SVGSVGElement | null>(null);
 
   const innerStage = stage.applyMargin(CHART_MARGIN);
 
@@ -361,7 +361,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
   };
 
   function handleMouseDown(e: ReactMouseEvent) {
-    const svg = svgRef.current;
+    const svg = svgElement;
     if (!svg) return;
     e.preventDefault();
 
@@ -386,7 +386,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
   }
 
   useGlobalEventListener('mousemove', (e: MouseEvent) => {
-    const svg = svgRef.current;
+    const svg = svgElement;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
     const x = e.clientX - rect.x - CHART_MARGIN.left;
@@ -462,7 +462,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
     e.preventDefault();
     setMouseDownAt(undefined);
 
-    const svg = svgRef.current;
+    const svg = svgElement;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
     const x = e.clientX - rect.x - CHART_MARGIN.left;
@@ -620,7 +620,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
                 icon={IconNames.ZOOM_IN}
                 text="Zoom in"
                 intent={Intent.PRIMARY}
-                small
+                size="small"
                 onClick={() => {
                   if (!selection) return;
                   setSelection(undefined);
@@ -665,7 +665,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
   return (
     <div className="segment-bar-chart-render">
       <svg
-        ref={svgRef}
+        ref={setSvgElement}
         {...stage.toWidthHeight()}
         viewBox={stage.toViewBox()}
         preserveAspectRatio="xMinYMin meet"
@@ -732,7 +732,9 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
           <g
             className="axis-x"
             transform={`translate(0,${innerStage.height + 1})`}
-            ref={(node: any) => select(node).call(axisBottom(timeScale))}
+            ref={(node: any) => {
+              select(node).call(axisBottom(timeScale));
+            }}
           />
           <rect
             className={classNames('time-shift-indicator', {
@@ -745,13 +747,13 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
           />
           <g
             className="axis-y"
-            ref={(node: any) =>
+            ref={(node: any) => {
               select(node).call(
                 axisLeft(statScale)
                   .ticks(3)
                   .tickFormat(e => formatTickRate(e.valueOf())),
-              )
-            }
+              );
+            }}
           />
         </g>
       </svg>
@@ -771,11 +773,11 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
           <div className="no-data-text">There are no segments in the selected range</div>
         </div>
       )}
-      {svgRef.current && (
+      {svgElement && (
         <PortalBubble
           className="segment-bar-chart-bubble"
           openOn={hoveredOpenOn}
-          offsetElement={svgRef.current}
+          offsetElement={svgElement}
           onClose={selection?.finalized ? () => setSelection(undefined) : undefined}
           mute
           direction="up"

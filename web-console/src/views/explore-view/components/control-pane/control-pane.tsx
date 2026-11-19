@@ -23,7 +23,7 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
+  PopoverNext,
   SegmentedControl,
   Tag,
 } from '@blueprintjs/core';
@@ -101,7 +101,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                 { value: 'false', label: 'False' },
                 { value: 'true', label: 'True' },
               ]}
-              small
+              size="small"
             />
           ),
         };
@@ -139,10 +139,11 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
         const selectedOption: OptionValue | undefined = controlOptions.find(o => o === value);
         return {
           element: (
-            <Popover
+            <PopoverNext
               fill
-              position="bottom-left"
-              minimal
+              placement="bottom-start"
+              animation="minimal"
+              arrow={false}
               content={
                 <Menu>
                   {controlOptions.map((o, i) => (
@@ -157,6 +158,8 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                   ))}
                 </Menu>
               }
+              lazy
+              shouldReturnFocusOnClose={false}
             >
               <InputGroup
                 value={
@@ -166,9 +169,9 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                 }
                 readOnly
                 fill
-                rightElement={<Button icon={IconNames.CARET_DOWN} minimal />}
+                rightElement={<Button icon={IconNames.CARET_DOWN} variant="minimal" />}
               />
-            </Popover>
+            </PopoverNext>
           ),
         };
       }

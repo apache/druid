@@ -20,7 +20,9 @@
 package org.apache.druid.server.coordinator.rules;
 
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -33,9 +35,7 @@ import org.junit.jupiter.api.Test;
 public class PeriodDropRuleTest
 {
   private static final DataSegment.Builder BUILDER = DataSegment
-      .builder()
-      .dataSource("test")
-      .version(DateTimes.of("2012-12-31T01:00:00").toString())
+      .builder(SegmentId.of("test", Intervals.ETERNITY, DateTimes.of("2012-12-31T01:00:00").toString(), 0))
       .shardSpec(NoneShardSpec.instance())
       .size(0);
 

@@ -762,7 +762,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       return segmentAvailabilityConfirmationCompleted;
     }
     catch (InterruptedException e) {
-      log.warn("Interrupted while waiting for segment availablity; Unable to confirm availability!");
+      log.warn("Interrupted while waiting for segment availability; Unable to confirm availability!");
       Thread.currentThread().interrupt();
       return false;
     }

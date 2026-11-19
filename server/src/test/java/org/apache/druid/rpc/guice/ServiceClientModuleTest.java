@@ -23,12 +23,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.ProvisionException;
 import org.apache.druid.client.broker.Broker;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.CoordinatorClientConfig;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -37,15 +41,21 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
+import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+
+import java.util.Properties;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.WARN)
@@ -68,9 +78,17 @@ public class ServiceClientModuleTest
   @BeforeEach
   public void setUp()
   {
-    injector = Guice.createInjector(
+    injector = makeInjector("4");
+  }
+
+  private Injector makeInjector(final String coordinatorMaxAttempts)
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.client.coordinator.maxAttempts", coordinatorMaxAttempts);
+    return Guice.createInjector(
         ImmutableList.of(
             new DruidGuiceExtensions(),
+            new ConfigModule(),
             new LifecycleModule(),
           new JacksonModule(),
           new ServiceClientModule(),
@@ -79,6 +97,7 @@ public class ServiceClientModuleTest
             binder.bind(ServiceLocator.class).toInstance(serviceLocator);
             binder.bind(DruidNodeDiscoveryProvider.class).toInstance(discoveryProvider);
             binder.bind(ServiceClientFactory.class).toInstance(serviceClientFactory);
+            binder.bind(Properties.class).toInstance(properties);
           }
           )
     );
@@ -100,6 +119,37 @@ public class ServiceClientModuleTest
   public void testGetCoordinatorClient()
   {
     Assertions.assertNotNull(injector.getInstance(CoordinatorClient.class));
+  }
+
+  @Test
+  public void testCoordinatorClientConfigRejectsNonPositiveMaxAttempts()
+  {
+    Assertions.assertThrows(
+        ProvisionException.class,
+        () -> makeInjector("0").getInstance(CoordinatorClientConfig.class)
+    );
+    Assertions.assertThrows(
+        ProvisionException.class,
+        () -> makeInjector("-1").getInstance(CoordinatorClientConfig.class)
+    );
+  }
+
+  @Test
+  public void testCoordinatorRetryPolicyUsesConfiguredMaxAttempts()
+  {
+    new ServiceClientModule().makeServiceClientForCoordinator(
+        serviceClientFactory,
+        serviceLocator,
+        injector.getInstance(CoordinatorClientConfig.class)
+    );
+
+    final ArgumentCaptor<ServiceRetryPolicy> retryPolicy = ArgumentCaptor.forClass(ServiceRetryPolicy.class);
+    Mockito.verify(serviceClientFactory).makeClient(
+        ArgumentMatchers.eq(NodeRole.COORDINATOR.getJsonName()),
+        ArgumentMatchers.eq(serviceLocator),
+        retryPolicy.capture()
+    );
+    Assertions.assertEquals(4, retryPolicy.getValue().maxAttempts());
   }
 
   @Test

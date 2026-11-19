@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 
@@ -123,10 +124,7 @@ public class RealtimeishTask extends AbstractTask
   private SegmentTransactionalInsertAction createSegmentInsertAction(Interval interval, String version)
   {
     final DataSegment segmentToInsert
-        = DataSegment.builder()
-                     .dataSource("foo")
-                     .interval(interval)
-                     .version(version)
+        = DataSegment.builder(SegmentId.of("foo", interval, version, 0))
                      .size(0)
                      .build();
     return SegmentTransactionalInsertAction

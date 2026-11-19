@@ -19,14 +19,16 @@
 import { Button, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
-import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  ConsoleTable,
   RefreshButton,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
   TableClickableCell,
   TableColumnSelector,
   TableFilterableCell,
@@ -36,7 +38,6 @@ import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
 import type { LookupSpec } from '../../druid-models';
 import { lookupSpecSummary } from '../../druid-models';
-import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
   deepGet,
@@ -357,7 +358,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             icon={IconNames.BUILD}
             text="Initialize lookups"
             onClick={() => void this.initializeLookup()}
-            large
+            size="large"
             intent={Intent.PRIMARY}
           />
         </div>
@@ -365,7 +366,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     }
 
     return (
-      <ReactTable
+      <ConsoleTable
         data={lookups}
         loading={lookupEntriesAndTiersState.loading}
         noDataText={lookupEntriesAndTiersState.getErrorMessage() || 'No lookups'}

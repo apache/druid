@@ -21,7 +21,10 @@ package org.apache.druid.msq.querykit.groupby;
 
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.msq.querykit.InputNumberDataSource;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
@@ -36,6 +39,7 @@ import org.joda.time.DateTimeZone;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -103,6 +107,25 @@ public class GroupByTimeBoundaryUtilsTest
                         new LongMinAggregatorFactory("a0", ColumnHolder.TIME_COLUMN_NAME)
                     )
                     .build();
+    assertFalse(GroupByTimeBoundaryUtils.isTimeBoundaryQuery(query));
+  }
+
+  @Test
+  public void testIsTimeBoundaryQuery_withFilteredDataSourceUnderUnion()
+  {
+    // A filter within the datasource might remove every row of the earliest and latest segments.
+    final GroupByQuery query = (GroupByQuery)
+        makeTimeBoundaryGroupByQuery(true, true).withDataSource(
+            new UnionDataSource(
+                List.of(
+                    FilteredDataSource.create(
+                        new InputNumberDataSource(0),
+                        new SelectorDimFilter("dim1", "abc", null)
+                    ),
+                    new InputNumberDataSource(1)
+                )
+            )
+        );
     assertFalse(GroupByTimeBoundaryUtils.isTimeBoundaryQuery(query));
   }
 

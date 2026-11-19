@@ -70,6 +70,12 @@ public class MSQTestWorkerContext implements WorkerContext
   private static final Logger log = new Logger(MSQTestWorkerContext.class);
   private static final StupidPool<ByteBuffer> BUFFER_POOL = new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000));
 
+  /**
+   * System property that sets {@link #threadCount()}, the number of processors each worker runs at once. Defaults to 1.
+   * The shared processing pool is sized separately, by {@link CalciteMSQTestsHelper.MSQTestModule#POOL_THREADS_PROPERTY}.
+   */
+  public static final String THREAD_COUNT_PROPERTY = "druid.msq.test.workerThreadCount";
+
   private final String workerId;
   private final Controller controller;
   private final ObjectMapper mapper;
@@ -186,7 +192,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public int threadCount()
   {
-    return 1;
+    return Integer.getInteger(THREAD_COUNT_PROPERTY, 1);
   }
 
   @Override

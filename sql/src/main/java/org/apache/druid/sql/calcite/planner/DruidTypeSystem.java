@@ -37,6 +37,18 @@ public class DruidTypeSystem implements RelDataTypeSystem
    */
   public static final int DEFAULT_TIMESTAMP_PRECISION = 3;
 
+  /**
+   * Default precision of DECIMAL, same as Calcite's default. This only affects planning, since we process
+   * DECIMAL as DOUBLE when executing queries.
+   */
+  public static final int DEFAULT_DECIMAL_PRECISION = 19;
+
+  /**
+   * Maximum precision of DECIMAL. Larger than {@link #DEFAULT_DECIMAL_PRECISION}, so the common type of a
+   * default-precision DECIMAL and a fractional value, like DECIMAL(19, 0) and 0.1, keeps the fractional digits.
+   */
+  public static final int MAX_DECIMAL_PRECISION = 38;
+
   private DruidTypeSystem()
   {
     // Singleton.
@@ -51,23 +63,21 @@ public class DruidTypeSystem implements RelDataTypeSystem
   @Override
   public int getDefaultPrecision(final SqlTypeName typeName)
   {
-    switch (typeName) {
-      case TIMESTAMP:
-      case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-        return DEFAULT_TIMESTAMP_PRECISION;
-      default:
-        return RelDataTypeSystem.DEFAULT.getDefaultPrecision(typeName);
-    }
+    return switch (typeName) {
+      case TIME, TIMESTAMP, TIMESTAMP_WITH_LOCAL_TIME_ZONE -> DEFAULT_TIMESTAMP_PRECISION;
+      case DECIMAL -> DEFAULT_DECIMAL_PRECISION;
+      default -> RelDataTypeSystem.DEFAULT.getDefaultPrecision(typeName);
+    };
   }
 
   @Override
   public int getMaxPrecision(final SqlTypeName typeName)
   {
-    if (typeName == SqlTypeName.TIME || typeName == SqlTypeName.TIMESTAMP) {
-      return DEFAULT_TIMESTAMP_PRECISION;
-    } else {
-      return RelDataTypeSystem.DEFAULT.getMaxPrecision(typeName);
-    }
+    return switch (typeName) {
+      case TIME, TIMESTAMP, TIMESTAMP_WITH_LOCAL_TIME_ZONE -> DEFAULT_TIMESTAMP_PRECISION;
+      case DECIMAL -> MAX_DECIMAL_PRECISION;
+      default -> RelDataTypeSystem.DEFAULT.getMaxPrecision(typeName);
+    };
   }
 
   @Override
@@ -79,7 +89,7 @@ public class DruidTypeSystem implements RelDataTypeSystem
   @Override
   public int getMaxNumericPrecision()
   {
-    return RelDataTypeSystem.DEFAULT.getMaxNumericPrecision();
+    return getMaxPrecision(SqlTypeName.DECIMAL);
   }
 
   @Override

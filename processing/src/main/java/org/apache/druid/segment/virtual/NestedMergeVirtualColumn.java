@@ -142,6 +142,12 @@ public class NestedMergeVirtualColumn extends SpecializedExpressionVirtualColumn
   }
 
   @Override
+  public NestedMergeVirtualColumn withOutputName(String outputName)
+  {
+    return new NestedMergeVirtualColumn(outputName, columns, macroTable);
+  }
+
+  @Override
   public String toString()
   {
     return "NestedMergeVirtualColumn{" +

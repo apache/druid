@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+@use 'colors' as *;
+
 $pt-intent-primary: $blue3;
 $pt-intent-success: $green3;
 $pt-intent-warning: $orange3;
@@ -25,6 +27,8 @@ $pt-app-background-color: $light-gray5;
 $pt-dark-app-background-color: $dark-gray3;
 
 $pt-outline-color: rgba($blue3, 0.6);
+$pt-focus-indicator-color: rgba($blue2, 0.752);
+$pt-dark-focus-indicator-color: rgba($blue5, 0.752);
 
 $pt-text-color: $dark-gray1;
 $pt-text-color-muted: $gray1;
@@ -56,3 +60,24 @@ $pt-code-text-color: $pt-text-color-muted;
 $pt-dark-code-text-color: $pt-dark-text-color-muted;
 $pt-code-background-color: rgba($white, 0.7);
 $pt-dark-code-background-color: rgba($black, 0.3);
+
+$pt-intent-colors: (
+  'primary': $pt-intent-primary,
+  'success': $pt-intent-success,
+  'warning': $pt-intent-warning,
+  'danger': $pt-intent-danger,
+);
+
+$pt-intent-text-colors: (
+  'primary': $blue2,
+  'success': $green2,
+  'warning': $orange2,
+  'danger': $red2,
+);
+
+$pt-dark-intent-text-colors: (
+  'primary': $blue5,
+  'success': $green5,
+  'warning': $orange5,
+  'danger': $red5,
+);

@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -72,17 +73,10 @@ public class CompactionInputSpecTest
 
   private static DataSegment newSegment(Interval interval)
   {
-    return new DataSegment(
-        DATASOURCE,
-        interval,
-        "version",
-        null,
-        null,
-        null,
-        null,
-        9,
-        10
-    );
+    return DataSegment.builder(SegmentId.of(DATASOURCE, interval, "version", 0))
+                      .binaryVersion(9)
+                      .size(10)
+                      .build();
   }
 
   private final CompactionInputSpec inputSpec;

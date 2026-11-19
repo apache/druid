@@ -19,8 +19,8 @@
 import { Button, Classes, Dialog, HTMLSelect } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
-import type { ReactDiffViewerStylesOverride } from 'react-diff-viewer';
-import ReactDiffViewer from 'react-diff-viewer';
+import type { ReactDiffViewerStylesOverride } from 'react-diff-viewer-continued';
+import ReactDiffViewer from 'react-diff-viewer-continued';
 
 import './diff-dialog.scss';
 

@@ -126,17 +126,27 @@ public class OutboxImplTest
   @Test
   public void test_getMessages_nonexistentHost() throws InterruptedException, ExecutionException
   {
-    // Calling getMessages with a nonexistent host creates an outbox.
+    // Calling getMessages with a nonexistent host creates an outbox. The first call, with INIT, returns right away
+    // with the epoch.
     final String nonexistentHost = "nonexistent";
-    final ListenableFuture<MessageBatch<String>> batchFuture = outbox.getMessages(
+    final ListenableFuture<MessageBatch<String>> initFuture = outbox.getMessages(
         nonexistentHost,
         MessageRelay.INIT,
         0
     );
-    Assertions.assertFalse(batchFuture.isDone());
+    Assertions.assertTrue(initFuture.isDone());
 
     // Check that an outbox was created (it has an epoch).
     MatcherAssert.assertThat(outbox.getOutboxEpoch(nonexistentHost), Matchers.greaterThanOrEqualTo(0L));
+    Assertions.assertEquals(
+        new MessageBatch<>(ImmutableList.of(), outbox.getOutboxEpoch(nonexistentHost), 0),
+        initFuture.get()
+    );
+
+    // Calls with the epoch wait for messages.
+    final ListenableFuture<MessageBatch<String>> batchFuture =
+        outbox.getMessages(nonexistentHost, outbox.getOutboxEpoch(nonexistentHost), 0);
+    Assertions.assertFalse(batchFuture.isDone());
 
     // getMessages future resolves when a message is sent.
     final ListenableFuture<?> sendFuture = outbox.sendMessage(nonexistentHost, "foo");
@@ -158,6 +168,22 @@ public class OutboxImplTest
   }
 
   @Test
+  public void test_getMessages_initDoesNotWait() throws InterruptedException, ExecutionException
+  {
+    outbox.sendMessage(HOST, "1");
+    final long epoch = outbox.getOutboxEpoch(HOST);
+
+    // Acknowledge the message, leaving the outbox empty.
+    final ListenableFuture<MessageBatch<String>> waitingFuture = outbox.getMessages(HOST, epoch, 1);
+    Assertions.assertFalse(waitingFuture.isDone());
+
+    // A poll with INIT, as from a newly started client, returns right away with the epoch and current watermark.
+    final ListenableFuture<MessageBatch<String>> initFuture = outbox.getMessages(HOST, MessageRelay.INIT, 0);
+    Assertions.assertTrue(initFuture.isDone());
+    Assertions.assertEquals(new MessageBatch<>(ImmutableList.of(), epoch, 1), initFuture.get());
+  }
+
+  @Test
   public void test_stop_cancelsSendMessage()
   {
     final ListenableFuture<?> sendFuture = outbox.sendMessage(HOST, "1");
@@ -168,7 +194,7 @@ public class OutboxImplTest
   @Test
   public void test_stop_cancelsGetMessages()
   {
-    final ListenableFuture<MessageBatch<String>> futureBatch = outbox.getMessages(HOST, MessageRelay.INIT, 0);
+    final ListenableFuture<MessageBatch<String>> futureBatch = outbox.getMessages(HOST, getEpoch(HOST), 0);
     outbox.stop();
     Assertions.assertTrue(futureBatch.isCancelled());
   }
@@ -184,7 +210,7 @@ public class OutboxImplTest
   @Test
   public void test_reset_cancelsGetMessages()
   {
-    final ListenableFuture<MessageBatch<String>> futureBatch = outbox.getMessages(HOST, MessageRelay.INIT, 0);
+    final ListenableFuture<MessageBatch<String>> futureBatch = outbox.getMessages(HOST, getEpoch(HOST), 0);
     outbox.resetOutbox(HOST);
     Assertions.assertTrue(futureBatch.isCancelled());
   }
@@ -209,5 +235,18 @@ public class OutboxImplTest
     outbox.stop();
     final ListenableFuture<MessageBatch<String>> futureBatch = outbox.getMessages(HOST, MessageRelay.INIT, 0);
     Assertions.assertTrue(futureBatch.isCancelled());
+  }
+
+  /**
+   * Returns the epoch of the outbox for a client, creating the outbox if needed, as a client's first poll would.
+   */
+  private long getEpoch(final String clientHost)
+  {
+    try {
+      return outbox.getMessages(clientHost, MessageRelay.INIT, 0).get().getEpoch();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

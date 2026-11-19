@@ -37,9 +37,10 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
@@ -83,6 +84,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -533,13 +535,44 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("select 1 + ?")
-        .queryContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
+        .queryContext(QueryContext.of(QueryContextParameters.BY_SEGMENT, true))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
-    Map<String, Object> context = stmt.context();
+    final QueryContext context = stmt.context();
     // should contain only query id, not bySegment since it is not valid for SQL
-    Assertions.assertEquals(Collections.singleton(QueryContexts.CTX_SQL_QUERY_ID), context.keySet());
+    Assertions.assertEquals(
+        Collections.singleton(QueryContextParameters.SQL_QUERY_ID.getName()),
+        context.asMap().keySet()
+    );
+  }
+
+  @Test
+  public void testUserProvidedSqlQueryIdIsKept()
+  {
+    final SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("select 1")
+        .queryContext(QueryContext.of(QueryContextParameters.SQL_QUERY_ID, "user-sql-query-id"))
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+    final DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+    Assertions.assertEquals("user-sql-query-id", stmt.sqlQueryId());
+    Assertions.assertEquals("user-sql-query-id", stmt.context().get(QueryContextParameters.SQL_QUERY_ID));
+  }
+
+  @Test
+  public void testNullSqlQueryIdIsReplaced()
+  {
+    final Map<String, Object> userContext = new HashMap<>();
+    userContext.put(QueryContextParameters.SQL_QUERY_ID.getName(), null);
+    final SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("select 1")
+        .queryContext(QueryContext.of(userContext))
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+    final DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+    Assertions.assertNotNull(stmt.sqlQueryId());
+    Assertions.assertEquals(stmt.sqlQueryId(), stmt.context().get(QueryContextParameters.SQL_QUERY_ID));
   }
 
   private SqlStatementFactory buildSqlStatementFactory()
@@ -595,7 +628,7 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
-        .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 100))
+        .queryContext(QueryContext.of(ImmutableMap.of(QueryContextParameters.MAX_PLANNING_TIME_MS.getName(), 100)))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
 
@@ -636,7 +669,7 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
-        .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 50))
+        .queryContext(QueryContext.of(ImmutableMap.of(QueryContextParameters.MAX_PLANNING_TIME_MS.getName(), 50)))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
 

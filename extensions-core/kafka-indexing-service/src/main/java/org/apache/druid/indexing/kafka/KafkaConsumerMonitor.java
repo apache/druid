@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.kafka;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -144,7 +143,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   private final Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier;
 
   private final Map<MetricName, AtomicLong> counters = new HashMap<>();
-  private final AtomicDouble pollIdleRatioAvg = new AtomicDouble(1.0d);
+  private final RunningAverage pollIdleRatio = new RunningAverage();
 
   public KafkaConsumerMonitor(
       final KafkaConsumer<?, ?> consumer,
@@ -197,7 +196,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
       // Capture `poll-idle-ratio-avg` metric for autoscaler purposes.
       if (POLL_IDLE_RATIO_METRIC_NAME.equals(metricName.name())) {
         if (entry.getValue().metricValue() != null) {
-          pollIdleRatioAvg.set(((Number) entry.getValue().metricValue()).doubleValue());
+          pollIdleRatio.addSample(((Number) entry.getValue().metricValue()).doubleValue());
         }
       }
     }
@@ -211,12 +210,54 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   }
 
   /**
-   * Average poll-to-idle ratio as reported by the Kafka consumer.
+   * poll-to-idle ratio as reported by the Kafka consumer averaged over a short
+   * sampling window (30s by default).
    * A value of 0 represents that the consumer is never idle, i.e. always consuming.
    * A value of 1 represents that the consumer is always idle, i.e. not receiving data.
+   * A negative value indicates that the metric is not yet known, e.g. because the consumer
+   * has not reported it yet.
    */
   public double getPollIdleRatioAvg()
   {
-    return pollIdleRatioAvg.get();
+    return pollIdleRatio.getLatest();
+  }
+
+  /**
+   * Cumulative average poll-to-idle ratio over the lifetime of the task
+   * as opposed to {@link #getPollIdleRatioAvg()} which only reflects Kafka's own short sampling window.
+   * A negative value indicates that the metric is not yet known, e.g. because the consumer
+   * has not reported any sample yet.
+   */
+  public double getRunningAvgPollIdleRatio()
+  {
+    return pollIdleRatio.getAvg();
+  }
+
+  private static class RunningAverage
+  {
+    private static final double UNKNOWN = -1.0d;
+
+    private double latest = UNKNOWN;
+    private double sum = 0.0d;
+    private long count = 0L;
+
+    synchronized void addSample(final double value)
+    {
+      if (!Double.isNaN(value) && value >= 0 && value <= 1) {
+        sum += value;
+        count++;
+      }
+      latest = value;
+    }
+
+    synchronized double getAvg()
+    {
+      return count == 0 ? UNKNOWN : sum / count;
+    }
+
+    synchronized double getLatest()
+    {
+      return latest;
+    }
   }
 }

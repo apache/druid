@@ -26,7 +26,7 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * Like {@link CloseableIterator}, but has a currentMetadata() method, which returns "metadata", which is effectively a Map<String, Object>
+ * Like {@link CloseableIterator}, but has a currentMetadata() method, which returns "metadata", which is effectively a {@code Map<String, Object>}
  * about the source of last value returned by next()
  *
  * The returned metadata is read-only and cannot be modified.

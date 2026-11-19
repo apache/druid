@@ -182,7 +182,7 @@ public class ThreadingTaskRunner
 
                           final TaskLocation taskLocation = TaskLocation.create(
                               node.getHost(),
-                              node.getPlaintextPort(),
+                              node.getAdvertisedPlaintextPort(),
                               node.getTlsPort()
                           );
 
@@ -587,6 +587,7 @@ public class ThreadingTaskRunner
       this.state = RunnerTaskState.PENDING;
     }
 
+    @Override
     public Task getTask()
     {
       return task;

@@ -117,6 +117,20 @@ public interface DataSourceCompactionConfig
   AggregatorFactory[] getMetricsSpec();
 
   /**
+   * Whether the schema declared by this config is the complete schema of the datasource, i.e. the segments cannot
+   * contain columns it does not declare. When false, compaction analyzes the existing segments even where this config
+   * does declare a schema, and preserves whatever the declaration does not cover.
+   * <p>
+   * Only {@link #getBaseTable()} observes this. The legacy {@link #getDimensionsSpec()} and {@link #getMetricsSpec()}
+   * express a partial declaration by being absent, so analysis for those is already driven by nullness; making a
+   * declaration that is present merge with an analyzed schema rather than replace it is not implemented.
+   */
+  default boolean isSealed()
+  {
+    return true;
+  }
+
+  /**
    * Converts this compaction config to a {@link CompactionState}.
    * <p>
    * For IndexSpec and DimensionsSpec, we convert to their effective specs so that the fingerprint and associated state

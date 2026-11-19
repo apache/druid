@@ -155,6 +155,15 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
   }
 
   /**
+   * Running average of the {@link #getPollIdleRatioMetric()} averaged over the
+   * entire lifecycle of the task.
+   */
+  default double getRunningAvgPollIdleRatio()
+  {
+    return -1;
+  }
+
+  /**
    * close the RecordSupplier
    */
   @Override

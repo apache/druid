@@ -245,17 +245,14 @@ public class TierSelectorStrategyTest
   )
   {
     final ServerSelector serverSelector = new ServerSelector(
-        new DataSegment(
-            "test",
-            Intervals.of("2013-01-01/2013-01-02"),
-            DateTimes.of("2013-01-01").toString(),
-            new HashMap<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            NoneShardSpec.instance(),
-            0,
-            0L
-        ),
+        DataSegment.builder(SegmentId.of("test", Intervals.of("2013-01-01/2013-01-02"), DateTimes.of("2013-01-01").toString(), 0))
+                   .loadSpec(new HashMap<>())
+                   .dimensions(new ArrayList<>())
+                   .metrics(new ArrayList<>())
+                   .shardSpec(NoneShardSpec.instance())
+                   .binaryVersion(0)
+                   .size(0L)
+                   .build(),
         tierSelectorStrategy,
         HistoricalFilter.IDENTITY_FILTER
     );
@@ -330,17 +327,14 @@ public class TierSelectorStrategyTest
   )
   {
     final ServerSelector serverSelector = new ServerSelector(
-        new DataSegment(
-            "test",
-            Intervals.of("2013-01-01/2013-01-02"),
-            DateTimes.of("2013-01-01").toString(),
-            new HashMap<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            NoneShardSpec.instance(),
-            0,
-            0L
-        ),
+        DataSegment.builder(SegmentId.of("test", Intervals.of("2013-01-01/2013-01-02"), DateTimes.of("2013-01-01").toString(), 0))
+                   .loadSpec(new HashMap<>())
+                   .dimensions(new ArrayList<>())
+                   .metrics(new ArrayList<>())
+                   .shardSpec(NoneShardSpec.instance())
+                   .binaryVersion(0)
+                   .size(0L)
+                   .build(),
         tierSelectorStrategy,
         HistoricalFilter.IDENTITY_FILTER
     );
@@ -424,17 +418,14 @@ public class TierSelectorStrategyTest
     );
 
     final ServerSelector serverSelector = new ServerSelector(
-        new DataSegment(
-            "test",
-            Intervals.of("2013-01-01/2013-01-02"),
-            DateTimes.of("2013-01-01").toString(),
-            new HashMap<>(),
-            new ArrayList<>(),
-            new ArrayList<>(),
-            NoneShardSpec.instance(),
-            0,
-            0L
-        ),
+        DataSegment.builder(SegmentId.of("test", Intervals.of("2013-01-01/2013-01-02"), DateTimes.of("2013-01-01").toString(), 0))
+                   .loadSpec(new HashMap<>())
+                   .dimensions(new ArrayList<>())
+                   .metrics(new ArrayList<>())
+                   .shardSpec(NoneShardSpec.instance())
+                   .binaryVersion(0)
+                   .size(0L)
+                   .build(),
         tierSelectorStrategy,
         HistoricalFilter.IDENTITY_FILTER
     );

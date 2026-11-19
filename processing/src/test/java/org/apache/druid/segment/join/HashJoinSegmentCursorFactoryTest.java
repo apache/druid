@@ -26,6 +26,7 @@ import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -39,6 +40,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DeferredCursorFactory;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.TopNOptimizationInspector;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
@@ -218,6 +220,34 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
             new Object[]{"History of Fourems", "MMMM", "MMMM", "Fourems", 205L}
         )
     );
+  }
+
+  @Test
+  public void test_getOrdering_endsAtPostJoinVirtualColumn()
+  {
+    final List<OrderBy> baseOrdering;
+    try (CursorHolder baseHolder = factSegment.as(CursorFactory.class).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      baseOrdering = baseHolder.getOrdering();
+    }
+    Assertions.assertEquals("channel", baseOrdering.get(1).getColumnName());
+
+    // This virtual column reads a joined column, so it applies on top of the join, which must end the ordering at the
+    // base column it shadows.
+    final List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        makeExpressionVirtualColumn(
+            StringUtils.format("concat(\"%scountryName\", '!')", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
+            "channel"
+        )
+    );
+    try (CursorHolder holder = new HashJoinSegmentCursorFactory(
+        factSegment.as(CursorFactory.class),
+        null,
+        joinableClauses,
+        makeDefaultConfigPreAnalysis(null, joinableClauses, virtualColumns)
+    ).makeCursorHolder(CursorBuildSpec.builder().setVirtualColumns(virtualColumns).build())) {
+      Assertions.assertEquals(baseOrdering.subList(0, 1), holder.getOrdering());
+    }
   }
 
   @Test
@@ -1449,6 +1479,101 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
             new Object[]{"Didier Leclair", "CA", "CL", "CL", "Chile"},
             new Object[]{"Les Argonautes", "CA", "CL", "CL", "Chile"},
             new Object[]{"Sarah Michelle Gellar", "CA", "CL", "CL", "Chile"}
+        )
+    );
+  }
+
+  @Test
+  public void test_makeCursor_factToCountryInnerUsingChainedPostJoinVirtualColumns()
+  {
+    // "v1" refers to the join table only through "v0", so it must be computed post-join along with "v0".
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.INNER));
+
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        makeExpressionVirtualColumn(
+            StringUtils.format("upper(\"%scountryName\")", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
+            "v0"
+        ),
+        makeExpressionVirtualColumn("concat(\"v0\", '!')", "v1")
+    );
+
+    Filter filter = new SelectorDimFilter("v1", "CANADA!", null).toFilter();
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        filter,
+        joinableClauses,
+        virtualColumns
+    );
+    JoinTestHelper.verifyCursor(
+        new HashJoinSegmentCursorFactory(
+            factSegment.as(CursorFactory.class),
+            null,
+            joinableClauses,
+            joinFilterPreAnalysis
+        ).makeCursorHolder(
+            CursorBuildSpec.builder().setFilter(filter).setVirtualColumns(virtualColumns).build()
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            "v0",
+            "v1"
+        ),
+        ImmutableList.of(
+            new Object[]{"Didier Leclair", "CA", "CANADA", "CANADA!"},
+            new Object[]{"Les Argonautes", "CA", "CANADA", "CANADA!"},
+            new Object[]{"Sarah Michelle Gellar", "CA", "CANADA", "CANADA!"}
+        )
+    );
+  }
+
+  @Test
+  public void test_makeCursor_factToCountryInnerUsingVirtualColumnsThatDifferFromPreAnalysis()
+  {
+    // The pre-analysis sees "v1" as post-join, through "v0". The cursor build spec redefines "v0" on the base table,
+    // making "v1" pre-join, so the cursor must classify virtual columns using its own spec, not the pre-analysis.
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.INNER));
+
+    Filter filter = new SelectorDimFilter("countryIsoCode", "CA", null).toFilter();
+
+    VirtualColumn v1 = makeExpressionVirtualColumn("concat(\"v0\", '!')", "v1");
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        filter,
+        joinableClauses,
+        VirtualColumns.create(
+            makeExpressionVirtualColumn(
+                StringUtils.format("upper(\"%scountryName\")", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
+                "v0"
+            ),
+            v1
+        )
+    );
+
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        makeExpressionVirtualColumn("upper(\"countryIsoCode\")", "v0"),
+        v1
+    );
+
+    JoinTestHelper.verifyCursor(
+        new HashJoinSegmentCursorFactory(
+            factSegment.as(CursorFactory.class),
+            null,
+            joinableClauses,
+            joinFilterPreAnalysis
+        ).makeCursorHolder(
+            CursorBuildSpec.builder().setFilter(filter).setVirtualColumns(virtualColumns).build()
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            "v0",
+            "v1"
+        ),
+        ImmutableList.of(
+            new Object[]{"Didier Leclair", "CA", "CA", "CA!"},
+            new Object[]{"Les Argonautes", "CA", "CA", "CA!"},
+            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "CA!"}
         )
     );
   }

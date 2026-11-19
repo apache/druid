@@ -312,8 +312,21 @@ FROM test_json_cols
 UNION ALL
 SELECT json_value(c1, '$.a_obj.a_str') c
 FROM test_json_cols;
-Query could not be planned
-!error
++---+
+| c |
++---+
+| A |
+| A |
+| A |
+| A |
+|   |
+|   |
+|   |
+|   |
++---+
+(8 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_func_json_value TEST_ID: A170

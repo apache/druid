@@ -24,6 +24,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.EmptyCursorHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.projections.ClusteringVectorColumnSelectorFactory;
 
 import java.util.List;
@@ -35,8 +36,8 @@ import java.util.Map;
  * table. Vector boundaries do not align with cluster-group boundaries; the last vector of each group is naturally
  * partial (its {@link #getCurrentVectorSize()} returns less than max), and the next {@link #advance()} swaps in the
  * next group's vector cursor without trying to merge across groups.
- * <p/
- * >On each group transition the wrapper {@link ClusteringVectorColumnSelectorFactory} updates its underlying
+ * <p/>
+ * On each group transition the wrapper {@link ClusteringVectorColumnSelectorFactory} updates its underlying
  * delegate and clustering values, so previously-acquired delegating vector selectors observe the new group's data via
  * generation-counter cache invalidation.
  * <p/>
@@ -116,7 +117,9 @@ public final class ConcatenatingVectorCursor implements VectorCursor
     currentCursor = null;
     if (!delegateSet) {
       wrapperFactory.setDelegate(
-          EmptyCursorHolder.forSpec(CursorBuildSpec.FULL_SCAN).asVectorCursor().getColumnSelectorFactory(),
+          EmptyCursorHolder.forSpec(CursorBuildSpec.FULL_SCAN, RowSignature.empty())
+                           .asVectorCursor()
+                           .getColumnSelectorFactory(),
           clusteringValuesByGroup.get(holderSuppliers.size() - 1)
       );
       delegateSet = true;

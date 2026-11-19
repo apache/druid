@@ -1208,6 +1208,8 @@ public class SqlTestFramework
     this.componentSupplier = builder.componentSupplier;
     Properties properties = new Properties();
     this.componentSupplier.gatherProperties(properties);
+    // Unlike the default, so that tests catch query context parameters missing from QueryContextParameters
+    properties.putIfAbsent("druid.query.context.rejectUnknownParameters", "true");
     Injector startupInjector = new StartupInjectorBuilder()
         .withProperties(properties)
         .build();

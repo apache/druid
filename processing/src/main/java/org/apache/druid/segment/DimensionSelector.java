@@ -42,8 +42,8 @@ import java.util.stream.Collectors;
  * Selector for a string-typed column, either single- or multi-valued. This is named a "dimension" selector for legacy
  * reasons: in the past, all Druid dimensions were string-typed.
  *
- * @see org.apache.druid.segment.vector.SingleValueDimensionVectorSelector, a vectorized version
- * @see org.apache.druid.segment.vector.MultiValueDimensionVectorSelector, another vectorized version
+ * @see org.apache.druid.segment.vector.SingleValueDimensionVectorSelector a vectorized version
+ * @see org.apache.druid.segment.vector.MultiValueDimensionVectorSelector another vectorized version
  */
 @PublicApi
 public interface DimensionSelector extends ColumnValueSelector<Object>, DimensionDictionarySelector, HotLoopCallee

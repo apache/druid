@@ -38,6 +38,7 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -181,8 +182,7 @@ public class KillStalePendingSegmentsTest
     Set<DataSegment> usedSegments = new HashSet<>();
     for (String datasource : datasources) {
       usedSegments.add(
-          DataSegment.builder().dataSource(datasource).interval(Intervals.ETERNITY)
-                     .version("v1").shardSpec(new NumberedShardSpec(0, 1)).size(100).build()
+          DataSegment.builder(SegmentId.of(datasource, Intervals.ETERNITY, "v1", 0)).shardSpec(new NumberedShardSpec(0, 1)).size(100).build()
       );
     }
 

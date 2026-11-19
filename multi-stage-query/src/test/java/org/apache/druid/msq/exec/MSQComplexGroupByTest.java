@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.exec;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
@@ -30,20 +29,20 @@ import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
@@ -55,7 +54,6 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -263,8 +261,8 @@ public class MSQComplexGroupByTest extends MSQTestBase
   public void testInsertWithRollupOnNestedData(String contextName, Map<String, Object> context)
   {
     final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
-    adjustedContext.put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false);
+    QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING.set(adjustedContext, false);
+    QueryContextParameters.FINALIZE_AGGREGATIONS.set(adjustedContext, false);
     testIngestQuery().setSql("INSERT INTO foo1 SELECT\n"
                              + " obj,\n"
                              + " COUNT(*) as cnt\n"
@@ -453,10 +451,10 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                             .add("distinct_obj", ColumnType.LONG)
                                             .build();
 
-    Map<String, Object> modifiedContext = ImmutableMap.<String, Object>builder()
+    Map<String, Object> modifiedContext = QueryContext.builder()
                                                       .putAll(context)
-                                                      .put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)
-                                                      .build();
+                                                      .put(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)
+                                                      .toMap();
 
     DimFilter innerFilter = new NullFilter("d0", null);
 
@@ -470,7 +468,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + "   )\n"
                              + " )\n"
                              + " ORDER BY 1")
-                     .setQueryContext(Map.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
+                     .setQueryContext(QueryContext.ofMap(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false))
                      .setExpectedMSQSpec(
                          LegacyMSQSpec
                              .builder()
@@ -545,10 +543,10 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                             .add("distinct_obj", ColumnType.LONG)
                                             .build();
 
-    Map<String, Object> modifiedContext = ImmutableMap.<String, Object>builder()
+    Map<String, Object> modifiedContext = QueryContext.builder()
                                                       .putAll(context)
-                                                      .put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)
-                                                      .build();
+                                                      .put(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)
+                                                      .toMap();
 
     DimFilter innerFilter = new NullFilter("d0", null);
 
@@ -562,7 +560,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + "   )\n"
                              + " )\n"
                              + " ORDER BY 1")
-                     .setQueryContext(Map.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
+                     .setQueryContext(QueryContext.ofMap(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false))
                      .setExpectedMSQSpec(
                          LegacyMSQSpec
                              .builder()

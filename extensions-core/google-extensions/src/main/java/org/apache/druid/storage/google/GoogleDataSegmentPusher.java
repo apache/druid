@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
@@ -49,10 +50,9 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   static final String INDEX_ZIP_FILE_NAME = "index.zip";
 
   /**
-   * Originally Google deep storage always wrote segments zipped, so that is what {@code druid.storage.zip} falls back
-   * to.
+   * Originally Google deep storage always wrote segments zipped, so that is the default when neither property is set.
    */
-  private static final boolean DEFAULT_ZIP = true;
+  private static final CompressionUtils.Format DEFAULT_FORMAT = CompressionUtils.Format.ZIP;
 
   private final GoogleStorage storage;
   private final GoogleAccountConfig config;
@@ -70,7 +70,11 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     this.storage = storage;
     this.config = config;
     this.inputDataConfig = inputDataConfig;
-    this.zip = deepStorageConfig.isZip(DEFAULT_ZIP);
+    this.zip = deepStorageConfig.getEffectiveCompressionFormat(
+        DEFAULT_FORMAT,
+        CompressionUtils.Format.ZIP,
+        CompressionUtils.Format.NONE
+    ) == CompressionUtils.Format.ZIP;
   }
 
   public void insert(final File file, final String contentType, final String path)
@@ -181,8 +185,11 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
 
     deleteStaleObjects(dirPath, pushedPaths);
 
+    // V10 unzipped is rangeable: a single druid.segment with a range-readable header. V9 unzipped is a directory of
+    // separate smoosh files the range-read path can't consume.
+    final boolean rangeable = version == IndexIO.V10_VERSION;
     return segment.withSize(size)
-                  .withLoadSpec(makeLoadSpec(config.getBucket(), dirPath))
+                  .withLoadSpec(makeLoadSpec(config.getBucket(), dirPath, rangeable))
                   .withBinaryVersion(version);
   }
 
@@ -243,6 +250,20 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
         "type", GoogleStorageDruidModule.SCHEME,
         "bucket", bucket,
         "path", path
+    );
+  }
+
+  /**
+   * Variant that stamps {@link GoogleLoadSpec#RANGEABLE} so {@link GoogleLoadSpec#openRangeReader()} can decide
+   * range-read eligibility. Used by the unzipped push path where the binary version is known at write time.
+   */
+  private Map<String, Object> makeLoadSpec(String bucket, String path, boolean rangeable)
+  {
+    return ImmutableMap.of(
+        "type", GoogleStorageDruidModule.SCHEME,
+        "bucket", bucket,
+        "path", path,
+        GoogleLoadSpec.RANGEABLE, rangeable
     );
   }
 

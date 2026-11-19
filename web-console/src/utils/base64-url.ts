@@ -20,7 +20,7 @@ export function base64UrlEncode(input: string): string {
   return base64Encode(input) // Encode to base64
     .replace(/\+/g, '-') // Replace '+' with '-'
     .replace(/\//g, '_') // Replace '/' with '_'
-    .replace(/=+$/, ''); // Remove any trailing '='
+    .replace(/={1,2}$/, ''); // Remove the trailing '=' padding
 }
 
 export function base64UrlDecode(input: string): string {

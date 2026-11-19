@@ -186,17 +186,14 @@ public class SegmentManagerThreadSafetyTest
 
   private DataSegment createSegment(String interval) throws IOException
   {
-    final DataSegment tmpSegment = new DataSegment(
-        "dataSource",
-        Intervals.of(interval),
-        "version",
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        new NumberedShardSpec(0, 0),
-        9,
-        100
-    );
+    final DataSegment tmpSegment = DataSegment.builder(SegmentId.of("dataSource", Intervals.of(interval), "version", 0))
+                                              .loadSpec(Collections.emptyMap())
+                                              .dimensions(Collections.emptyList())
+                                              .metrics(Collections.emptyList())
+                                              .shardSpec(new NumberedShardSpec(0, 0))
+                                              .binaryVersion(9)
+                                              .size(100)
+                                              .build();
     final String storageDir = DataSegmentPusher.getDefaultStorageDir(tmpSegment, false);
     final File segmentDir = new File(segmentDeepStorageDir, storageDir);
     FileUtils.mkdirp(segmentDir);

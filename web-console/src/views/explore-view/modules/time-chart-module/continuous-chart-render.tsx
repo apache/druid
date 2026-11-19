@@ -26,7 +26,7 @@ import { axisBottom } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
 import { select } from 'd3-selection';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { PortalBubbleOpenOn } from '../../../../components';
 import { PortalBubble } from '../../../../components';
@@ -191,7 +191,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
   const [shiftOffset, setShiftOffset] = useState<number | undefined>();
 
   const now = useClock(minute.canonicalLength);
-  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [svgElement, setSvgElement] = useState<SVGSVGElement | null>(null);
 
   const stackedDataByMeasure: StackedRangeDatum[][] = useMemo(() => {
     const effectiveFacet = facets || ['undefined'];
@@ -305,7 +305,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
   }
 
   function handleMouseDown(e: ReactMouseEvent) {
-    const svg = svgRef.current;
+    const svg = svgElement;
     if (!svg) return;
     e.preventDefault();
 
@@ -336,7 +336,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
   }
 
   useGlobalEventListener('mousemove', (e: MouseEvent) => {
-    const svg = svgRef.current;
+    const svg = svgElement;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
     const x = e.clientX - rect.x - chartMargin.left;
@@ -495,7 +495,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
                 icon={IconNames.ZOOM_IN}
                 text="Zoom in"
                 intent={Intent.PRIMARY}
-                small
+                size="small"
                 onClick={() => {
                   if (!selection) return;
                   setSelection(undefined);
@@ -540,7 +540,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
     <div className="continuous-chart-render">
       <svg
         className="main-chart"
-        ref={svgRef}
+        ref={setSvgElement}
         {...stage.toWidthHeight()}
         viewBox={stage.toViewBox()}
         preserveAspectRatio="xMinYMin meet"
@@ -603,7 +603,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
           <g
             className="axis-x"
             transform={`translate(0,${totalChartsHeight + 1})`}
-            ref={(node: any) =>
+            ref={(node: any) => {
               select(node).call(
                 axisBottom(timeScale)
                   .tickValues(
@@ -615,8 +615,8 @@ export const ContinuousChartRender = function ContinuousChartRender(
                     ),
                   )
                   .tickFormat(x => tickFormatWithTimezone(x as Date, timezone)),
-              )
-            }
+              );
+            }}
           />
           <rect
             className={classNames('time-shift-indicator', {
@@ -638,17 +638,17 @@ export const ContinuousChartRender = function ContinuousChartRender(
         className="zoom-out-button"
         icon={IconNames.ZOOM_OUT}
         data-tooltip="Zoom out"
-        small
-        minimal
+        size="small"
+        variant="minimal"
         onClick={() => {
           onChangeRange(zoomedOutRange);
         }}
       />
-      {svgRef.current && (
+      {svgElement && (
         <PortalBubble
           className="continuous-chart-bubble"
           openOn={hoveredOpenOn}
-          offsetElement={svgRef.current}
+          offsetElement={svgElement}
           onClose={selection?.finalized ? () => setSelection(undefined) : undefined}
           mute
           direction="up"

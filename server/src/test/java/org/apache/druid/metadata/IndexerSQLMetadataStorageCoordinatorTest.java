@@ -939,17 +939,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         "append"
     );
     for (int i = 1; i < 9; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)),
-          "2023-01-0" + i,
-          ImmutableMap.of("path", "a-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(0),
-          9,
-          100
-      );
+      final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)), "2023-01-0" + i, 0))
+                                             .loadSpec(ImmutableMap.of("path", "a-" + i))
+                                             .dimensions(ImmutableList.of("dim1"))
+                                             .metrics(ImmutableList.of("m1"))
+                                             .shardSpec(new LinearShardSpec(0))
+                                             .binaryVersion(9)
+                                             .size(100)
+                                             .build();
       segmentsAppendedWithReplaceLock.add(segment);
       appendedSegmentToReplaceLockMap.put(segment, replaceLock);
     }
@@ -960,17 +957,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     final Set<DataSegment> replacingSegments = new HashSet<>();
     for (int i = 1; i < 9; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-01/2023-02-01"),
-          "2023-02-01",
-          ImmutableMap.of("path", "b-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new NumberedShardSpec(i, 9),
-          9,
-          100
-      );
+      final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01", i))
+                                             .loadSpec(ImmutableMap.of("path", "b-" + i))
+                                             .dimensions(ImmutableList.of("dim1"))
+                                             .metrics(ImmutableList.of("m1"))
+                                             .shardSpec(new NumberedShardSpec(i, 9))
+                                             .binaryVersion(9)
+                                             .size(100)
+                                             .build();
       replacingSegments.add(segment);
     }
 
@@ -1011,17 +1005,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         "append"
     );
     for (int i = 1; i < 9; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)),
-          "2023-01-0" + i,
-          ImmutableMap.of("path", "a-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(0),
-          9,
-          100
-      );
+      final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)), "2023-01-0" + i, 0))
+                                             .loadSpec(ImmutableMap.of("path", "a-" + i))
+                                             .dimensions(ImmutableList.of("dim1"))
+                                             .metrics(ImmutableList.of("m1"))
+                                             .shardSpec(new LinearShardSpec(0))
+                                             .binaryVersion(9)
+                                             .size(100)
+                                             .build();
       segmentsAppendedWithReplaceLock.add(segment);
       appendedSegmentToReplaceLockMap.put(segment, replaceLock);
     }
@@ -1036,17 +1027,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     final Set<DataSegment> replacingSegments = new HashSet<>();
     for (int i = 1; i < 9; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-01/2023-02-01"),
-          "2023-02-01",
-          ImmutableMap.of("path", "b-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new NumberedShardSpec(i - 1, 8),
-          9,
-          100
-      );
+      final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01", i - 1))
+                                             .loadSpec(ImmutableMap.of("path", "b-" + i))
+                                             .dimensions(ImmutableList.of("dim1"))
+                                             .metrics(ImmutableList.of("m1"))
+                                             .shardSpec(new NumberedShardSpec(i - 1, 8))
+                                             .binaryVersion(9)
+                                             .size(100)
+                                             .build();
       replacingSegments.add(segment);
     }
 
@@ -1126,17 +1114,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     final Map<String, List<String>> partitionDimensionValues = ImmutableMap.of("tenant_id", ImmutableList.of("tenant_a"));
     // A published APPEND segment carrying a DimensionValueSetShardSpec (as stamped at publish time by the streaming task).
-    final DataSegment appendSegment = new DataSegment(
-        "foo",
-        Intervals.of("2023-01-01/2023-01-02"),
-        "2023-01-01",
-        ImmutableMap.of("path", "a-0"),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new DimensionValueSetShardSpec(0, 1, partitionDimensionValues),
-        9,
-        100
-    );
+    final DataSegment appendSegment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-01/2023-01-02"), "2023-01-01", 0))
+                                                 .loadSpec(ImmutableMap.of("path", "a-0"))
+                                                 .dimensions(ImmutableList.of("dim1"))
+                                                 .metrics(ImmutableList.of("m1"))
+                                                 .shardSpec(new DimensionValueSetShardSpec(0, 1, partitionDimensionValues))
+                                                 .binaryVersion(9)
+                                                 .size(100)
+                                                 .build();
     segmentSchemaTestUtils.insertUsedSegments(Set.of(appendSegment), Collections.emptyMap());
     insertIntoUpgradeSegmentsTable(
         Map.of(appendSegment, replaceLock),
@@ -1146,17 +1131,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final Set<DataSegment> replacingSegments = new HashSet<>();
     for (int i = 0; i < 4; i++) {
       replacingSegments.add(
-          new DataSegment(
-              "foo",
-              Intervals.of("2023-01-01/2023-02-01"),
-              "2023-02-01",
-              ImmutableMap.of("path", "b-" + i),
-              ImmutableList.of("dim1"),
-              ImmutableList.of("m1"),
-              new NumberedShardSpec(i, 4),
-              9,
-              100
-          )
+          DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01", i))
+                     .loadSpec(ImmutableMap.of("path", "b-" + i))
+                     .dimensions(ImmutableList.of("dim1"))
+                     .metrics(ImmutableList.of("m1"))
+                     .shardSpec(new NumberedShardSpec(i, 4))
+                     .binaryVersion(9)
+                     .size(100)
+                     .build()
       );
     }
     Assertions.assertTrue(coordinator.commitReplaceSegments(replacingSegments, Set.of(replaceLock), null).isSuccess());
@@ -1222,17 +1204,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         "append"
     );
     for (int i = 1; i < 9; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)),
-          "2023-01-0" + i,
-          ImmutableMap.of("path", "a-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new DimensionRangeShardSpec(List.of("dim1"), null, null, null, i - 1, 8),
-          9,
-          100
-      );
+      final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)), "2023-01-0" + i, i - 1))
+                                             .loadSpec(ImmutableMap.of("path", "a-" + i))
+                                             .dimensions(ImmutableList.of("dim1"))
+                                             .metrics(ImmutableList.of("m1"))
+                                             .shardSpec(new DimensionRangeShardSpec(List.of("dim1"), null, null, null, i - 1, 8))
+                                             .binaryVersion(9)
+                                             .size(100)
+                                             .build();
       segmentsAppendedWithReplaceLock.add(segment);
       appendedSegmentToReplaceLockMap.put(segment, replaceLock);
     }
@@ -1247,17 +1226,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     final Set<DataSegment> replacingSegments = new HashSet<>();
     for (int i = 1; i < 9; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-01/2023-02-01"),
-          "2023-02-01",
-          ImmutableMap.of("path", "b-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new DimensionRangeShardSpec(List.of("dim1"), null, null, null, i - 1, 8),
-          9,
-          100
-      );
+      final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01", i - 1))
+                                             .loadSpec(ImmutableMap.of("path", "b-" + i))
+                                             .dimensions(ImmutableList.of("dim1"))
+                                             .metrics(ImmutableList.of("m1"))
+                                             .shardSpec(new DimensionRangeShardSpec(List.of("dim1"), null, null, null, i - 1, 8))
+                                             .binaryVersion(9)
+                                             .size(100)
+                                             .build();
       replacingSegments.add(segment);
     }
 
@@ -1386,17 +1362,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Set<DataSegment> segments = new HashSet<>();
 
     for (int i = 0; i < 105; i++) {
-      DataSegment segment = new DataSegment(
-          "fooDataSource",
-          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-          "version",
-          ImmutableMap.of(),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
+      DataSegment segment = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "version", i))
+                                       .loadSpec(ImmutableMap.of())
+                                       .dimensions(ImmutableList.of("dim1"))
+                                       .metrics(ImmutableList.of("m1"))
+                                       .shardSpec(new LinearShardSpec(i))
+                                       .binaryVersion(9)
+                                       .size(100)
+                                       .build();
       segments.add(segment);
     }
 
@@ -3446,17 +3419,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assertions.assertEquals(0, identifier2.getShardSpec().getNumCorePartitions());
 
     // now simulate that one compaction was done (batch) ingestion for same interval (like reindex of the previous three):
-    DataSegment segment = new DataSegment(
-        "ds",
-        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "version_new",
-        ImmutableMap.of(),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new NumberedShardSpec(0, 1),
-        9,
-        100
-    );
+    DataSegment segment = DataSegment.builder(SegmentId.of("ds", Intervals.of("2017-01-01T00Z/2017-02-01T00Z"), "version_new", 0))
+                                     .loadSpec(ImmutableMap.of())
+                                     .dimensions(ImmutableList.of("dim1"))
+                                     .metrics(ImmutableList.of("m1"))
+                                     .shardSpec(new NumberedShardSpec(0, 1))
+                                     .binaryVersion(9)
+                                     .size(100)
+                                     .build();
     coordinator.commitSegments(Set.of(segment), null);
     List<String> ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assertions.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new", ids.get(0));
@@ -3527,17 +3497,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     Assertions.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A", identifier.toString());
     // Assume it publishes; create its corresponding segment
-    DataSegment segment = new DataSegment(
-        "ds",
-        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "A",
-        ImmutableMap.of(),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    DataSegment segment = DataSegment.builder(SegmentId.of("ds", Intervals.of("2017-01-01T00Z/2017-02-01T00Z"), "A", 0))
+                                     .loadSpec(ImmutableMap.of())
+                                     .dimensions(ImmutableList.of("dim1"))
+                                     .metrics(ImmutableList.of("m1"))
+                                     .shardSpec(new LinearShardSpec(0))
+                                     .binaryVersion(9)
+                                     .size(100)
+                                     .build();
     coordinator.commitSegments(Set.of(segment), null);
     List<String> ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assertions.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A", ids.get(0));
@@ -3556,17 +3523,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     Assertions.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_1", identifier1.toString());
     // Assume it publishes; create its corresponding segment
-    segment = new DataSegment(
-        "ds",
-        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "A",
-        ImmutableMap.of(),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(1),
-        9,
-        100
-    );
+    segment = DataSegment.builder(SegmentId.of("ds", Intervals.of("2017-01-01T00Z/2017-02-01T00Z"), "A", 1))
+                         .loadSpec(ImmutableMap.of())
+                         .dimensions(ImmutableList.of("dim1"))
+                         .metrics(ImmutableList.of("m1"))
+                         .shardSpec(new LinearShardSpec(1))
+                         .binaryVersion(9)
+                         .size(100)
+                         .build();
     coordinator.commitSegments(Set.of(segment), null);
     ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assertions.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_1", ids.get(1));
@@ -3585,17 +3549,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     Assertions.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_2", identifier2.toString());
     // Assume it publishes; create its corresponding segment
-    segment = new DataSegment(
-        "ds",
-        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "A",
-        ImmutableMap.of(),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(2),
-        9,
-        100
-    );
+    segment = DataSegment.builder(SegmentId.of("ds", Intervals.of("2017-01-01T00Z/2017-02-01T00Z"), "A", 2))
+                         .loadSpec(ImmutableMap.of())
+                         .dimensions(ImmutableList.of("dim1"))
+                         .metrics(ImmutableList.of("m1"))
+                         .shardSpec(new LinearShardSpec(2))
+                         .binaryVersion(9)
+                         .size(100)
+                         .build();
     // state so far:
     // pendings: A: 0,1,2
     // used segments A: 0,1,2
@@ -3607,17 +3568,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     // 2)
     // now simulate that one compaction was done (batch) ingestion for same interval (like reindex of the previous three):
-    DataSegment compactedSegment = new DataSegment(
-        "ds",
-        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "B",
-        ImmutableMap.of(),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    DataSegment compactedSegment = DataSegment.builder(SegmentId.of("ds", Intervals.of("2017-01-01T00Z/2017-02-01T00Z"), "B", 0))
+                                              .loadSpec(ImmutableMap.of())
+                                              .dimensions(ImmutableList.of("dim1"))
+                                              .metrics(ImmutableList.of("m1"))
+                                              .shardSpec(new LinearShardSpec(0))
+                                              .binaryVersion(9)
+                                              .size(100)
+                                              .build();
     coordinator.commitSegments(Set.of(compactedSegment), null);
     ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
     Assertions.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_B", ids.get(3));
@@ -3678,17 +3636,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     // ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_2
     Assertions.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_A_3", identifier4.toString());
     // Assume it publishes; create its corresponding segment
-    segment = new DataSegment(
-        "ds",
-        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "A",
-        ImmutableMap.of(),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(3),
-        9,
-        100
-    );
+    segment = DataSegment.builder(SegmentId.of("ds", Intervals.of("2017-01-01T00Z/2017-02-01T00Z"), "A", 3))
+                         .loadSpec(ImmutableMap.of())
+                         .dimensions(ImmutableList.of("dim1"))
+                         .metrics(ImmutableList.of("m1"))
+                         .shardSpec(new LinearShardSpec(3))
+                         .binaryVersion(9)
+                         .size(100)
+                         .build();
     //        pending: version = A, id = 0,1,2,3
     //                 version = B, id = 1
     //
@@ -3844,17 +3799,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     String maxVersion = "Z";
 
     // create one used segment
-    DataSegment segment = new DataSegment(
-        "ds",
-        Intervals.of("2017-01-01T00Z/2017-02-01T00Z"),
-        "A",
-        ImmutableMap.of(),
-        ImmutableList.of("dim1"),
-        ImmutableList.of("m1"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    DataSegment segment = DataSegment.builder(SegmentId.of("ds", Intervals.of("2017-01-01T00Z/2017-02-01T00Z"), "A", 0))
+                                     .loadSpec(ImmutableMap.of())
+                                     .dimensions(ImmutableList.of("dim1"))
+                                     .metrics(ImmutableList.of("m1"))
+                                     .shardSpec(new LinearShardSpec(0))
+                                     .binaryVersion(9)
+                                     .size(100)
+                                     .build();
 
     coordinator.commitSegments(Set.of(segment), null);
     List<String> ids = retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get());
@@ -4055,17 +4007,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       );
       prevSegmentId = identifier.toString();
       final Set<DataSegment> toBeAnnounced = Collections.singleton(
-          new DataSegment(
-              identifier.getDataSource(),
-              identifier.getInterval(),
-              identifier.getVersion(),
-              null,
-              Collections.emptyList(),
-              Collections.emptyList(),
-              ((NumberedOverwriteShardSpec) identifier.getShardSpec()).withAtomicUpdateGroupSize(1),
-              0,
-              10L
-          )
+          DataSegment.builder(identifier.asSegmentId())
+                     .dimensions(Collections.emptyList())
+                     .metrics(Collections.emptyList())
+                     .shardSpec(((NumberedOverwriteShardSpec) identifier.getShardSpec()).withAtomicUpdateGroupSize(1))
+                     .binaryVersion(0)
+                     .size(10L)
+                     .build()
       );
       final Set<DataSegment> announced = coordinator.commitSegments(toBeAnnounced, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
 
@@ -4077,23 +4025,19 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Assertions.assertEquals(1, visibleSegments.size());
     Assertions.assertEquals(
-        new DataSegment(
-            dataSource,
-            interval,
-            "version",
-            null,
-            Collections.emptyList(),
-            Collections.emptyList(),
-            new NumberedOverwriteShardSpec(
-                9 + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
-                0,
-                1,
-                (short) 9,
-                (short) 1
-            ),
-            0,
-            10L
-        ),
+        DataSegment.builder(SegmentId.of(dataSource, interval, "version", 9 + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID))
+                   .dimensions(Collections.emptyList())
+                   .metrics(Collections.emptyList())
+                   .shardSpec(new NumberedOverwriteShardSpec(
+                           9 + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
+                           0,
+                           1,
+                           (short) 9,
+                           (short) 1
+                       ))
+                   .binaryVersion(0)
+                   .size(10L)
+                   .build(),
         Iterables.getOnlyElement(visibleSegments)
     );
   }
@@ -4123,17 +4067,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     coordinator.commitSegments(
         Collections.singleton(
-            new DataSegment(
-                id.getDataSource(),
-                id.getInterval(),
-                id.getVersion(),
-                null,
-                Collections.emptyList(),
-                Collections.emptyList(),
-                id.getShardSpec(),
-                0,
-                10L
-            )
+            DataSegment.builder(id.asSegmentId())
+                       .dimensions(Collections.emptyList())
+                       .metrics(Collections.emptyList())
+                       .shardSpec(id.getShardSpec())
+                       .binaryVersion(0)
+                       .size(10L)
+                       .build()
         ),
         new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
@@ -4156,17 +4096,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     coordinator.commitSegments(
         Collections.singleton(
-            new DataSegment(
-                id.getDataSource(),
-                id.getInterval(),
-                id.getVersion(),
-                null,
-                Collections.emptyList(),
-                Collections.emptyList(),
-                id.getShardSpec(),
-                0,
-                10L
-            )
+            DataSegment.builder(id.asSegmentId())
+                       .dimensions(Collections.emptyList())
+                       .metrics(Collections.emptyList())
+                       .shardSpec(id.getShardSpec())
+                       .binaryVersion(0)
+                       .size(10L)
+                       .build()
         ),
         new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
@@ -4199,24 +4135,21 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final Set<DataSegment> originalSegments = new HashSet<>();
     for (int i = 0; i < 6; i++) {
       originalSegments.add(
-          new DataSegment(
-              datasource,
-              interval,
-              version,
-              ImmutableMap.of(),
-              dimensions,
-              metrics,
-              new DimensionRangeShardSpec(
-                  Collections.singletonList("dim"),
-                  VirtualColumns.EMPTY,
-                  i == 0 ? null : StringTuple.create(String.valueOf(i - 1)),
-                  i == 5 ? null : StringTuple.create(String.valueOf(i)),
-                  i,
-                  null // emulate shardSpecs created in older versions of Druid
-              ),
-              9,
-              10L
-          )
+          DataSegment.builder(SegmentId.of(datasource, interval, version, i))
+                     .loadSpec(ImmutableMap.of())
+                     .dimensions(dimensions)
+                     .metrics(metrics)
+                     .shardSpec(new DimensionRangeShardSpec(
+                             Collections.singletonList("dim"),
+                             VirtualColumns.EMPTY,
+                             i == 0 ? null : StringTuple.create(String.valueOf(i - 1)),
+                             i == 5 ? null : StringTuple.create(String.valueOf(i)),
+                             i,
+                             null // emulate shardSpecs created in older versions of Druid
+                         ))
+                     .binaryVersion(9)
+                     .size(10L)
+                     .build()
       );
     }
     coordinator.commitSegments(originalSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
@@ -4246,23 +4179,20 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       final String start = i == 0 ? null : String.valueOf(i - 1);
       final String end = i == 5 ? null : String.valueOf(i);
       originalSegments.add(
-          new DataSegment(
-              datasource,
-              interval,
-              version,
-              ImmutableMap.of(),
-              dimensions,
-              metrics,
-              new SingleDimensionShardSpec(
-                  "dim",
-                  start,
-                  end,
-                  i,
-                  null // emulate shardSpecs created in older versions of Druid
-              ),
-              9,
-              10L
-          )
+          DataSegment.builder(SegmentId.of(datasource, interval, version, i))
+                     .loadSpec(ImmutableMap.of())
+                     .dimensions(dimensions)
+                     .metrics(metrics)
+                     .shardSpec(new SingleDimensionShardSpec(
+                             "dim",
+                             start,
+                             end,
+                             i,
+                             null // emulate shardSpecs created in older versions of Druid
+                         ))
+                     .binaryVersion(9)
+                     .size(10L)
+                     .build()
       );
     }
     coordinator.commitSegments(originalSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
@@ -4764,17 +4694,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < size; i++) {
       segments.add(
-          new DataSegment(
-              "DS",
-              Intervals.ETERNITY,
-              "v " + (i % 5),
-              ImmutableMap.of("num", i / 5),
-              ImmutableList.of("dim"),
-              ImmutableList.of("agg"),
-              new NumberedShardSpec(i / 5, 0),
-              0,
-              100L
-          )
+          DataSegment.builder(SegmentId.of("DS", Intervals.ETERNITY, "v " + (i % 5), i / 5))
+                     .loadSpec(ImmutableMap.of("num", i / 5))
+                     .dimensions(ImmutableList.of("dim"))
+                     .metrics(ImmutableList.of("agg"))
+                     .shardSpec(new NumberedShardSpec(i / 5, 0))
+                     .binaryVersion(0)
+                     .size(100L)
+                     .build()
       );
     }
     Map<String, String> expected = new HashMap<>();
@@ -4832,17 +4759,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < size; i++) {
       segments.add(
-          new DataSegment(
-              "DS",
-              Intervals.ETERNITY,
-              "v " + (i % 5),
-              ImmutableMap.of("num", i / 5),
-              ImmutableList.of("dim"),
-              ImmutableList.of("agg"),
-              new NumberedShardSpec(i / 5, 0),
-              0,
-              100L
-          )
+          DataSegment.builder(SegmentId.of("DS", Intervals.ETERNITY, "v " + (i % 5), i / 5))
+                     .loadSpec(ImmutableMap.of("num", i / 5))
+                     .dimensions(ImmutableList.of("dim"))
+                     .metrics(ImmutableList.of("agg"))
+                     .shardSpec(new NumberedShardSpec(i / 5, 0))
+                     .binaryVersion(0)
+                     .size(100L)
+                     .build()
       );
     }
 
@@ -4896,32 +4820,26 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final List<String> versions = ImmutableList.of("v0", "v1", "v2", "v2");
     for (int i = 0; i < 4; i++) {
       nextSegments = new HashSet<>();
-      firstSegment = new DataSegment(
-          datasource,
-          intervals.get(i),
-          versions.get(i),
-          loadspec,
-          dimensions,
-          metrics,
-          new DimensionRangeShardSpec(dimensions, VirtualColumns.EMPTY, null, null, 0, 1),
-          0,
-          100
-      );
+      firstSegment = DataSegment.builder(SegmentId.of(datasource, intervals.get(i), versions.get(i), 0))
+                                .loadSpec(loadspec)
+                                .dimensions(dimensions)
+                                .metrics(metrics)
+                                .shardSpec(new DimensionRangeShardSpec(dimensions, VirtualColumns.EMPTY, null, null, 0, 1))
+                                .binaryVersion(0)
+                                .size(100)
+                                .build();
       coordinator.commitSegments(Set.of(firstSegment), null);
       for (int j = 1; j < numSegmentsPerInterval; j++) {
         nextSegments.add(
-            new DataSegment(
-                datasource,
-                intervals.get(i),
-                versions.get(i),
-                loadspec,
-                dimensions,
-                metrics,
-                // The numCorePartitions is intentionally 0
-                new NumberedShardSpec(j, 0),
-                0,
-                100
-            )
+            DataSegment.builder(SegmentId.of(datasource, intervals.get(i), versions.get(i), j))
+                       .loadSpec(loadspec)
+                       .dimensions(dimensions)
+                       .metrics(metrics)
+                       .shardSpec(// The numCorePartitions is intentionally 0
+                           new NumberedShardSpec(j, 0))
+                       .binaryVersion(0)
+                       .size(100)
+                       .build()
         );
       }
       coordinator.commitSegments(nextSegments, null);

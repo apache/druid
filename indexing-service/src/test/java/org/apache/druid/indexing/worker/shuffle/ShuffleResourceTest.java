@@ -36,6 +36,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -191,17 +192,11 @@ public class ShuffleResourceTest
     BucketNumberedShardSpec<?> shardSpec = Mockito.mock(BucketNumberedShardSpec.class);
     Mockito.when(shardSpec.getBucketId()).thenReturn(0);
 
-    return new DataSegment(
-        DATASOURCE,
-        interval,
-        "version",
-        null,
-        null,
-        null,
-        shardSpec,
-        0,
-        10
-    );
+    return DataSegment.builder(SegmentId.of(DATASOURCE, interval, "version", 0))
+                      .shardSpec(shardSpec)
+                      .binaryVersion(0)
+                      .size(10)
+                      .build();
   }
 
   private File generateSegmentDir(String fileName) throws IOException

@@ -22,6 +22,7 @@ package org.apache.druid.msq.dart.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -44,7 +45,7 @@ import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -52,6 +53,7 @@ import org.apache.druid.server.coordination.ServerType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -69,15 +71,17 @@ public class DartControllerContext implements ControllerContext
    * Default for {@link MultiStageQueryContext#getTargetPartitionsPerWorkerWithDefault(QueryContext, int)}.
    */
   public static final int DEFAULT_TARGET_PARTITIONS_PER_WORKER = 1;
-
   /**
    * Context parameter for maximum number of nonleaf workers.
+   * @deprecated Use {@link QueryContextParameters#MAX_NON_LEAF_WORKERS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_MAX_NON_LEAF_WORKER_COUNT = "maxNonLeafWorkers";
-
   /**
    * Default to scatter/gather style: fan in to a single worker after the leaf stage(s).
+   * @deprecated Use the default value of {@link QueryContextParameters#MAX_NON_LEAF_WORKERS} instead.
    */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final int DEFAULT_MAX_NON_LEAF_WORKER_COUNT = 1;
 
   public static final SegmentSource DEFAULT_SEGMENT_SOURCE = SegmentSource.REALTIME;
@@ -91,6 +95,7 @@ public class DartControllerContext implements ControllerContext
   private final List<InputSpecSlicerProvider> inputSpecSlicerProviders;
   private final ServiceEmitter emitter;
   private final QueryContext context;
+  private final DruidNodeDiscovery dartWorkerDiscovery;
 
   public DartControllerContext(
       final Injector injector,
@@ -101,7 +106,8 @@ public class DartControllerContext implements ControllerContext
       final TimelineServerView serverView,
       final List<InputSpecSlicerProvider> inputSpecSlicerProviders,
       final ServiceEmitter emitter,
-      final QueryContext context
+      final QueryContext context,
+      final DruidNodeDiscovery dartWorkerDiscovery
   )
   {
     this.injector = injector;
@@ -113,12 +119,13 @@ public class DartControllerContext implements ControllerContext
     this.inputSpecSlicerProviders = inputSpecSlicerProviders;
     this.emitter = emitter;
     this.context = context;
+    this.dartWorkerDiscovery = dartWorkerDiscovery;
   }
 
   @Override
   public String queryId()
   {
-    return context.getString(QueryContexts.CTX_DART_QUERY_ID);
+    return context.get(QueryContextParameters.DART_QUERY_ID);
   }
 
   @Override
@@ -126,15 +133,36 @@ public class DartControllerContext implements ControllerContext
   {
     final List<DruidServerMetadata> servers = serverView.getDruidServerMetadatas();
 
+    final Set<String> dartWorkerHosts =
+        dartWorkerDiscovery.getAllNodes()
+                           .stream()
+                           .map(node -> node.getDruidNode().getHostAndPortToUse())
+                           .collect(Collectors.toSet());
+
     // Lock in the list of workers when creating the kernel config. There is a race here: the serverView itself is
     // allowed to float. If a segment moves to a new server that isn't part of our list after the WorkerManager is
     // created, we won't be able to find a valid server for certain segments. This isn't expected to be a problem,
     // since the serverView is referenced shortly after the worker list is created.
     final List<String> workerIds = new ArrayList<>(servers.size());
     for (final DruidServerMetadata server : servers) {
-      if (server.getType() == ServerType.HISTORICAL) {
+      if (server.getType() == ServerType.HISTORICAL && dartWorkerHosts.contains(server.getHost())) {
         workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId()).toString());
       }
+    }
+
+    // Fail fast rather than running a query with no workers.
+    if (workerIds.isEmpty()) {
+      final boolean anyHistoricals = servers.stream().anyMatch(s -> s.getType() == ServerType.HISTORICAL);
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(
+                              anyHistoricals
+                              ? "No Dart workers are available: Historicals are present but none advertise a Dart "
+                                + "worker. Set druid.msq.dart.enabled=true on the Historicals that should run Dart "
+                                + "queries."
+                              : "No Dart workers are available: no Historicals are currently available to run the "
+                                + "query."
+                          );
     }
 
     // Shuffle workerIds, so we don't bias towards specific servers when running multiple queries concurrently. For any
@@ -182,7 +210,7 @@ public class DartControllerContext implements ControllerContext
   public void emitMetric(MSQMetricEventBuilder metricBuilder)
   {
     metricBuilder.setDartDimensions(context);
-    metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, context.get(QueryContexts.CTX_DART_QUERY_ID));
+    metricBuilder.setDimension(QueryContextParameters.DART_QUERY_ID.getName(), context.get(QueryContextParameters.DART_QUERY_ID));
     emitter.emit(metricBuilder);
   }
 
@@ -243,10 +271,7 @@ public class DartControllerContext implements ControllerContext
   @Override
   public int maxNonLeafWorkerCount()
   {
-    return context.getInt(
-        DartControllerContext.CTX_MAX_NON_LEAF_WORKER_COUNT,
-        DartControllerContext.DEFAULT_MAX_NON_LEAF_WORKER_COUNT
-    );
+    return context.getOrDefault(QueryContextParameters.MAX_NON_LEAF_WORKERS);
   }
 
   @Override

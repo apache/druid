@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { FancyNumericInput } from './fancy-numeric-input';
 
 describe('FancyNumericInput', () => {
   it('matches snapshot', () => {
-    const numericInputWithDefault = shallow(
+    const { container } = render(
       <FancyNumericInput value={5} defaultValue={3} onValueChange={() => {}} />,
     );
 
-    expect(numericInputWithDefault).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

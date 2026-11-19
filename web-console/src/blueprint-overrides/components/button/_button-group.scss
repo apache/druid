@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+@use '../../common/variables' as *;
+
 // Add body to make the selector more specific than what is in
 // node_modules/@blueprintjs/core/src/components/button/_button-group.scss
 body .#{$ns}-button-group {

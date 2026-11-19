@@ -163,7 +163,8 @@ public class CliIndexerServerModule implements Module
         oldConfig.isEnableHSTS(),
         oldConfig.isEnableResponseIdentityHeaders(),
         oldConfig.getUriCompliance(),
-        oldConfig.isEnforceStrictSNIHostChecking()
+        oldConfig.isEnforceStrictSNIHostChecking(),
+        oldConfig.isEnableQueryRequestsQueuing()
     );
   }
 }

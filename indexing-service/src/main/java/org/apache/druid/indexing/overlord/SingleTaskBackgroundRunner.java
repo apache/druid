@@ -98,7 +98,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     this.toolboxFactory = Preconditions.checkNotNull(toolboxFactory, "toolboxFactory");
     this.taskConfig = taskConfig;
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
-    this.location = TaskLocation.create(node.getHost(), node.getPlaintextPort(), node.getTlsPort());
+    this.location = TaskLocation.create(node.getHost(), node.getAdvertisedPlaintextPort(), node.getTlsPort());
     this.serverConfig = serverConfig;
   }
 
@@ -423,6 +423,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
       this.location = location;
     }
 
+    @Override
     public Task getTask()
     {
       return task;

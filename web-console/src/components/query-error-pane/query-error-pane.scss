@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-@import '../../blueprint-overrides/common/colors';
-@import '../../variables';
+@use '../../blueprint-overrides/common/colors' as *;
+@use '../../variables' as *;
 
 .query-error-pane {
   padding: 20px 22px;

@@ -30,7 +30,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
@@ -41,7 +40,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.CollectionUtils;
-import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -248,16 +246,14 @@ public class AggregateProjectionSpec
           continue;
         }
         final VirtualColumn vc = virtualColumns.getVirtualColumn(groupingColumn.getName());
-        final Granularity maybeGranularity = Granularities.fromVirtualColumn(vc);
+        final Granularity maybeGranularity = Granularities.fromTimeVirtualColumn(vc);
         if (maybeGranularity == null || maybeGranularity.equals(Granularities.ALL)) {
           // no __time in inputs or not supported, skip
         } else if (Granularities.NONE.equals(maybeGranularity)) {
           timeColumnName = groupingColumn.getName();
           // already found exact __time grouping, skip assigning, granularity = Granularities.NONE;
           break;
-        } else if (maybeGranularity.getClass().equals(PeriodGranularity.class)
-            && maybeGranularity.getTimeZone().equals(DateTimeZone.UTC)
-            && ((PeriodGranularity) maybeGranularity).getOrigin() == null
+        } else if (Granularities.isStandardUtcPeriod(maybeGranularity)
             && (granularity == null || maybeGranularity.isFinerThan(granularity))) {
           // found a finer period granularity than the existing granularity, or it's the first one
           timeColumnName = groupingColumn.getName();

@@ -29,8 +29,8 @@ import {
   SqlStar,
 } from 'druid-query-toolkit';
 
-import type { RowColumn } from './general';
-import { offsetToRowColumn } from './general';
+import type { LineColumn } from './general';
+import { offsetToLineColumn } from './general';
 
 export function prettyPrintSql(b: SqlBase): string {
   return b.prettyTrim(50).toString();
@@ -103,7 +103,8 @@ export function findSqlQueryPrefix(text: string): string | undefined {
     } catch {
       // Try to trim out last word
       try {
-        return extractQueryPrefix(prefix.replace(/\s*\w+$/, ''));
+        const lastWord = /\b\w+$/.exec(prefix);
+        return extractQueryPrefix(lastWord ? prefix.slice(0, lastWord.index).trimEnd() : prefix);
       } catch {
         return;
       }
@@ -127,9 +128,9 @@ export function cleanSqlQueryPrefix(text: string): string {
 export interface QuerySlice {
   index: number;
   startOffset: number;
-  startRowColumn: RowColumn;
+  startLineColumn: LineColumn;
   endOffset: number;
-  endRowColumn: RowColumn;
+  endLineColumn: LineColumn;
   sql: string;
 }
 
@@ -150,9 +151,9 @@ export function findAllSqlQueriesInText(text: string): QuerySlice[] {
       found.push({
         index: found.length,
         startOffset: offset + m.index,
-        startRowColumn: offsetToRowColumn(text, offset + m.index)!,
+        startLineColumn: offsetToLineColumn(text, offset + m.index)!,
         endOffset: offset + endIndex,
-        endRowColumn: offsetToRowColumn(text, offset + endIndex)!,
+        endLineColumn: offsetToLineColumn(text, offset + endIndex)!,
         sql: cleanSqlQueryPrefix(sql),
       });
     }

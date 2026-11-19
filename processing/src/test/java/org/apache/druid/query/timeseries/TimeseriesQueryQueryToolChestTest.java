@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.Result;
@@ -39,6 +40,7 @@ import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFac
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
@@ -93,7 +95,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
                 ),
                 ImmutableList.of(new ConstantPostAggregator("post", 10)),
                 0,
-                ImmutableMap.of(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, "ts_field")
+                QueryContext.ofMap(QueryContextParameters.TIMESTAMP_RESULT_FIELD, "ts_field")
             )
         );
 
@@ -313,7 +315,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
                                                  )
                                              )
                                          )
-                                         .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, true))
+                                         .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, true))
                                          .build();
 
     final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
@@ -345,7 +347,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
                                                  )
                                              )
                                          )
-                                         .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, true))
+                                         .context(QueryContext.ofMap(QueryContextParameters.GRAND_TOTAL, true))
                                          .build();
 
     Assertions.assertTrue(
@@ -398,7 +400,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
               .granularity(Granularities.HOUR)
               .aggregators(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
               .postAggregators(QueryRunnerTestHelper.CONSTANT)
-              .context(ImmutableMap.of(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME))
+              .context(QueryContext.ofMap(QueryContextParameters.TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME))
               .build();
 
     Assertions.assertEquals(

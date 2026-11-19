@@ -18,11 +18,15 @@
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
-import ReactTable from 'react-table';
 
-import { Loader, TableFilterableCell } from '../../components';
+import {
+  ConsoleTable,
+  Loader,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  TableFilterableCell,
+} from '../../components';
 import { useQueryManager } from '../../hooks';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, UrlBaser } from '../../singletons';
 import { TableFilters } from '../../utils/table-filters';
 
@@ -82,7 +86,7 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
         <div className="version">
           Druid version: <strong>{response.version}</strong>
         </div>
-        <ReactTable
+        <ConsoleTable
           data={response.modules}
           loading={responseState.loading}
           filterable
@@ -123,7 +127,7 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
         <div className="view-raw-button">
           <Button
             text="View raw"
-            minimal
+            variant="minimal"
             onClick={() => window.open(UrlBaser.base(`/status`), '_blank')}
           />
         </div>

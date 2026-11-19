@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.mean;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -29,12 +28,14 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
@@ -125,7 +126,7 @@ public class DoubleMeanAggregationTest
             new DoubleMeanAggregatorFactory("meanOnString", SimpleTestIndex.SINGLE_VALUE_DOUBLE_AS_STRING_DIM),
             new DoubleMeanAggregatorFactory("meanOnMultiValue", SimpleTestIndex.MULTI_VALUE_DOUBLE_AS_STRING_DIM)
         )
-        .setContext(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, doVectorize))
+        .setContext(QueryContext.ofMap(QueryContextParameters.VECTORIZE, doVectorize ? Vectorize.TRUE : Vectorize.FALSE))
         .build();
 
     // do json serialization and deserialization of query to ensure there are no serde issues
@@ -157,7 +158,7 @@ public class DoubleMeanAggregationTest
         .setAggregatorSpecs(
             new DoubleMeanAggregatorFactory("meanOnDouble", SimpleTestIndex.DOUBLE_COL)
         )
-        .setContext(Collections.singletonMap(QueryContexts.VECTORIZE_KEY, doVectorize))
+        .setContext(QueryContext.ofMap(QueryContextParameters.VECTORIZE, doVectorize ? Vectorize.TRUE : Vectorize.FALSE))
         .build();
 
     // do json serialization and deserialization of query to ensure there are no serde issues
@@ -186,7 +187,7 @@ public class DoubleMeanAggregationTest
         .setAggregatorSpecs(
             new DoubleMeanAggregatorFactory("meanOnDouble", TestIndex.COLUMNS[9])
         )
-        .setContext(Collections.singletonMap(QueryContexts.VECTORIZE_KEY, doVectorize))
+        .setContext(QueryContext.ofMap(QueryContextParameters.VECTORIZE, doVectorize ? Vectorize.TRUE : Vectorize.FALSE))
         .build();
 
     // do json serialization and deserialization of query to ensure there are no serde issues
@@ -220,7 +221,7 @@ public class DoubleMeanAggregationTest
                                           SimpleTestIndex.MULTI_VALUE_DOUBLE_AS_STRING_DIM
                                       )
                                   )
-                                  .context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, doVectorize))
+                                  .context(QueryContext.ofMap(QueryContextParameters.VECTORIZE, doVectorize ? Vectorize.TRUE : Vectorize.FALSE))
                                   .build();
 
     // do json serialization and deserialization of query to ensure there are no serde issues

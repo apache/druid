@@ -951,7 +951,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   }
 
   /**
-   * {@link ForkJoinPool} friendly conversion of {@link Sequence} to {@link Yielder< ResultBatch >}
+   * {@link ForkJoinPool} friendly conversion of {@link Sequence} to {@link Yielder<ResultBatch>}
    */
   static class SequenceBatcher<E> implements ForkJoinPool.ManagedBlocker
   {

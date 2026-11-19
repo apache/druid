@@ -72,7 +72,8 @@ public class ServerConfigTest
         true,
         true,
         UriCompliance.RFC3986,
-        false
+        false,
+        true
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);

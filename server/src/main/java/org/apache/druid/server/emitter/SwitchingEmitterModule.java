@@ -56,7 +56,7 @@ public class SwitchingEmitterModule implements Module
   public Emitter makeEmitter(SwitchingEmitterConfig config, final Injector injector)
   {
     log.info(
-        "Createing Switching emitter with %s, and default emitter %s",
+        "Creating Switching emitter with %s, and default emitter %s",
         config.getEmitters(),
         config.getDefaultEmitter()
     );

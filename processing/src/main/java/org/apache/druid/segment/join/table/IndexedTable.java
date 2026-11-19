@@ -96,7 +96,7 @@ public interface IndexedTable extends ReferenceCountedObjectProvider<Closeable>,
    *
    * @return the byte array for cache key
    *
-   * @throws {@link IAE} if caching is not supported
+   * @throws IAE if caching is not supported
    */
   default byte[] computeCacheKey()
   {

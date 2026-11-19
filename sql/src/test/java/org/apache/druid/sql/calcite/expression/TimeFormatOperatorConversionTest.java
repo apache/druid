@@ -65,7 +65,7 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
   {
     testExpression(
         "2000-02-03 04:05:06",
-        "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')",
+        "UTC",
         "yyyy-MM-dd HH:mm:ss",
         "UTC"
     );
@@ -76,7 +76,7 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
   {
     testExpression(
         "2000-02-03 04:05:06",
-        "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')",
+        "UTC",
         "yyyy-MM-dd HH:mm:ss",
         null
     );
@@ -87,7 +87,7 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
   {
     testExpression(
         "2000-02-02 20:05:06",
-        "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')",
+        "America/Los_Angeles",
         "yyyy-MM-dd HH:mm:ss",
         "America/Los_Angeles"
     );
@@ -99,7 +99,7 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
     assertThrows(IAE.class, () -> {
       testExpression(
           "2000-02-02 20:05:06",
-          "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/NO_TZ')",
+          "America/NO_TZ",
           "yyyy-MM-dd HH:mm:ss",
           "America/NO_TZ"
       );
@@ -108,7 +108,7 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
 
   private void testExpression(
       String expectedResult,
-      String expectedExpression,
+      String expectedTimezone,
       String format,
       @Nullable String timezone
   )
@@ -121,10 +121,18 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
       exprsBuilder.add(testHelper.makeLiteral(timezone));
     }
 
-    testHelper.testExpressionString(
+    testHelper.testExpression(
         target.calciteOperator(),
         exprsBuilder.build(),
-        makeExpression(expectedExpression),
+        DruidExpression.ofFunctionCall(
+            ColumnType.STRING,
+            "timestamp_format",
+            ImmutableList.of(
+                DruidExpression.ofColumn(ColumnType.LONG, "t"),
+                DruidExpression.ofStringLiteral(format),
+                DruidExpression.ofStringLiteral(expectedTimezone)
+            )
+        ),
         expectedResult
     );
   }

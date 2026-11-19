@@ -67,9 +67,9 @@ public class TaskCountStatsMonitor extends AbstractMonitor
 
   private void emit(ServiceEmitter emitter, String key, Map<RowKey, Long> counts)
   {
-    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     if (counts != null) {
       counts.forEach((k, v) -> {
+        final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
         k.getValues().forEach((dim, value) -> builder.setDimension(dim.reportedName(), value));
         emitter.emit(builder.setMetric(key, v));
       });

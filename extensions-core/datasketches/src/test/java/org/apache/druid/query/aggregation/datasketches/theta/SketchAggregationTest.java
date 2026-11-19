@@ -47,6 +47,7 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.IntervalDimFilter;
@@ -93,7 +94,7 @@ public class SketchAggregationTest
         config,
         tempFolder
     );
-    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
+    this.vectorize = QueryContextParameters.VECTORIZE.parse(vectorize);
   }
 
   public static Collection<?> constructorFeeder()

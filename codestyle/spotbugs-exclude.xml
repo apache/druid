@@ -98,6 +98,17 @@
             </Or>
         </And>
     </Match>
+    <Match>
+        <!-- sqlResultSet() hands ownership of the statement to the returned ResultSet via closeOnCompletion(), and
+             closes the statement itself if no ResultSet is produced. Spotbugs cannot see through closeOnCompletion(). -->
+        <And>
+            <Or>
+                <Bug pattern="OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE" />
+                <Bug pattern="ODR_OPEN_DATABASE_RESOURCE" />
+            </Or>
+            <Class name="org.apache.druid.jdbc.DruidDatabaseMetaData" />
+        </And>
+    </Match>
 
     <Bug pattern="AT_NONATOMIC_64BIT_PRIMITIVE"/>
     <Bug pattern="AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE"/>

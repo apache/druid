@@ -158,26 +158,26 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   @Test
   public void testNumberProcessorMatchingValue()
   {
-    Double num = 2.;
+    final double num = 2.;
     final TestColumnValueSelector<Number> columnValueSelector = TestColumnValueSelector.of(
             Number.class,
             ImmutableList.of(new Number() {
               @Override
               public int intValue()
               {
-                return num.intValue();
+                return (int) num;
               }
 
               @Override
               public long longValue()
               {
-                return num.longValue();
+                return (long) num;
               }
 
               @Override
               public float floatValue()
               {
-                return num.floatValue();
+                return (float) num;
               }
 
               @Override
@@ -195,26 +195,26 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   @Test
   public void testNumberProcessorNotMatchingValue()
   {
-    Double num = 2.;
+    final double num = 2.;
     final TestColumnValueSelector<Double> columnValueSelector = TestColumnValueSelector.of(
             Double.class,
             ImmutableList.of(new Number() {
               @Override
               public int intValue()
               {
-                return num.intValue();
+                return (int) num;
               }
 
               @Override
               public long longValue()
               {
-                return num.longValue();
+                return (long) num;
               }
 
               @Override
               public float floatValue()
               {
-                return num.floatValue();
+                return (float) num;
               }
 
               @Override

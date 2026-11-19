@@ -20,6 +20,7 @@
 package org.apache.druid.server.broker;
 
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryBlocklistRule;
 
@@ -37,12 +38,12 @@ import java.util.Set;
 public class QueryConfigSnapshot
 {
   /** Already resolved against {@link BrokerDynamicConfig#getQueryContext()}. */
-  private final Map<String, Object> resolvedDefaultQueryContext;
+  private final QueryContext resolvedDefaultQueryContext;
   @Nullable
   private final BrokerDynamicConfig dynamicConfig;
 
   public QueryConfigSnapshot(
-      Map<String, Object> resolvedDefaultQueryContext,
+      QueryContext resolvedDefaultQueryContext,
       @Nullable BrokerDynamicConfig dynamicConfig
   )
   {
@@ -50,7 +51,7 @@ public class QueryConfigSnapshot
     this.dynamicConfig = dynamicConfig;
   }
 
-  public Map<String, Object> getResolvedDefaultQueryContext()
+  public QueryContext getResolvedDefaultQueryContext()
   {
     return resolvedDefaultQueryContext;
   }
@@ -73,7 +74,8 @@ public class QueryConfigSnapshot
    */
   public Map<String, Object> resolveContext(Query<?> query, Set<String> clientProvidedQueryContextKeys)
   {
-    final Map<String, Object> result = QueryContexts.override(resolvedDefaultQueryContext, query.getContext());
+    final Map<String, Object> result =
+        QueryContexts.withDefaults(resolvedDefaultQueryContext.asMap(), query.getContext());
     if (dynamicConfig != null) {
       for (Map.Entry<String, Object> override : dynamicConfig.getContextOverridesForQuery(query).asMap().entrySet()) {
         if (!clientProvidedQueryContextKeys.contains(override.getKey())) {

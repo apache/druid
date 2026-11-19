@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import { Button, Popover } from '@blueprintjs/core';
+import { Button, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Timezone } from 'chronoshift';
 import classNames from 'classnames';
-import { isDate } from 'date-fns';
 import type {
   Column,
   FilterPattern,
@@ -29,7 +28,7 @@ import type {
   SqlQuery,
 } from 'druid-query-toolkit';
 import { filterPatternsToExpression, fitFilterPatterns } from 'druid-query-toolkit';
-import { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
+import { useImperativeHandle, useMemo, useState } from 'react';
 
 import { useQueryManager } from '../../../../hooks';
 import { prettyFormatIsoDateWithMsIfNeeded, without } from '../../../../utils';
@@ -45,7 +44,12 @@ import { FilterMenu } from './filter-menu/filter-menu';
 
 import './filter-pane.scss';
 
+export interface FilterPaneHandle {
+  filterOn(column: Column): void;
+}
+
 export interface FilterPaneProps {
+  ref?: React.Ref<FilterPaneHandle | undefined>;
   querySource: QuerySource | undefined;
   extraFilter: SqlExpression;
   timezone: Timezone;
@@ -56,8 +60,9 @@ export interface FilterPaneProps {
   onMoveToSourceQueryAsClause?: (expression: SqlExpression, changeWhere?: SqlExpression) => void;
 }
 
-export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps, ref) {
+export function FilterPane(props: FilterPaneProps) {
   const {
+    ref,
     querySource,
     extraFilter,
     timezone,
@@ -84,7 +89,11 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
     processQuery: async (query, signal) => {
       const boundsData = await runSqlQuery(query, signal);
       const startEndRecord = boundsData.toObjectArray()[0];
-      if (!startEndRecord || !isDate(startEndRecord.start) || !isDate(startEndRecord.end)) {
+      if (
+        !startEndRecord ||
+        !(startEndRecord.start instanceof Date) ||
+        !(startEndRecord.end instanceof Date)
+      ) {
         throw new Error('Unexpected result');
       }
       return [startEndRecord.start, startEndRecord.end];
@@ -113,14 +122,9 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
     }
   }
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      filterOn,
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [patterns],
-  );
+  useImperativeHandle(ref, () => ({
+    filterOn,
+  }));
 
   function changePatterns(newPatterns: FilterPattern[]) {
     onFilterChange(filterPatternsToExpression(newPatterns));
@@ -128,15 +132,15 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
 
   return (
     <DroppableContainer className="filter-pane" onDropColumn={filterOn}>
-      <Button className="filter-icon-button" icon={IconNames.FILTER} minimal disabled />
+      <Button className="filter-icon-button" icon={IconNames.FILTER} variant="minimal" disabled />
       {patterns.map((pattern, i) => {
         return (
           <div className="filter-pill" key={i}>
             {querySource ? (
-              <Popover
+              <PopoverNext
                 isOpen={i === menuIndex}
                 onClose={() => setMenuIndex(-1)}
-                position="bottom"
+                placement="bottom"
                 content={
                   <FilterMenu
                     querySource={querySource}
@@ -166,19 +170,21 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
                     }
                   />
                 }
+                lazy
+                shouldReturnFocusOnClose={false}
               >
                 <Button
                   className={classNames('filter-text-button', { negated: pattern.negated })}
-                  minimal
+                  variant="minimal"
                   text={formatPatternWithoutNegation(pattern, timezone)}
                   onClick={() => setMenuIndex(i)}
                   data-tooltip={i !== menuIndex ? filterTooltip(pattern) : undefined}
                 />
-              </Popover>
+              </PopoverNext>
             ) : (
               <Button
                 className={classNames('filter-text-button', { negated: pattern.negated })}
-                minimal
+                variant="minimal"
                 text={formatPatternWithoutNegation(pattern, timezone)}
                 disabled
               />
@@ -186,8 +192,8 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
             <Button
               className="remove"
               icon={IconNames.CROSS}
-              minimal
-              small
+              variant="minimal"
+              size="small"
               onClick={() => changePatterns(patterns.filter((_clause, idx) => idx !== i))}
               data-tooltip="Remove filter"
             />
@@ -195,10 +201,10 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
         );
       })}
       {querySource ? (
-        <Popover
+        <PopoverNext
           className="add-button"
           isOpen={Boolean(menuNew)}
-          position="bottom"
+          placement="bottom"
           onClose={() => setMenuNew(undefined)}
           content={
             <FilterMenu
@@ -217,24 +223,26 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
               onMoveToSourceQueryAsClause={onMoveToSourceQueryAsClause}
             />
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
           <Button
             icon={IconNames.PLUS}
             text={patterns.length ? undefined : 'Add filter'}
             onClick={() => setMenuNew({})}
-            minimal
+            variant="minimal"
             data-tooltip={patterns.length ? 'Add filter' : undefined}
           />
-        </Popover>
+        </PopoverNext>
       ) : (
         <Button
           icon={IconNames.PLUS}
           text={patterns.length ? undefined : 'Add filter'}
           disabled
-          minimal
+          variant="minimal"
           data-tooltip="No query source, unable to query"
         />
       )}
     </DroppableContainer>
   );
-});
+}

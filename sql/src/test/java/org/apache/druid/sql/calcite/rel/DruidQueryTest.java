@@ -23,15 +23,20 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -42,6 +47,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 public class DruidQueryTest
 {
@@ -63,7 +70,8 @@ public class DruidQueryTest
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
-            false
+            false,
+            Set.of()
         ),
         CalciteTests.createJoinableFactoryWrapper()
     );
@@ -80,7 +88,8 @@ public class DruidQueryTest
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
-            false
+            false,
+            Set.of()
         ),
         CalciteTests.createJoinableFactoryWrapper()
     );
@@ -97,7 +106,8 @@ public class DruidQueryTest
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
-            false
+            false,
+            Set.of()
         ),
         CalciteTests.createJoinableFactoryWrapper()
     );
@@ -115,7 +125,8 @@ public class DruidQueryTest
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
-            false
+            false,
+            Set.of()
         ),
         CalciteTests.createJoinableFactoryWrapper()
     );
@@ -133,7 +144,8 @@ public class DruidQueryTest
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
-            false
+            false,
+            Set.of()
         ),
         CalciteTests.createJoinableFactoryWrapper()
     );
@@ -151,7 +163,8 @@ public class DruidQueryTest
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
-            false
+            false,
+            Set.of()
         ),
         CalciteTests.createJoinableFactoryWrapper()
     );
@@ -169,7 +182,8 @@ public class DruidQueryTest
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
-            false
+            false,
+            Set.of()
         ),
         CalciteTests.createJoinableFactoryWrapper()
     );
@@ -192,11 +206,176 @@ public class DruidQueryTest
         VirtualColumnRegistry.create(
             RowSignature.empty(),
             new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
-            false
+            false,
+            Set.of()
         ),
         CalciteTests.createJoinableFactoryWrapper()
     );
     verify(pair, expectedDataSource, otherFilter, Intervals.utc(150, 200));
+  }
+
+  @Test
+  public void test_filtration_filteredUnionDataSource_intervalsInArmFilters()
+  {
+    final DataSource dataSource = FilteredDataSource.create(
+        new UnionDataSource(
+            List.of(
+                FilteredDataSource.create(new TableDataSource("a"), filterWithInterval),
+                FilteredDataSource.create(
+                    new TableDataSource("b"),
+                    new BoundDimFilter("__time", "300", "400", false, true, null, null, StringComparators.NUMERIC)
+                )
+            )
+        ),
+        selectorFilter
+    );
+    final Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
+        dataSource,
+        otherFilter,
+        VirtualColumnRegistry.create(
+            RowSignature.empty(),
+            new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
+            false,
+            Set.of()
+        ),
+        CalciteTests.createJoinableFactoryWrapper()
+    );
+    Assertions.assertEquals(dataSource, pair.lhs);
+    Assertions.assertEquals(otherFilter, pair.rhs.getDimFilter());
+    Assertions.assertEquals(List.of(Intervals.utc(100, 200), Intervals.utc(300, 400)), pair.rhs.getIntervals());
+  }
+
+  @Test
+  public void test_filtration_timeCondition_noIntervalInQueryFilter()
+  {
+    DataSource dataSource = new TableDataSource("test");
+    Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
+        dataSource,
+        DruidQuery.withTimeCondition(dataSource, selectorFilter, Collections.singletonList(Intervals.utc(50, 150))),
+        VirtualColumnRegistry.create(
+            RowSignature.empty(),
+            new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
+            false,
+            Set.of()
+        ),
+        CalciteTests.createJoinableFactoryWrapper()
+    );
+    verify(pair, dataSource, selectorFilter, Intervals.utc(50, 150));
+  }
+
+  @Test
+  public void test_filtration_timeCondition_noQueryFilter()
+  {
+    DataSource dataSource = new TableDataSource("test");
+    Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
+        dataSource,
+        DruidQuery.withTimeCondition(dataSource, null, Collections.singletonList(Intervals.utc(50, 150))),
+        VirtualColumnRegistry.create(
+            RowSignature.empty(),
+            new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
+            false,
+            Set.of()
+        ),
+        CalciteTests.createJoinableFactoryWrapper()
+    );
+    verify(pair, dataSource, null, Intervals.utc(50, 150));
+  }
+
+  @Test
+  public void test_filtration_timeCondition_intervalInQueryFilter()
+  {
+    DataSource dataSource = new TableDataSource("test");
+    Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
+        dataSource,
+        DruidQuery.withTimeCondition(dataSource, filterWithInterval, Collections.singletonList(Intervals.utc(150, 300))),
+        VirtualColumnRegistry.create(
+            RowSignature.empty(),
+            new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
+            false,
+            Set.of()
+        ),
+        CalciteTests.createJoinableFactoryWrapper()
+    );
+    verify(pair, dataSource, selectorFilter, Intervals.utc(150, 200));
+  }
+
+  @Test
+  public void test_filtration_timeCondition_joinDataSource_intervalInBaseTableFilter()
+  {
+    DataSource dataSource = join(JoinType.INNER, filterWithInterval);
+    DataSource expectedDataSource = join(JoinType.INNER, selectorFilter);
+    Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
+        dataSource,
+        DruidQuery.withTimeCondition(dataSource, otherFilter, Collections.singletonList(Intervals.utc(50, 150))),
+        VirtualColumnRegistry.create(
+            RowSignature.empty(),
+            new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
+            false,
+            Set.of()
+        ),
+        CalciteTests.createJoinableFactoryWrapper()
+    );
+    verify(pair, expectedDataSource, otherFilter, Intervals.utc(100, 150));
+  }
+
+  @Test
+  public void test_filtration_timeCondition_queryDataSource()
+  {
+    DataSource dataSource = new QueryDataSource(
+        Druids.newScanQueryBuilder()
+              .dataSource("test")
+              .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+              .build()
+    );
+    Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
+        dataSource,
+        DruidQuery.withTimeCondition(dataSource, selectorFilter, Collections.singletonList(Intervals.utc(150, 300))),
+        VirtualColumnRegistry.create(
+            RowSignature.empty(),
+            new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
+            false,
+            Set.of()
+        ),
+        CalciteTests.createJoinableFactoryWrapper()
+    );
+
+    // Time condition is not applied, since the datasource is not table-based.
+    verify(pair, dataSource, selectorFilter, Intervals.ETERNITY);
+  }
+
+  @Test
+  public void test_filtration_timeCondition_joinDataSource_subqueryOnLeft()
+  {
+    DataSource dataSource = JoinDataSource.create(
+        new QueryDataSource(
+            Druids.newScanQueryBuilder()
+                  .dataSource("left")
+                  .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+                  .build()
+        ),
+        new TableDataSource("right"),
+        "r.",
+        "c == \"r.c\"",
+        JoinType.INNER,
+        null,
+        ExprMacroTable.nil(),
+        CalciteTests.createJoinableFactoryWrapper(),
+        JoinAlgorithm.BROADCAST
+    );
+    Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
+        dataSource,
+        DruidQuery.withTimeCondition(dataSource, selectorFilter, Collections.singletonList(Intervals.utc(150, 300))),
+        VirtualColumnRegistry.create(
+            RowSignature.empty(),
+            new ExpressionParserImpl(TestExprMacroTable.INSTANCE),
+            false,
+            Set.of()
+        ),
+        CalciteTests.createJoinableFactoryWrapper()
+    );
+
+    // Time condition is not applied, since the base of the join is a subquery, which is not table-based.
+    verify(pair, dataSource, selectorFilter, Intervals.ETERNITY);
   }
 
   private JoinDataSource join(JoinType joinType, DimFilter filter)

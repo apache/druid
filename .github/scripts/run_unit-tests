@@ -21,4 +21,4 @@ set -x
 OPTS+=" -Dsurefire.failIfNoSpecifiedTests=false -P skip-static-checks -Dweb.console.skip=true"
 OPTS+=" -Djacoco.destFile=target/jacoco-${HASH}.exec"
 
-mvn -B $OPTS test "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
+./mvnw -B $OPTS test "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"

@@ -27,6 +27,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -38,17 +39,14 @@ public class RoundRobinServerSelectorTest
 {
   private static final String TIER = "normal";
 
-  private final DataSegment segment = new DataSegment(
-      TestDataSource.WIKI,
-      Intervals.of("2022-01-01/2022-01-02"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new NumberedShardSpec(1, 10),
-      IndexIO.CURRENT_VERSION_ID,
-      100
-  );
+  private final DataSegment segment = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2022-01-01/2022-01-02"), "1", 1))
+                                                 .loadSpec(Collections.emptyMap())
+                                                 .dimensions(Collections.emptyList())
+                                                 .metrics(Collections.emptyList())
+                                                 .shardSpec(new NumberedShardSpec(1, 10))
+                                                 .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                                                 .size(100)
+                                                 .build();
 
   @Test
   public void testSingleIterator()

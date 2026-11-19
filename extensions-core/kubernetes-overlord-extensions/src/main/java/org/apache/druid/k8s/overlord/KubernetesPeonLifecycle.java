@@ -100,6 +100,7 @@ public class KubernetesPeonLifecycle
   private final TaskStateListener stateListener;
   private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
   private final long logSaveTimeoutMs;
+  private final int plaintextPort;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -116,6 +117,23 @@ public class KubernetesPeonLifecycle
       long logSaveTimeoutMs
   )
   {
+    this(task, taskId, kubernetesClient, taskLogs, mapper, stateListener, logSaveTimeoutMs, null);
+  }
+
+  protected KubernetesPeonLifecycle(
+      Task task,
+      K8sTaskId taskId,
+      KubernetesPeonClient kubernetesClient,
+      TaskLogs taskLogs,
+      ObjectMapper mapper,
+      TaskStateListener stateListener,
+      long logSaveTimeoutMs,
+      @Nullable Integer advertisedPlaintextPort
+  )
+  {
+    this.plaintextPort = advertisedPlaintextPort != null && advertisedPlaintextPort > 0
+                         ? advertisedPlaintextPort
+                         : DruidK8sConstants.PORT;
     this.task = task;
     this.taskId = taskId;
     this.kubernetesClient = kubernetesClient;
@@ -229,15 +247,16 @@ public class KubernetesPeonLifecycle
    * the job's associated pod.
    *
    * Task state will be set by the thread running the run(...) or join(...) commands
+   *
+   * If neither has been called yet, the lifecycle moves to STOPPED so that a later run(...) or join(...) fails
+   * instead of launching or waiting for the job, and the task-started future completes with false.
    */
   protected void shutdown()
   {
-    State currentState = state.get();
-    if (State.PENDING.equals(currentState)
-        || State.RUNNING.equals(currentState)
-        || State.STOPPED.equals(currentState)) {
-      kubernetesClient.deletePeonJob(taskId);
+    if (state.compareAndSet(State.NOT_STARTED, State.STOPPED)) {
+      taskStartedSuccessfullyFuture.set(false);
     }
+    kubernetesClient.deletePeonJob(taskId);
   }
 
   /**
@@ -300,7 +319,7 @@ public class KubernetesPeonLifecycle
       }
       taskLocationRef.set(TaskLocation.create(
           podStatus.getPodIP(),
-          DruidK8sConstants.PORT,
+          plaintextPort,
           DruidK8sConstants.TLS_PORT,
           Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")),
           pod.getMetadata() != null ? pod.getMetadata().getName() : ""

@@ -19,8 +19,6 @@
 
 package org.apache.druid.testing.embedded.tools;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.DynamicMessage;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
 import org.apache.druid.java.util.common.Pair;
@@ -51,7 +49,7 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
     try {
       RetryUtils.retry(
           () -> {
-            schemaId = client.register(topic, new ProtobufSchema(ProtobufEventSerializer.SCHEMA.newMessageBuilder("Wikipedia").getDescriptorForType()));
+            schemaId = client.register(topic, new ProtobufSchema(DESCRIPTOR));
             return 0;
           },
           (e) -> true,
@@ -66,12 +64,7 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
   @Override
   public byte[] serialize(List<Pair<String, Object>> event)
   {
-    DynamicMessage.Builder builder = SCHEMA.newMessageBuilder("Wikipedia");
-    Descriptors.Descriptor msgDesc = builder.getDescriptorForType();
-    for (Pair<String, Object> pair : event) {
-      builder.setField(msgDesc.findFieldByName(pair.lhs), pair.rhs);
-    }
-    byte[] bytes = builder.build().toByteArray();
+    final byte[] bytes = super.serialize(event);
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 6).put((byte) 0).putInt(schemaId).put((byte) 0).put(bytes);
     bb.rewind();
     return bb.array();

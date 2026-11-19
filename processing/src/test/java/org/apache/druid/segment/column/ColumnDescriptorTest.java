@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.List;
 
 class ColumnDescriptorTest
@@ -81,5 +83,30 @@ class ColumnDescriptorTest
     final ColumnType columnType = descriptor.toColumnType();
     Assertions.assertEquals(ValueType.STRING, columnType.getType());
     Assertions.assertNull(columnType.getComplexTypeName());
+  }
+
+  @Test
+  void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(ColumnDescriptor.class).usingGetClass().verify();
+
+    final ColumnPartSerde part1 = LongNumericColumnPartSerde.createDeserializer(ByteOrder.BIG_ENDIAN);
+    final ColumnPartSerde part2 = LongNumericColumnPartSerde.createDeserializer(ByteOrder.BIG_ENDIAN);
+    Assertions.assertEquals(
+        new ColumnDescriptor(ValueType.LONG, false, List.of(part1)),
+        new ColumnDescriptor(ValueType.LONG, false, List.of(part2))
+    );
+  }
+
+  @Test
+  void testPartsAreImmutable()
+  {
+    final List<ColumnPartSerde> parts = new ArrayList<>();
+    parts.add(LongNumericColumnPartSerde.createDeserializer(ByteOrder.BIG_ENDIAN));
+    final ColumnDescriptor descriptor = new ColumnDescriptor(ValueType.LONG, false, parts);
+    parts.clear();
+
+    Assertions.assertEquals(1, descriptor.getParts().size());
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> descriptor.getParts().clear());
   }
 }

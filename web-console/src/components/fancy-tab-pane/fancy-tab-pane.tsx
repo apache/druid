@@ -73,7 +73,7 @@ export const FancyTabPane = React.memo(function FancyTabPane(props: FancyTabPane
               key={d.id}
               text={d.label}
               intent={activeTab === d.id ? Intent.PRIMARY : Intent.NONE}
-              minimal={activeTab !== d.id}
+              variant={activeTab === d.id ? undefined : 'minimal'}
               onClick={() => onActivateTab(d.id)}
             />
           );

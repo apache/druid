@@ -65,8 +65,6 @@ public class NullColumnPartSerde implements ColumnPartSerde
   private final int numRows;
   private final BitmapSerdeFactory bitmapSerdeFactory;
 
-  private final NullDictionaryEncodedColumn nullDictionaryEncodedColumn;
-
   @JsonCreator
   public NullColumnPartSerde(
       @JsonProperty("numRows") int numRows,
@@ -75,7 +73,6 @@ public class NullColumnPartSerde implements ColumnPartSerde
   {
     this.numRows = numRows;
     this.bitmapSerdeFactory = bitmapSerdeFactory;
-    this.nullDictionaryEncodedColumn = new NullDictionaryEncodedColumn();
   }
 
   @JsonProperty
@@ -111,7 +108,7 @@ public class NullColumnPartSerde implements ColumnPartSerde
              // this is a bit sneaky, we set supplier to null here to act like a null column instead of a column
              // without any indexes, which is the default state
              .setIndexSupplier(null, true, false)
-             .setDictionaryEncodedColumnSupplier(Suppliers.ofInstance(nullDictionaryEncodedColumn));
+             .setDictionaryEncodedColumnSupplier(Suppliers.ofInstance(new NullDictionaryEncodedColumn()));
     };
   }
 

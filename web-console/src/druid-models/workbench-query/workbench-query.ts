@@ -36,7 +36,7 @@ import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
 
-import type { RowColumn } from '../../utils';
+import type { LineColumn } from '../../utils';
 import { caseInsensitiveEquals, deleteKeys } from '../../utils';
 import type { ArrayIngestMode } from '../array-ingest-mode/array-ingest-mode';
 import type { DruidEngine } from '../druid-engine/druid-engine';
@@ -212,10 +212,10 @@ export class WorkbenchQuery {
     return orderByExpressions.length ? SqlOrderByClause.create(orderByExpressions) : undefined;
   }
 
-  static getRowColumnFromIssue(issue: string): RowColumn | undefined {
+  static getLineColumnFromIssue(issue: string): LineColumn | undefined {
     const m = /at line (\d+),(\d+)/.exec(issue);
     if (!m) return;
-    return { row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
+    return { line: Number(m[1]), column: Number(m[2]) };
   }
 
   static isTaskEngineNeeded(queryString: string): boolean {

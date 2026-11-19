@@ -167,6 +167,22 @@ Druid interacts with ZooKeeper through a set of standard path configurations. We
 Although not recommended but both HTTP and HTTPS connectors can be enabled at a time and respective ports are configurable using `druid.plaintextPort`
 and `druid.tlsPort` properties on each service. Please see `Configuration` section of individual services to check the valid and default values for these ports.
 
+#### Advertised plaintext port
+
+By default, a service advertises the same plaintext port it listens on. Set `druid.advertisedPlaintextPort` when other services must reach it on a different port, for example when a sidecar proxy such as Envoy terminates mTLS on one port and forwards traffic to Jetty on `druid.plaintextPort`.
+
+- `druid.plaintextPort` remains the port that Jetty binds to and listens on.
+- `druid.advertisedPlaintextPort` is the port that the service publishes through service discovery and that other services use to reach it over plaintext. This covers internal RPC between services, Router to Broker proxying, dynamic configuration sync, lookup and security cache notifications, catalog sync, `sys.server_properties`, task locations reported by Indexers, and Consul registration.
+- If `druid.advertisedPlaintextPort` is unset or non-positive, it falls back to `druid.plaintextPort`.
+- It only applies when `druid.enablePlaintextPort` is `true`. When `druid.enableTlsPort` is `true`, services still prefer `druid.tlsPort` to reach each other.
+- The `plaintext_port` column of `sys.servers` and the `plaintextPort` field of the `/druid/coordinator/v1/cluster` API continue to report `druid.plaintextPort`.
+
+You can't use a port in `druid.host` for this purpose, because a port in `druid.host` must match `druid.plaintextPort`.
+
+Peons forked by a Middle Manager don't support `druid.advertisedPlaintextPort`. Each Peon listens on its own port from `druid.indexer.runner.startPort`, `druid.indexer.runner.endPort`, or `druid.indexer.runner.ports`, so a single advertised port can't identify an individual Peon. The Middle Manager always starts Peons with `druid.advertisedPlaintextPort` unset, so each Peon advertises its own port. This applies even if the property is inherited from the Middle Manager or set through `druid.indexer.fork.property.druid.advertisedPlaintextPort` or the task context. Setting `druid.advertisedPlaintextPort` on the Middle Manager itself only affects how other services reach the Middle Manager.
+
+Task pods launched by the [Kubernetes task runner](../development/extensions-core/k8s-jobs.md) aren't reached through service discovery. The Overlord reports each task's location from the pod IP and a fixed port, so `druid.advertisedPlaintextPort` has no effect on them. To reach task pods through a sidecar proxy, set [`druid.indexer.runner.advertisedPlaintextPort`](../development/extensions-core/k8s-jobs.md#properties) on the Overlord instead.
+
 #### Jetty server TLS configuration
 
 Druid uses Jetty as an embedded web server. To learn more about TLS/SSL, certificates, and related concepts in Jetty, including explanations of the configuration settings below, see "Configuring SSL/TLS KeyStores" in the [Jetty Operations Guide](https://www.eclipse.org/jetty/documentation.php).
@@ -219,6 +235,7 @@ values for the above mentioned configs among others provided by Java implementat
 |`druid.auth.unsecuredPaths`| List of Strings|List of paths for which security checks will not be performed. All requests to these paths will be allowed.|[]|no|
 |`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, skip authentication checks for HTTP OPTIONS requests. This is needed for certain use cases, such as supporting CORS pre-flight requests. Note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404), so enabling this option may reveal information about server configuration, including information about what extensions are loaded (if those extensions add extensions).|false|no|
 |`druid.auth.emitAuthMetrics`|Boolean|If true, emit service metrics for authorization events. When enabled, Druid emits `auth/forbidden` when access is denied and `auth/exception` when an internal authorization error occurs. See [Security metrics](#security) for details.|false|no|
+|`druid.auth.enableLookupAuthorization`|Boolean|If true, authorize lookup endpoints with `LOOKUP` resources. Requests where neither a tier nor a lookup can be resolved require `LOOKUP:LOOKUP`. See [LOOKUP resource permissions](../operations/security-user-auth.md#lookup).|false|no|
 
 For more information, please see [Authentication and Authorization](../operations/auth.md).
 
@@ -231,7 +248,7 @@ All services can log debugging information on startup.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.startup.logging.logProperties`|Log all properties on startup (from common.runtime.properties, runtime.properties, and the JVM command line).|false|
-|`druid.startup.logging.maskProperties`|Masks sensitive properties (passwords, for example) containing theses words.|["password"]|
+|`druid.startup.logging.maskProperties`|**Deprecated**, use `druid.server.hiddenProperties` instead. Words in this list are still added to `druid.server.hiddenProperties`.|null|
 
 Note that some sensitive information may be logged if these settings are enabled.
 
@@ -309,13 +326,16 @@ For native queries, the logger only logs requests when the `query/time` metric e
 For SQL queries, it only logs requests when the `sqlQuery/time` metric exceeds threshold provided in `sqlQueryTimeThresholdMs`.
 See [Metrics](../operations/metrics.md) for more details on query metrics.
 
-Requests that meet the threshold are logged using the request logger type set in `druid.request.logging.delegate.type`.
+Requests that pass every filter are logged using the request logger type set in `druid.request.logging.delegate.type`.
+Set `alwaysLogFailures` to log failed queries even when they would otherwise be filtered out.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.queryTimeThresholdMs`|Threshold value for the `query/time` metric in milliseconds.|0, i.e., no filtering|
 |`druid.request.logging.sqlQueryTimeThresholdMs`|Threshold value for the `sqlQuery/time` metric in milliseconds.|0, i.e., no filtering|
 |`druid.request.logging.mutedQueryTypes` | Query requests of these types are not logged. Query types are defined as string objects corresponding to the "queryType" value for the specified query in the Druid's [native JSON query API](../querying/querying.md). Misspelled query types will be ignored. Example to ignore scan and timeBoundary queries: `["scan", "timeBoundary"]`| []|
+|`druid.request.logging.muteSqlPlannedNativeQueries`|If `true`, native queries with a `sqlQueryId` in their context are not logged, regardless of `queryTimeThresholdMs`. This covers every native query planned from SQL; on the Broker, the SQL request log line still records each query's outcome and its `nativeQueryIds`. Data servers receive these native queries with the same `sqlQueryId`, so they are muted there too. Native queries submitted directly without a `sqlQueryId` are unaffected.|false|
+|`druid.request.logging.alwaysLogFailures`|If `true`, failed native and SQL queries (any query with `success: false`, including cancelled, timed-out and invalid queries) are always logged, bypassing the time thresholds, `mutedQueryTypes`, and `muteSqlPlannedNativeQueries`.|false|
 |`druid.request.logging.delegate.type`|Type of delegate request logger to log requests.|none|
 
 #### Composing request logging
@@ -416,7 +436,7 @@ This deep storage is used to interface with HDFS. You must load the `druid-hdfs-
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.storage.storageDirectory`|HDFS directory to use as deep storage.|none|
-|`druid.storage.compressionFormat`|The compression format applied to the segments uploaded to HDFS. Only `zip` and `lz4` are supported. |zip|
+|`druid.storage.compressionFormat`|The compression format applied to segments uploaded to HDFS. Supports `zip`, `lz4`, and `none` (uncompressed directory layout).|zip|
 
 #### Cassandra deep storage
 
@@ -486,7 +506,7 @@ These properties do not apply to metadata storage connections.
 |Property|Possible values| Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |Default|
 |--------|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
 |`druid.access.jdbc.enforceAllowedProperties`|Boolean| When true, Druid applies `druid.access.jdbc.allowedProperties` to JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, or `jdbc:mariadb:`. When false, Druid allows any kind of JDBC connections without JDBC property validation. This config is for backward compatibility especially during upgrades since enforcing allow list can break existing ingestion jobs or lookups based on JDBC. This config is deprecated and will be removed in a future release. |true|
-|`druid.access.jdbc.allowedProperties`|List of JDBC properties| Defines a list of allowed JDBC properties. Druid always enforces the list for all JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, and `jdbc:mariadb:` if `druid.access.jdbc.enforceAllowedProperties` is set to true.<br/><br/>This option is tested against MySQL connector 8.2.0, MariaDB connector 3.5.10, and PostgreSQL connector 42.2.14. Other connector versions might not work.                                                                           |`["useSSL", "requireSSL", "sslMode", "ssl", "sslmode"]`|
+|`druid.access.jdbc.allowedProperties`|List of JDBC properties| Defines a list of allowed JDBC properties. Druid always enforces the list for all JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, and `jdbc:mariadb:` if `druid.access.jdbc.enforceAllowedProperties` is set to true.<br/><br/>This option is tested against MySQL connector 8.2.0, MariaDB connector 4.0.0, and PostgreSQL connector 42.2.14. Other connector versions might not work. With MariaDB connector 4.x, Druid counts both `useSSL=false` and `sslMode=disable` as setting `sslMode`, so keep `sslMode` in the list to allow connections without TLS.                                                                           |`["useSSL", "requireSSL", "sslMode", "ssl", "sslmode"]`|
 |`druid.access.jdbc.allowUnknownJdbcUrlFormat`|Boolean| When false, Druid only accepts JDBC connections starting with `jdbc:postgresql:` or `jdbc:mysql:`. When true, Druid allows JDBC connections to any kind of database, but only enforces `druid.access.jdbc.allowedProperties` for PostgreSQL and MySQL/MariaDB.                                                                                                                                                                                                                 |true|
 
 ### Task logging
@@ -659,6 +679,7 @@ the `expression` aggregator/post-aggregator, and any SQL functions that lower to
 |`druid.expressions.homogenizeNullMultiValueStringArrays`|If true, multi-value string expression input values of `null`, `[]`, and `[null]` are all coerced to `[null]`. Provided for backwards compatibility with Druid 0.22 and earlier. If false (the default), this coercion only happens when single-value expressions are implicitly mapped across multi-value rows, so the single-valued expression is evaluated with an input of `null`.|false|
 |`druid.expressions.allowVectorizeFallback`|If true, the vectorized query engine handles expressions without a native vectorized implementation using a fallback processor that invokes the scalar expression evaluator in a loop. If false, such expressions cannot be vectorized and the query falls back to the non-vectorized engine.|true|
 |`druid.expressions.useVectorApi`|If true, vectorized expression vector processors and numeric vector aggregators dispatch to SIMD specializations backed by the JDK incubator Vector API (`jdk.incubator.vector`) where available. Requires `--add-modules=jdk.incubator.vector` on the JVM command line (see [strong encapsulation](../operations/java.md#strong-encapsulation)). Off by default while the Vector API remains an incubator JDK feature.|false|
+|`druid.expressions.useVectorMathApi`|When `useVectorApi` is true, controls whether math expressions whose SIMD path is backed by the JDK's VO_MATHLIB routing (Intel SVML on x86, SLEEF on Arm) dispatch to that SIMD path. SIMD and non-SIMD results for these functions can differ slightly, and the exact bits can shift once the JIT promotes the SIMD loop during a long-running query. In general applications should not rely on bit-for-bit equality of floating-point results, and should round or truncate before comparing or grouping. This flag exists as an escape hatch for legacy queries that rely on `Math.<op>` bits without rounding. Has no effect unless `useVectorApi` is also true. On by default when `useVectorApi` is enabled.|true|
 
 ### Double column storage
 
@@ -689,7 +710,8 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.clientConnectTimeout`|Connect timeout (in milliseconds) for the HTTP client used to forward management API requests between Druid services. On the Router, this covers forwarding management API calls to the Coordinator or Overlord. On the Coordinator, this covers proxying `/druid/indexer/*` requests to the Overlord (when they run as separate processes). Does not affect Router query proxying to Brokers (see `druid.router.http.clientConnectTimeout`) or direct RPC connections between services (see `connectTimeout`).|500|
 |`druid.global.http.connectTimeout`|Connect timeout for the HTTP client used for most direct RPC between Druid services. This covers, among other things, Overlord-to-task and supervisor-to-task calls in the indexing service, Coordinator lookup management, dynamic config sync between services, MSQ tasks reading from data servers, and general Coordinator/Overlord/Broker service clients. Does not affect Broker-to-Historical query dispatch (see `druid.broker.http.connectTimeout`) or request forwarding (see `clientConnectTimeout`).|`PT10S`|
 |`druid.global.http.allocator`|Netty memory allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between `pooled` and `unpooled` based on load), `pooled`, or `unpooled`.|`adaptive`|
-|`druid.global.http.poolImplementation`|How the connection pool tracks demand, never exceeding `numConnections` either way. With `adaptive`, a request discards every stale or broken connection it walks past and opens a new one only once none is left, so the pool falls back to the number of connections the traffic actually needs. With `retaining`, the pool holds on to every connection it has opened, replacing a stale or broken one by a fresh one, one for one, so it stays at its high-water mark.|`adaptive`|
+|`druid.global.http.poolImplementation`|How the connection pool tracks demand, never exceeding `numConnections` either way. With `adaptive`, a request discards every stale or broken connection it walks past and opens a new one only once none is left, so the pool falls back to the number of connections the traffic actually needs. With `retaining`, the pool holds on to every connection it has opened, replacing a stale or broken one by a fresh one, one for one, so it stays at its high-water mark.|`retaining`|
+|`druid.client.coordinator.maxAttempts`|Maximum number of attempts, including the first one, that a service makes for a request to the Coordinator before giving up on a retryable error. Must be at least 1.|`15`|
 
 ### Common endpoints configuration
 
@@ -697,7 +719,7 @@ This section contains the configuration options for endpoints that are supported
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.hiddenProperties`| If property names or substring of property names (case insensitive) is in this list, responses of the `/status/properties` endpoint do not show these properties | `["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password", "password", "key", "token", "pwd"]` |
+|`druid.server.hiddenProperties`|Properties whose names contain any of these words (case insensitive) are treated as sensitive: their values are masked in the startup property log (`druid.startup.logging.logProperties`) and in logged task commands, and the properties are omitted from the `/status/properties` endpoint. Setting this property replaces the default list, so keep the default words when adding new ones.|`["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password", "password", "key", "token", "pwd", "secret", "passphrase", "basicAuthentication", "druid.emitter.kafka.producer.hiddenProperties"]`|
 
 ## Master server
 
@@ -718,6 +740,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service.|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8081|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative integer.|8281|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/coordinator`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -733,8 +756,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.balancer.diskNormalized.utilizationThreshold`|Only used when `druid.coordinator.balancer.strategy` is `diskNormalized`. Projected disk utilization difference that the strategy ignores before applying the exponential utilization penalty. A value of `0.05` means candidates within 5 percentage points of the least-used candidate are ordered by normal cost, while candidates outside that band are penalized exponentially by the excess utilization difference. Must be in `(0.0, 1.0)`.|`0.05`|
 |`druid.coordinator.loadqueuepeon.http.repeatDelay`|The start and repeat delay (in milliseconds) for the load queue peon, which manages the load/drop queue of segments for any server.|1 minute|
 |`druid.coordinator.loadqueuepeon.http.batchSize`|Number of segment load/drop requests to batch in one HTTP request. Note that it must be smaller than or equal to the `druid.segmentCache.numLoadingThreads` config on Historical service. If this value is not configured, the coordinator uses the value of the `numLoadingThreads` for the respective server. | `druid.segmentCache.numLoadingThreads` |
-|`druid.coordinator.asOverlord.enabled`|Boolean value for whether this Coordinator service should act like an Overlord as well. This configuration allows users to simplify a Druid cluster by not having to deploy any standalone Overlord services. If set to true, then Overlord console is available at `http://coordinator-host:port/console.html` and be sure to set `druid.coordinator.asOverlord.overlordService` also.|false|
-|`druid.coordinator.asOverlord.overlordService`| Required, if `druid.coordinator.asOverlord.enabled` is `true`. This must be same value as `druid.service` on standalone Overlord services and `druid.selectors.indexing.serviceName` on Middle Managers.|NULL|
+|`druid.coordinator.asOverlord.enabled`|Boolean value for whether this Coordinator service should act like an Overlord as well. This configuration allows users to simplify a Druid cluster by not having to deploy any standalone Overlord services. If set to true, then Overlord console is available at `http://coordinator-host:port/console.html`.|false|
 
 ##### Data management
 
@@ -865,6 +887,7 @@ You can configure automatic compaction through the following properties:
 
 |Property|Description|Required|
 |--------|-----------|--------|
+|`type`|Where the compaction schema comes from. `inline` declares it in this configuration, using the schema properties below. `catalog` reads it from the datasource's [catalog](../development/extensions-core/catalog.md) table definition on every run, and accepts none of the schema properties; see [Catalog-based compaction](../development/extensions-core/catalog.md#catalog-based-compaction).|no (default = `inline`)|
 |`dataSource`|The datasource name to be compacted.|yes|
 |`taskPriority`|[Priority](../ingestion/tasks.md#lock-priority) of compaction task.|no (default = 25)|
 |`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk.|no (default = 100,000,000,000,000 i.e. 100TB)|
@@ -967,6 +990,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service.|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`.|8090|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8290|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/overlord`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1017,7 +1041,7 @@ If autoscaling is enabled, you can set these additional configs:
 |`druid.indexer.autoscale.maxScalingDuration`|How long the Overlord will wait around for a Middle Manager to show up before giving up.|`PT15M`|
 |`druid.indexer.autoscale.numEventsToTrack`|The number of autoscaling related events (node creation and termination) to track.|10|
 |`druid.indexer.autoscale.pendingTaskTimeout`|How long a task can be in "pending" state before the Overlord tries to scale up.|`PT30S`|
-|`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling. Overrides dynamic configuration. |null|
+|`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling, and running workers with an older version count as invalid, so they can be terminated. If not set, `druid.indexer.runner.minWorkerVersion` decides which workers are valid. |null|
 |`druid.indexer.autoscale.workerPort`|The port that Middle Managers will run on.|8080|
 |`druid.indexer.autoscale.workerCapacityHint`| An estimation of the number of task slots available for each worker launched by the auto scaler when there are no workers running. The auto scaler uses the worker capacity hint to launch workers with an adequate capacity to handle pending tasks. When unset or set to a value less than or equal to 0, the auto scaler scales workers equal to the value for `minNumWorkers` in autoScaler config instead. The auto scaler assumes that each worker, either a Middle Manager or indexer, has the same amount of task slots. Therefore, when all your workers have the same capacity (homogeneous capacity), set the value for `autoscale.workerCapacityHint` equal to `druid.worker.capacity`. If your workers have different capacities (heterogeneous capacity), set the value to the average of `druid.worker.capacity` across the workers. For example, if two workers have `druid.worker.capacity=10`, and one has `druid.worker.capacity=4`, set `autoscale.workerCapacityHint=8`. Only applies to `pendingTaskBased` provisioning strategy.|-1|
 
@@ -1319,6 +1343,7 @@ These Middle Manager and Peon configurations can be defined in the `middleManage
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. Ignored for Peons forked by a Middle Manager, which always advertise their own port. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/middlemanager`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1446,6 +1471,7 @@ For most types of tasks, `SegmentWriteOutMediumFactory` can be configured per-ta
 |`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/indexer`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1483,7 +1509,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|`PT5M`|
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
-|`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
+|`druid.server.http.gracefulShutdownTimeout`|How long Jetty waits on shutdown for in-flight requests, such as queries, to finish before closing the remaining connections. Idle connections are closed after about one second. This wait starts after `druid.server.http.unannouncePropagationDelay` elapses. `PT0S` disables the wait.|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context-reference.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |`Long.MAX_VALUE`|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
@@ -1544,6 +1570,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8083|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/historical`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1604,7 +1631,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|`PT5M`|
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
-|`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
+|`druid.server.http.gracefulShutdownTimeout`|How long Jetty waits on shutdown for in-flight requests, such as queries, to finish before closing the remaining connections. Idle connections are closed after about one second. This wait starts after `druid.server.http.unannouncePropagationDelay` elapses. `PT0S` disables the wait.|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context-reference.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |`Long.MAX_VALUE`|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
@@ -1665,6 +1692,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8082|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8282|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/broker`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1812,7 +1840,7 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 |`druid.server.http.maxScatterGatherBytes`|Maximum number of bytes gathered from data processes such as Historicals and realtime processes to execute a query. Queries that exceed this limit will fail. This is an advance configuration that allows to protect in case Broker is under heavy load and not utilizing the data gathered in memory fast enough and leading to OOMs. This limit can be further reduced at query time using `maxScatterGatherBytes` in the context. Note that having large limit is not necessarily bad if broker is never under heavy concurrent load in which case data gathered is processed quickly and freeing up the memory used. Human-readable format is supported, see [here](human-readable-byte.md). |`Long.MAX_VALUE`|
 |`druid.server.http.maxSubqueryRows`|Maximum number of rows from all subqueries per query. Druid stores the subquery rows in temporary tables that live in the Java heap. `druid.server.http.maxSubqueryRows` is a guardrail to prevent the system from exhausting available heap. When a subquery exceeds the row limit, Druid throws a resource limit exceeded exception: "Subquery generated results beyond maximum."<br /><br />It is a good practice to avoid large subqueries in Druid. However, if you choose to raise the subquery row limit, you must also increase the heap size of all Brokers, Historicals, and task Peons that process data for the subqueries to accommodate the subquery results.<br /><br />There is no formula to calculate the correct value. Trial and error is the best approach.|100000|
 |`druid.server.http.maxSubqueryBytes`|Maximum number of bytes from all subqueries per query. Since the results are stored on the Java heap, `druid.server.http.maxSubqueryBytes` is a guardrail like `druid.server.http.maxSubqueryRows` to prevent the heap space from exhausting. When a subquery exceeds the byte limit, Druid throws a resource limit exceeded exception. A negative value for the guardrail indicates that Druid won't guardrail by memory. This can be set to 'disabled' which disables the results from being limited via the byte limit, 'auto' which sets this value automatically taking free heap space into account, or a positive long value depicting the number of bytes per query's subqueries' results can occupy. This is an experimental feature for now as this materializes the results in a different format.|'disabled'|
-|`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
+|`druid.server.http.gracefulShutdownTimeout`|How long Jetty waits on shutdown for in-flight requests, such as queries, to finish before closing the remaining connections. Idle connections are closed after about one second. This wait starts after `druid.server.http.unannouncePropagationDelay` elapses. `PT0S` disables the wait.|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context-reference.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |`Long.MAX_VALUE`|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks. |8 * 1024|
@@ -1835,7 +1863,7 @@ client has the following configuration options.
 |`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|(number of cores) * 3 / 2 + 1`|
 |`druid.broker.http.connectTimeout`|Connect timeout for the HTTP client the Broker uses to dispatch queries to Historical and real-time processes.|`PT10S`|
 |`druid.broker.http.allocator`|Netty memory allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between `pooled` and `unpooled` based on load), `pooled`, or `unpooled`.|`adaptive`|
-|`druid.broker.http.poolImplementation`|How the connection pool tracks demand, never exceeding `numConnections` either way. With `adaptive`, a query discards every stale or broken connection it walks past and opens a new one only once none is left, so the pool falls back to the number of connections the traffic actually needs. With `retaining`, the pool holds on to every connection it has opened, replacing a stale or broken one by a fresh one, one for one, so it stays at its high-water mark.|`adaptive`|
+|`druid.broker.http.poolImplementation`|How the connection pool tracks demand, never exceeding `numConnections` either way. With `adaptive`, a query discards every stale or broken connection it walks past and opens a new one only once none is left, so the pool falls back to the number of connections the traffic actually needs. With `retaining`, the pool holds on to every connection it has opened, replacing a stale or broken one by a fresh one, one for one, so it stays at its high-water mark.|`retaining`|
 
 
 ##### Retry policy
@@ -1915,7 +1943,7 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.useGroupingSetForExactDistinct`|Only relevant when `useApproximateCountDistinct` is disabled. If set to true, exact distinct queries are re-written using grouping sets. Otherwise, exact distinct queries are re-written using joins. This should be set to true for group by query with multiple exact distinct aggregations. This flag can be overridden per query.|false|
 |`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.md) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.md) will be used instead.|true|
 |`druid.sql.planner.useLexicographicTopN`|Whether to use [TopN queries](../querying/topnquery.md) with lexicographic dimension ordering. If false, [GroupBy queries](../querying/groupbyquery.md) will be used instead for lexicographic ordering. When both this and `useApproximateTopN` are false, TopN queries are never used.|false|
-|`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on `__time` column so that all generated native queries will have user specified intervals. If true, all queries without filter condition on `__time` column will fail|false|
+|`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on `__time` column so that all generated native queries will have user specified intervals. If true, all queries without a filter condition on `__time` are rejected. The guard inspects every physical leaf: a right-hand join input or semi-join subquery with no `__time` filter is also rejected, even when the left-hand side is bounded. A time condition on the outer query does not satisfy an unbounded inner subquery or an unbounded right-leg join input.|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
 |`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments on Broker that can be used to serve queries against `sys.segments`. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST API will be invoked when broker needs published segments info.|true|
 |`druid.sql.planner.metadataSegmentPollPeriod`|How often to poll coordinator for published segments list if `druid.sql.planner.metadataSegmentCacheEnable` is set to true. Poll period is in milliseconds. |60000|
@@ -1943,6 +1971,7 @@ You can optionally only configure caching to be enabled on the Broker by setting
 |`druid.broker.cache.populateCache`|true, false|Populate the cache on the Broker.|false|
 |`druid.broker.cache.useResultLevelCache`|true, false|Enable result level caching on the Broker.|false|
 |`druid.broker.cache.populateResultLevelCache`|true, false|Populate the result level cache on the Broker.|false|
+|`druid.broker.cache.includeDatasourceAndIntervalsInResultLevelCacheKey`|true, false|Include the query's datasource and intervals in the result level cache key. By default the key has neither, so queries that differ only by interval or datasource share one cache entry and overwrite each other. Enabling this gives each of them its own entry, which helps when the same queries repeat over a few different intervals. Trade-offs: the cache holds more entries, and a query whose interval changes on every run, such as a rolling time window, adds a new entry each run that is never read again. Queries whose intervals cover the same data but differ elsewhere, such as an end time past the latest data, no longer reuse each other's entry. Changing this setting means existing result level cache entries are no longer read.|false|
 |`druid.broker.cache.resultLevelCacheLimit`|positive integer|Maximum size of query response that can be cached.|`Integer.MAX_VALUE`|
 |`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|`[scan]`|
 |`druid.broker.cache.cacheBulkMergeLimit`|positive integer or 0|Queries with more segments than this number will not attempt to fetch from cache at the broker level, leaving potential caching fetches (and cache result merging) to the Historicals|`Integer.MAX_VALUE`|
@@ -2259,6 +2288,21 @@ If runtime property only contains `druid.query.default.context.maxQueuedBytes=y`
 `druid.query.default.context.maxQueuedBytes`, `y`, is use (given that query does not have `maxQueuedBytes` in the
 context). If query does have `maxQueuedBytes` in the context, then that value is use instead.
 
+### Query context validation
+
+The Broker checks the parameters that a query sets in its context. This applies to the top-level context of native queries, and to the context and `SET` statements of SQL queries, including the connection properties of JDBC connections.
+
+The Broker always rejects a recognized parameter with an invalid value. If you set `druid.query.context.rejectUnknownParameters` to `true`, it also rejects a parameter that Druid doesn't recognize, such as a misspelled parameter name, instead of ignoring it. The error names an invalid parameter and, for an unrecognized parameter, suggests the parameters with similar names, if any. For example: `Unknown query context parameter [useCahce]. Did you mean [useCache]?`
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.context.rejectUnknownParameters`|Whether the Broker rejects queries with unrecognized query context parameters. If `false`, the Broker ignores unrecognized parameters.|`false`|
+
+Druid also checks the default context that operators configure, in the same way: it always rejects invalid values, and rejects unrecognized parameters if `druid.query.context.rejectUnknownParameters` is `true`.
+
+* The Broker fails to start if `druid.query.default.context.*` or `druid.msq.dart.query.context.*` sets an invalid parameter.
+* The Coordinator rejects an update of the [Broker dynamic configuration](../api-reference/dynamic-configuration-api.md) whose `queryContext` sets an invalid parameter. To reject unrecognized parameters there, set `druid.query.context.rejectUnknownParameters` on the Coordinator as well as on the Broker, for example in `common.runtime.properties`.
+
 ### Search query config
 
 |Property|Description|Default|
@@ -2333,6 +2377,7 @@ Supported query contexts:
 |`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8888|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|9088|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/router`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|

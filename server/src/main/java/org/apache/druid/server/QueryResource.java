@@ -21,8 +21,11 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
@@ -40,6 +43,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -66,6 +70,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
@@ -89,7 +94,8 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String ERROR_MESSAGE_TRAILER_HEADER = "X-Error-Message";
   public static final String RESPONSE_COMPLETE_TRAILER_HEADER = "X-Druid-Response-Complete";
   public static final String HEADER_ETAG = "ETag";
-  public static final String WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW = "writeExceptionBodyAsResponseRow";
+  public static final String WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW =
+      QueryContextParameters.WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW.getName();
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
   protected final ObjectMapper jsonMapper;
@@ -287,6 +293,35 @@ public class QueryResource implements QueryCountStatsProvider
     void incrementTimedOut();
   }
 
+  /**
+   * Whether {@code e} wraps an exception that Druid code threw while binding a query, such as a
+   * {@link NullPointerException} from a deserializer or setter, rather than a rejection of the input. Jackson wraps
+   * those in a plain {@link JsonMappingException} with the original exception as its cause, while its own input
+   * errors are subclasses such as {@link com.fasterxml.jackson.databind.exc.MismatchedInputException}.
+   */
+  private static boolean isServerErrorDuringBinding(final JsonMappingException e)
+  {
+    final Throwable cause = e.getCause();
+    if (e.getClass() != JsonMappingException.class || cause == null) {
+      return false;
+    }
+    if (cause instanceof IllegalArgumentException || cause instanceof JsonProcessingException) {
+      return false;
+    }
+    return !(cause instanceof DruidException
+             && ((DruidException) cause).getTargetPersona() == DruidException.Persona.USER);
+  }
+
+  /**
+   * Validates the context of a query as received from the client, before Druid adds any parameter to it. Data servers
+   * accept any context, since their queries come from the Broker.
+   *
+   * @throws org.apache.druid.query.QueryException if the context is invalid
+   */
+  protected void validateQueryContext(final Map<String, Object> context)
+  {
+  }
+
   private Query<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
@@ -300,9 +335,23 @@ public class QueryResource implements QueryCountStatsProvider
     catch (ValueInstantiationException e) {
       throw new BadJsonQueryException(e);
     }
+    catch (InvalidDefinitionException e) {
+      // A query class that Jackson cannot bind to is a server-side defect, not a bad request, so leave it to the
+      // catch-all in doPost to log and return as a 500.
+      throw e;
+    }
+    catch (JsonMappingException e) {
+      if (isServerErrorDuringBinding(e)) {
+        // Leave it to the catch-all in doPost to log and return as a 500.
+        throw e;
+      }
+      // Well-formed JSON that cannot be bound to a query, such as an unknown query type or a field of the wrong type.
+      throw new BadJsonQueryException(e);
+    }
     catch (JsonParseException e) {
       throw new BadJsonQueryException(e);
     }
+    validateQueryContext(baseQuery.getContext());
 
     String prevEtag = getPreviousEtag(req);
     if (prevEtag == null) {

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.ISE;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -120,5 +121,18 @@ public class CapabilitiesBasedFormatTest
         () -> format1.merge(stringFormat)
     );
     Assertions.assertEquals("Cannot merge columns of type[COMPLEX<someComplex>] and [STRING]", t.getMessage());
+  }
+
+  @Test
+  public void testEqualsAndHashcode()
+  {
+    EqualsVerifier.forClass(CapabilitiesBasedFormat.class)
+                  .usingGetClass()
+                  .withPrefabValues(
+                      ColumnCapabilities.class,
+                      ImmutableColumnCapabilities.internedOf(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG)),
+                      ImmutableColumnCapabilities.internedOf(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.DOUBLE))
+                  )
+                  .verify();
   }
 }

@@ -116,7 +116,7 @@ public class JwtAuthenticatorTest
     EasyMock.replay(configuration);
 
     TokenValidator tokenValidator = EasyMock.createMock(TokenValidator.class);
-    EasyMock.expect(tokenValidator.validate(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(tokenValidator.validateIdToken(EasyMock.anyObject(), EasyMock.anyObject()))
             .andReturn(new IDTokenClaimsSet(new Issuer("foo"),
                                             new Subject("testsub"),
                                             Collections.singletonList(new Audience("testClient")),
@@ -158,7 +158,7 @@ public class JwtAuthenticatorTest
 
     TokenValidator tokenValidator = EasyMock.createMock(TokenValidator.class);
     // This doesn't return any claims for the default scope
-    EasyMock.expect(tokenValidator.validate(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(tokenValidator.validateIdToken(EasyMock.anyObject(), EasyMock.anyObject()))
             .andReturn(new IDTokenClaimsSet(new Issuer("test"),
                                             new Subject("testsub"),
                                             Collections.singletonList(new Audience("testClient")),

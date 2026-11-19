@@ -413,7 +413,7 @@ public class ConciseSet extends AbstractIntSet implements Serializable
    * string. The bit <i>must</i> be appendable, that is it must represent an
    * integer that is strictly greater than the maximum integer in the set.
    * Note that the parameter range check is performed by the public method
-   * {@link #add)} and <i>not</i> in this method.
+   * {@link #add} and <i>not</i> in this method.
    * <p/>
    * <b>NOTE:</b> This method assumes that the last element of {@link #words}
    * (i.e. <code>getLastWord()</code>) <i>must</i> be one of the

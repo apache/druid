@@ -21,16 +21,19 @@ import { IconNames } from '@blueprintjs/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import React, { type ReactNode } from 'react';
-import type { Filter } from 'react-table';
-import ReactTable from 'react-table';
 
+import type { ColumnFilter } from '../../components';
 import {
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  ConsoleTable,
   MoreButton,
   RefreshButton,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  suggestibleFilterInput,
   TableClickableCell,
   TableColumnSelector,
   TableFilterableCell,
@@ -44,11 +47,6 @@ import {
   TASK_CANCELED_PREDICATE,
 } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
-import {
-  SMALL_TABLE_PAGE_SIZE,
-  SMALL_TABLE_PAGE_SIZE_OPTIONS,
-  suggestibleFilterInput,
-} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
   DATE_FORMAT,
@@ -379,7 +377,7 @@ ORDER BY
 
     const tasks = tasksState.data || [];
     return (
-      <ReactTable
+      <ConsoleTable
         data={tasks}
         loading={tasksState.loading}
         noDataText={tasksState.data?.length === 0 ? 'No tasks' : tasksState.getErrorMessage() || ''}
@@ -520,7 +518,7 @@ ORDER BY
             ),
             Aggregated: () => '',
             show: visibleColumns.shown('Created time'),
-            filterMethod: (filter: Filter, row: TaskQueryResultRow) => {
+            filterMethod: (filter: ColumnFilter, row: TaskQueryResultRow) => {
               const tableFilter = TableFilter.fromFilter(filter);
               const parsedRowDate = formatDate(row.created_time);
               if (tableFilter.mode === '~') {

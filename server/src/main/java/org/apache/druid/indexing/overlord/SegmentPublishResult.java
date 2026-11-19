@@ -41,6 +41,7 @@ public class SegmentPublishResult
   private final Set<DataSegment> segments;
   private final boolean success;
   private final boolean retryable;
+  private final boolean offsetMismatch;
   private final String errorMsg;
   private final List<PendingSegmentRecord> upgradedPendingSegments;
 
@@ -51,17 +52,22 @@ public class SegmentPublishResult
 
   public static SegmentPublishResult ok(Set<DataSegment> segments, List<PendingSegmentRecord> upgradedPendingSegments)
   {
-    return new SegmentPublishResult(segments, true, false, null, upgradedPendingSegments);
+    return new SegmentPublishResult(segments, true, false, null, upgradedPendingSegments, false);
   }
 
   public static SegmentPublishResult fail(String errorMsg, Object... args)
   {
-    return new SegmentPublishResult(Set.of(), false, false, StringUtils.format(errorMsg, args), null);
+    return new SegmentPublishResult(Set.of(), false, false, StringUtils.format(errorMsg, args), null, false);
   }
 
   public static SegmentPublishResult retryableFailure(String errorMsg, Object... args)
   {
-    return new SegmentPublishResult(Set.of(), false, true, StringUtils.format(errorMsg, args), null);
+    return new SegmentPublishResult(Set.of(), false, true, StringUtils.format(errorMsg, args), null, false);
+  }
+
+  public static SegmentPublishResult retryableOffsetMismatchFailure(String errorMsg, Object... args)
+  {
+    return new SegmentPublishResult(Set.of(), false, true, StringUtils.format(errorMsg, args), null, true);
   }
 
   @JsonCreator
@@ -72,7 +78,7 @@ public class SegmentPublishResult
       @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
-    this(segments, success, retryable, errorMsg, null);
+    this(segments, success, retryable, errorMsg, null, false);
   }
 
   private SegmentPublishResult(
@@ -80,7 +86,8 @@ public class SegmentPublishResult
       boolean success,
       boolean retryable,
       @Nullable String errorMsg,
-      List<PendingSegmentRecord> upgradedPendingSegments
+      List<PendingSegmentRecord> upgradedPendingSegments,
+      boolean offsetMismatch
   )
   {
     this.segments = Preconditions.checkNotNull(segments, "segments");
@@ -88,6 +95,7 @@ public class SegmentPublishResult
     this.errorMsg = errorMsg;
     this.retryable = retryable;
     this.upgradedPendingSegments = upgradedPendingSegments;
+    this.offsetMismatch = offsetMismatch;
 
     if (!success) {
       Preconditions.checkArgument(segments.isEmpty(), "segments must be empty for unsuccessful publishes");
@@ -127,6 +135,15 @@ public class SegmentPublishResult
   public boolean isRetryable()
   {
     return retryable;
+  }
+
+  /**
+   * @return true if and only if the segment publish failed due to a mismatch
+   * between provided start offset and existing end offset in DB.
+   */
+  public boolean isOffsetMismatch()
+  {
+    return offsetMismatch;
   }
 
   @Nullable

@@ -26,6 +26,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
@@ -35,10 +36,7 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -75,19 +73,22 @@ public class MergingColumnSelectorFactory implements ColumnSelectorFactory
   private final RowSignature clusteringColumns;
   private final List<Object[]> clusteringValuesByGroup;
   private final VirtualColumns queryVirtualColumns;
+  private final MultiGroupColumnInspector capabilities;
   // Index of the group currently winning the merge (the row being exposed). Valid while the cursor is not done.
   private final IntSupplier currentGroup;
-  // First non-null group factory; a valid stand-in for every group's non-clustering capabilities (schema-homogeneous).
-  @Nullable
-  private final ColumnSelectorFactory representative;
   // Row id minted from the merge's output-row counter (one per emitted row), forwarded to callers for caching.
   private final RowIdSupplier rowIdSupplier;
 
+  /**
+   * Creates a factory over the given per-group factories. Capabilities of non-clustering columns come from
+   * {@code allGroupsInspector}, which must cover every group; see {@link MultiGroupColumnInspector}.
+   */
   public MergingColumnSelectorFactory(
       ColumnSelectorFactory[] groupFactories,
       RowSignature clusteringColumns,
       List<Object[]> clusteringValuesByGroup,
       VirtualColumns queryVirtualColumns,
+      ColumnInspector allGroupsInspector,
       IntSupplier currentGroup,
       LongSupplier currentRowId
   )
@@ -96,8 +97,8 @@ public class MergingColumnSelectorFactory implements ColumnSelectorFactory
     this.clusteringColumns = clusteringColumns;
     this.clusteringValuesByGroup = clusteringValuesByGroup;
     this.queryVirtualColumns = queryVirtualColumns;
+    this.capabilities = new MultiGroupColumnInspector(clusteringColumns, queryVirtualColumns, allGroupsInspector);
     this.currentGroup = currentGroup;
-    this.representative = firstNonNull(groupFactories);
     this.rowIdSupplier = currentRowId::getAsLong;
   }
 
@@ -111,17 +112,6 @@ public class MergingColumnSelectorFactory implements ColumnSelectorFactory
   {
     final int idx = clusteringColumns.indexOf(name);
     return idx >= 0 && !queryVirtualColumns.exists(name) ? idx : -1;
-  }
-
-  @Nullable
-  private static ColumnSelectorFactory firstNonNull(ColumnSelectorFactory[] factories)
-  {
-    for (ColumnSelectorFactory factory : factories) {
-      if (factory != null) {
-        return factory;
-      }
-    }
-    return null;
   }
 
   /**
@@ -243,33 +233,7 @@ public class MergingColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    final int clusteringIdx = clusteringConstantIndex(column);
-    if (clusteringIdx >= 0) {
-      // Clustering columns are exposed as per-group constants; report simple type-based capabilities (never
-      // dictionary-encoded across the merge), exactly as ClusteringColumnSelectorFactory does.
-      final ColumnType type = clusteringColumns.getColumnType(clusteringIdx).orElseThrow();
-      if (type.is(ValueType.STRING)) {
-        return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
-      }
-      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
-    }
-    if (representative == null) {
-      return null;
-    }
-    // Precondition: every cluster group shares one schema (the sub-indexes are the same table split by clustering
-    // key), so the first non-null group is a valid stand-in for all groups' capabilities of any given column.
-    final ColumnCapabilities capabilities = representative.getColumnCapabilities(column);
-    if (capabilities == null) {
-      return null;
-    }
-    // Per-group-local dictionary ids are not stable across the merged stream (the same id means different values in
-    // different groups), so advertise non-dictionary-encoded to force value-based grouping, which is correct across
-    // groups.
-    return ColumnCapabilitiesImpl.copyOf(capabilities)
-                                 .setDictionaryEncoded(false)
-                                 .setDictionaryValuesSorted(false)
-                                 .setDictionaryValuesUnique(false)
-                                 .setHasBitmapIndexes(false);
+    return capabilities.getColumnCapabilities(column);
   }
 
   @Nullable

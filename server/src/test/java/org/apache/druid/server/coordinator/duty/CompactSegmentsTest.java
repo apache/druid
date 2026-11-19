@@ -31,6 +31,8 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.catalog.MapMetadataCatalog;
 import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.NullMetadataCatalog;
+import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
+import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
@@ -72,13 +74,17 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
@@ -103,6 +109,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -252,17 +259,13 @@ public class CompactSegmentsTest
                                       startDay + 2
                                   )
                               );
-    return new DataSegment(
-        dataSource,
-        interval,
-        "version",
-        null,
-        Collections.emptyList(),
-        Collections.emptyList(),
-        shardSpec,
-        0,
-        10L
-    );
+    return DataSegment.builder(SegmentId.of(dataSource, interval, "version", shardSpec))
+                      .dimensions(Collections.emptyList())
+                      .metrics(Collections.emptyList())
+                      .shardSpec(shardSpec)
+                      .binaryVersion(0)
+                      .size(10L)
+                      .build();
   }
 
   @Test
@@ -1067,6 +1070,68 @@ public class CompactSegmentsTest
   }
 
   @Test
+  public void testCompactWithCatalogBaseTable()
+  {
+    // The catalog table's layout combines with its declared columns to become the physical spec the compaction task
+    // is given, and the table's 'sealed' property decides whether the task may treat that spec as complete.
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
+    final ObjectMapper mapper = new DefaultObjectMapper((DefaultObjectMapper) JSON_MAPPER);
+    final MapMetadataCatalog metadataCatalog = new MapMetadataCatalog(mapper);
+
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(MetadataCatalog.class, metadataCatalog)
+            .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
+    );
+
+    final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
+    metadataCatalog.addSpec(
+        TableId.datasource(dataSource),
+        TableBuilder.datasource(dataSource, "P1D")
+                    .columns(
+                        ImmutableList.of(
+                            new ColumnSpec("bar", ColumnType.STRING.asTypeString(), null),
+                            new ColumnSpec(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG.asTypeString(), null)
+                        )
+                    )
+                    .baseTable(new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("bar"), null, null))
+                    .buildSpec()
+    );
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    doCompactSegments(
+        compactSegments,
+        List.of(
+            new CatalogDataSourceCompactionConfig(
+                dataSource,
+                // baseTable requires the MSQ compaction engine
+                CompactionEngine.MSQ,
+                new Period("PT0H"),
+                null,
+                0,
+                null,
+                500L,
+                metadataCatalog
+            )
+        )
+    );
+
+    final ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
+    Assertions.assertEquals(
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("bar"),
+                                                       new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME)
+                                                   )
+                                                   .clusteringColumns("bar")
+                                                   .build(),
+        taskPayload.getBaseTable()
+    );
+    // The table does not declare itself sealed, so the task is told to analyze the segments it is rewriting.
+    Assertions.assertFalse(taskPayload.isSealed());
+  }
+
+  @Test
   public void testCompactWithRollupInGranularitySpec()
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
@@ -1138,6 +1203,7 @@ public class CompactSegmentsTest
             ),
             null,
             new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null),
+            null,
             null,
             null,
             null,
@@ -1394,30 +1460,22 @@ public class CompactSegmentsTest
     String dataSourceName = DATA_SOURCE_PREFIX + 1;
     List<DataSegment> segments = new ArrayList<>();
     segments.add(
-        new DataSegment(
-            dataSourceName,
-            Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
-            "1",
-            null,
-            ImmutableList.of(),
-            ImmutableList.of(),
-            shardSpecFactory.apply(0, 2),
-            0,
-            10L
-        )
+        DataSegment.builder(SegmentId.of(dataSourceName, Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"), "1", 0))
+                   .dimensions(ImmutableList.of())
+                   .metrics(ImmutableList.of())
+                   .shardSpec(shardSpecFactory.apply(0, 2))
+                   .binaryVersion(0)
+                   .size(10L)
+                   .build()
     );
     segments.add(
-        new DataSegment(
-            dataSourceName,
-            Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
-            "1",
-            null,
-            ImmutableList.of(),
-            ImmutableList.of(),
-            shardSpecFactory.apply(1, 2),
-            0,
-            10L
-        )
+        DataSegment.builder(SegmentId.of(dataSourceName, Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"), "1", 1))
+                   .dimensions(ImmutableList.of())
+                   .metrics(ImmutableList.of())
+                   .shardSpec(shardSpecFactory.apply(1, 2))
+                   .binaryVersion(0)
+                   .size(10L)
+                   .build()
     );
     dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
@@ -1454,30 +1512,22 @@ public class CompactSegmentsTest
     String dataSourceName = DATA_SOURCE_PREFIX + 1;
     List<DataSegment> segments = new ArrayList<>();
     segments.add(
-        new DataSegment(
-            dataSourceName,
-            Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
-            "1",
-            null,
-            ImmutableList.of(),
-            ImmutableList.of(),
-            shardSpecFactory.apply(0, 2),
-            0,
-            10L
-        )
+        DataSegment.builder(SegmentId.of(dataSourceName, Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"), "1", 0))
+                   .dimensions(ImmutableList.of())
+                   .metrics(ImmutableList.of())
+                   .shardSpec(shardSpecFactory.apply(0, 2))
+                   .binaryVersion(0)
+                   .size(10L)
+                   .build()
     );
     segments.add(
-        new DataSegment(
-            dataSourceName,
-            Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"),
-            "1",
-            null,
-            ImmutableList.of(),
-            ImmutableList.of(),
-            shardSpecFactory.apply(1, 2),
-            0,
-            10L
-        )
+        DataSegment.builder(SegmentId.of(dataSourceName, Intervals.of("2017-01-01T00:00:00/2017-01-02T00:00:00"), "1", 1))
+                   .dimensions(ImmutableList.of())
+                   .metrics(ImmutableList.of())
+                   .shardSpec(shardSpecFactory.apply(1, 2))
+                   .binaryVersion(0)
+                   .size(10L)
+                   .build()
     );
     dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
@@ -1863,7 +1913,7 @@ public class CompactSegmentsTest
                                                 .withTaskContext(
                                               maxNumTasksForMSQ == null
                                               ? null
-                                              : ImmutableMap.of(ClientMSQContext.CTX_MAX_NUM_TASKS, maxNumTasksForMSQ)
+                                              : QueryContext.ofMap(QueryContextParameters.MAX_NUM_TASKS, maxNumTasksForMSQ)
                                           )
                                                 .build()
       );
@@ -1977,41 +2027,37 @@ public class CompactSegmentsTest
       }
 
       for (int i = 0; i < 2; i++) {
-        DataSegment compactSegment = new DataSegment(
-            segments.get(0).getDataSource(),
-            compactInterval,
-            version,
-            null,
-            segments.get(0).getDimensions(),
-            segments.get(0).getMetrics(),
-            shardSpecFactory.apply(i, 2),
-            CompactionState.builder()
-                           .partitionsSpec(compactionPartitionsSpec)
-                           .dimensionsSpec(clientCompactionTaskQuery.getDimensionsSpec() == null
-                                           ? null
-                                           : new DimensionsSpec(
-                                               clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
-                                           ))
-                           .metricsSpec(metricsSpec)
-                           .transformSpec(clientCompactionTaskQuery.getTransformSpec())
-                           .indexSpec(jsonMapper.convertValue(
-                               ImmutableMap.of(
-                                   "bitmap",
-                                   ImmutableMap.of("type", "roaring"),
-                                   "dimensionCompression",
-                                   "lz4",
-                                   "metricCompression",
-                                   "lz4",
-                                   "longEncoding",
-                                   "longs"
-                               ),
-                               IndexSpec.class
-                           ))
-                           .granularitySpec(jsonMapper.convertValue(ImmutableMap.of(), GranularitySpec.class))
-                           .build(),
-            1,
-            segmentSize
-        );
+        DataSegment compactSegment = DataSegment.builder(SegmentId.of(segments.get(0).getDataSource(), compactInterval, version, i))
+                                                .dimensions(segments.get(0).getDimensions())
+                                                .metrics(segments.get(0).getMetrics())
+                                                .shardSpec(shardSpecFactory.apply(i, 2))
+                                                .lastCompactionState(CompactionState.builder()
+                                                                   .partitionsSpec(compactionPartitionsSpec)
+                                                                   .dimensionsSpec(clientCompactionTaskQuery.getDimensionsSpec() == null
+                                                                                   ? null
+                                                                                   : new DimensionsSpec(
+                                                                                       clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
+                                                                                   ))
+                                                                   .metricsSpec(metricsSpec)
+                                                                   .transformSpec(clientCompactionTaskQuery.getTransformSpec())
+                                                                   .indexSpec(jsonMapper.convertValue(
+                                                                       ImmutableMap.of(
+                                                                           "bitmap",
+                                                                           ImmutableMap.of("type", "roaring"),
+                                                                           "dimensionCompression",
+                                                                           "lz4",
+                                                                           "metricCompression",
+                                                                           "lz4",
+                                                                           "longEncoding",
+                                                                           "longs"
+                                                                       ),
+                                                                       IndexSpec.class
+                                                                   ))
+                                                                   .granularitySpec(jsonMapper.convertValue(ImmutableMap.of(), GranularitySpec.class))
+                                                                   .build())
+                                                .binaryVersion(1)
+                                                .size(segmentSize)
+                                                .build();
 
         timeline.add(
             compactInterval,

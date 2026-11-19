@@ -48,6 +48,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -173,10 +174,7 @@ public class CachingClusteredClientFunctionalityTest
   {
     timeline.add(interval, version, new SingleElementPartitionChunk<>(
         new ServerSelector(
-            DataSegment.builder()
-                       .dataSource("test")
-                       .interval(interval)
-                       .version(version)
+            DataSegment.builder(SegmentId.of("test", interval, version, 0))
                        .shardSpec(NoneShardSpec.instance())
                        .size(0)
                        .build(),

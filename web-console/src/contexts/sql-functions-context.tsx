@@ -32,11 +32,7 @@ export const SqlFunctionsProvider: React.FC<SqlFunctionsProviderProps> = ({
   availableSqlFunctions,
   children,
 }) => {
-  return (
-    <SqlFunctionsContext.Provider value={availableSqlFunctions}>
-      {children}
-    </SqlFunctionsContext.Provider>
-  );
+  return <SqlFunctionsContext value={availableSqlFunctions}>{children}</SqlFunctionsContext>;
 };
 
 export const useAvailableSqlFunctions = () => {

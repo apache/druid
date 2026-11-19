@@ -99,6 +99,20 @@ public class NestedFieldVirtualColumnTest
   }
 
   @Test
+  public void testWithOutputName()
+  {
+    NestedFieldVirtualColumn original = new NestedFieldVirtualColumn("nested", "$.x.y.z", "v0", ColumnType.LONG);
+    Assertions.assertTrue(original.supportsOutputNameRewrite());
+    NestedFieldVirtualColumn renamed = original.withOutputName("declared");
+    Assertions.assertEquals(
+        new NestedFieldVirtualColumn("nested", "$.x.y.z", "declared", ColumnType.LONG),
+        renamed
+    );
+    // Everything except the output name is identical, which the name-independent equivalence key certifies.
+    Assertions.assertEquals(original.getEquivalanceKey(), renamed.getEquivalanceKey());
+  }
+
+  @Test
   public void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(NestedFieldVirtualColumn.class)

@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
+import type { ColumnSort } from '@tanstack/react-table';
 import { ascending, descending, sort } from 'd3-array';
 import type { QueryResult, SqlExpression } from 'druid-query-toolkit';
 import { C } from 'druid-query-toolkit';
-import type { SortingRule } from 'react-table';
 
 import { filterMap, formatNumber, isNumberLike, oneOf } from './general';
 import { deepSet } from './object-change';
@@ -73,15 +73,15 @@ export interface TableState {
   page: number;
   pageSize: number;
   filtered: TableFilters;
-  sorted: SortingRule[];
+  sorted: ColumnSort[];
 }
 
-export function sortedToOrderByClause(sorted: SortingRule[]): string | undefined {
+export function sortedToOrderByClause(sorted: ColumnSort[]): string | undefined {
   if (!sorted.length) return;
   return 'ORDER BY ' + sorted.map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`).join(', ');
 }
 
-export function applySorting(xs: any[], sorted: SortingRule[]): any[] {
+export function applySorting(xs: any[], sorted: ColumnSort[]): any[] {
   const firstSortingRule = sorted[0];
   if (!firstSortingRule) return xs;
   const { id, desc } = firstSortingRule;

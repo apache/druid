@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -57,22 +58,19 @@ import java.util.Set;
 
 public class S3DataSegmentMoverTest
 {
-  private static final DataSegment SOURCE_SEGMENT = new DataSegment(
-      "test",
-      Intervals.of("2013-01-01/2013-01-02"),
-      "1",
-      ImmutableMap.of(
-          "key",
-          "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
-          "bucket",
-          "main"
-      ),
-      ImmutableList.of("dim1", "dim1"),
-      ImmutableList.of("metric1", "metric2"),
-      NoneShardSpec.instance(),
-      0,
-      1
-  );
+  private static final DataSegment SOURCE_SEGMENT = DataSegment.builder(SegmentId.of("test", Intervals.of("2013-01-01/2013-01-02"), "1", 0))
+                                                               .loadSpec(ImmutableMap.of(
+                                                                       "key",
+                                                                       "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+                                                                       "bucket",
+                                                                       "main"
+                                                                   ))
+                                                               .dimensions(ImmutableList.of("dim1", "dim1"))
+                                                               .metrics(ImmutableList.of("metric1", "metric2"))
+                                                               .shardSpec(NoneShardSpec.instance())
+                                                               .binaryVersion(0)
+                                                               .size(1)
+                                                               .build();
 
   @Test
   public void testMove() throws Exception
@@ -100,6 +98,27 @@ public class S3DataSegmentMoverTest
     );
     Assertions.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
     Assertions.assertTrue(mockS3Client.didMove());
+  }
+
+  @Test
+  public void testMoveFromMultiRegionAccessPointIsRejected()
+  {
+    final String mrap = "arn:aws:s3::123456789012:accesspoint/abcdef0123456.mrap";
+    final MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
+    final S3DataSegmentMover mover = new S3DataSegmentMover(
+        Suppliers.ofInstance(mockS3Client),
+        new S3DataSegmentPusherConfig()
+    );
+
+    final SegmentLoadingException e = Assertions.assertThrows(
+        SegmentLoadingException.class,
+        () -> mover.move(
+            SOURCE_SEGMENT.withLoadSpec(ImmutableMap.of("key", "baseKey/index.zip", "bucket", mrap)),
+            ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
+        )
+    );
+    Assertions.assertTrue(e.getMessage().contains("only as a CopyObject destination"));
+    Assertions.assertFalse(mockS3Client.didMove());
   }
 
   @Test
@@ -196,22 +215,19 @@ public class S3DataSegmentMoverTest
         Suppliers.ofInstance(mockS3Client),
         new S3DataSegmentPusherConfig()
     );
-    mover.move(new DataSegment(
-        "test",
-        Intervals.of("2013-01-01/2013-01-02"),
-        "1",
-        ImmutableMap.of(
-            "key",
-            "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
-            "bucket",
-            "DOES NOT EXIST"
-        ),
-        ImmutableList.of("dim1", "dim1"),
-        ImmutableList.of("metric1", "metric2"),
-        NoneShardSpec.instance(),
-        0,
-        1
-    ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
+    mover.move(DataSegment.builder(SegmentId.of("test", Intervals.of("2013-01-01/2013-01-02"), "1", 0))
+                          .loadSpec(ImmutableMap.of(
+                                  "key",
+                                  "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+                                  "bucket",
+                                  "DOES NOT EXIST"
+                              ))
+                          .dimensions(ImmutableList.of("dim1", "dim1"))
+                          .metrics(ImmutableList.of("metric1", "metric2"))
+                          .shardSpec(NoneShardSpec.instance())
+                          .binaryVersion(0)
+                          .size(1)
+                          .build(), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
   }
 
   @Test
@@ -224,22 +240,19 @@ public class S3DataSegmentMoverTest
     );
     Assertions.assertThrows(
         SegmentLoadingException.class,
-        () -> mover.move(new DataSegment(
-            "test",
-            Intervals.of("2013-01-01/2013-01-02"),
-            "1",
-            ImmutableMap.of(
-                "key",
-                "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
-                "bucket",
-                "DOES NOT EXIST"
-            ),
-            ImmutableList.of("dim1", "dim1"),
-            ImmutableList.of("metric1", "metric2"),
-            NoneShardSpec.instance(),
-            0,
-            1
-        ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"))
+        () -> mover.move(DataSegment.builder(SegmentId.of("test", Intervals.of("2013-01-01/2013-01-02"), "1", 0))
+                                    .loadSpec(ImmutableMap.of(
+                                            "key",
+                                            "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+                                            "bucket",
+                                            "DOES NOT EXIST"
+                                        ))
+                                    .dimensions(ImmutableList.of("dim1", "dim1"))
+                                    .metrics(ImmutableList.of("metric1", "metric2"))
+                                    .shardSpec(NoneShardSpec.instance())
+                                    .binaryVersion(0)
+                                    .size(1)
+                                    .build(), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"))
     );
   }
 

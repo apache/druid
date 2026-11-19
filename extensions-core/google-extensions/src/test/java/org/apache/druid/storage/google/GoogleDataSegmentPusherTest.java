@@ -22,12 +22,18 @@ package org.apache.druid.storage.google;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.jupiter.api.Assertions;
@@ -47,8 +53,8 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
   private static final String BUCKET = "bucket";
   private static final String PREFIX = "prefix";
   private static final GoogleInputDataConfig INPUT_DATA_CONFIG = new GoogleInputDataConfig();
-  private static final DeepStorageSegmentConfig ZIP_CONFIG = new DeepStorageSegmentConfig(true);
-  private static final DeepStorageSegmentConfig NO_ZIP_CONFIG = new DeepStorageSegmentConfig(false);
+  private static final DeepStorageSegmentConfig ZIP_CONFIG = new DeepStorageSegmentConfig(true, null);
+  private static final DeepStorageSegmentConfig NO_ZIP_CONFIG = new DeepStorageSegmentConfig(false, null);
 
   private GoogleStorage storage;
   private GoogleAccountConfig googleAccountConfig;
@@ -72,17 +78,14 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
     Files.write(data, tmp);
     final long size = data.length;
 
-    DataSegment segmentToPush = new DataSegment(
-        "foo",
-        Intervals.of("2015/2016"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        size
-    );
+    DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                           .loadSpec(new HashMap<>())
+                                           .dimensions(new ArrayList<>())
+                                           .metrics(new ArrayList<>())
+                                           .shardSpec(NoneShardSpec.instance())
+                                           .binaryVersion(0)
+                                           .size(size)
+                                           .build();
 
     GoogleDataSegmentPusher pusher = createMockBuilder(GoogleDataSegmentPusher.class)
         .withConstructor(storage, googleAccountConfig, INPUT_DATA_CONFIG, ZIP_CONFIG)
@@ -148,13 +151,101 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
 
     DataSegment segment = pusher.push(tempFolder, segmentToPush, false);
 
-    // the trailing slash is what marks the path as a directory of files rather than a single object
+    // the trailing slash is what marks the path as a directory of files rather than a single object, and V1 (the test
+    // fixture) is not V10, so rangeable is stamped false
     Assertions.assertEquals(ImmutableMap.of(
         "type", GoogleStorageDruidModule.SCHEME,
         "bucket", BUCKET,
-        "path", expectedDir + "/"
+        "path", expectedDir + "/",
+        "rangeable", false
     ), segment.getLoadSpec());
     Assertions.assertEquals(2 * data.length, segment.getSize());
+
+    verifyAll();
+  }
+
+  @Test
+  public void testPushNoZipV10StampsRangeableTrue() throws Exception
+  {
+    // A real V10 segment rather than a hand-made file, so the layout under test is whatever IndexMergerV10 actually
+    // writes: one druid.segment whose leading byte is the version getVersionFromDir reads.
+    final File segmentDir = IndexBuilder.create()
+                                        .useV10()
+                                        .tmpDir(new File(tempFolder, "v10"))
+                                        .rows(ImmutableList.of(
+                                            new MapBasedInputRow(
+                                                DateTimes.of("2015-01-01"),
+                                                ImmutableList.of("dim"),
+                                                ImmutableMap.of("dim", "a")
+                                            )
+                                        ))
+                                        .buildMMappedIndexFile();
+
+    final File[] segmentFiles = segmentDir.listFiles();
+    Assertions.assertNotNull(segmentFiles);
+    long segmentSize = 0;
+    for (final File file : segmentFiles) {
+      segmentSize += file.length();
+    }
+
+    DataSegment segmentToPush = newSegmentToPush(segmentSize);
+
+    GoogleDataSegmentPusher pusher = createMockBuilder(GoogleDataSegmentPusher.class)
+        .withConstructor(storage, googleAccountConfig, INPUT_DATA_CONFIG, NO_ZIP_CONFIG)
+        .addMockedMethod("insert", File.class, String.class, String.class)
+        .createMock();
+
+    final String expectedDir = PREFIX + "/" + pusher.getStorageDir(segmentToPush, false);
+    final ImmutableList.Builder<GoogleStorageObjectMetadata> listing = ImmutableList.builder();
+    for (final File file : segmentFiles) {
+      pusher.insert(
+          EasyMock.anyObject(File.class),
+          EasyMock.anyString(),
+          EasyMock.eq(expectedDir + "/" + file.getName())
+      );
+      EasyMock.expectLastCall();
+      listing.add(new GoogleStorageObjectMetadata(BUCKET, expectedDir + "/" + file.getName(), file.length(), 0L));
+    }
+    // everything under the path was written by this push, so there is nothing to clean up
+    EasyMock.expect(storage.list(EasyMock.eq(BUCKET), EasyMock.eq(expectedDir + "/"), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(new GoogleStorageObjectPage(listing.build(), null));
+
+    replayAll();
+
+    DataSegment segment = pusher.push(segmentDir, segmentToPush, false);
+
+    // a V10 segment is a single file, and that is what makes it range-readable
+    Assertions.assertEquals(1, segmentFiles.length);
+    Assertions.assertEquals(IndexIO.V10_FILE_NAME, segmentFiles[0].getName());
+    Assertions.assertEquals(IndexIO.V10_VERSION, (int) segment.getBinaryVersion());
+    Assertions.assertEquals(Boolean.TRUE, segment.getLoadSpec().get("rangeable"));
+
+    verifyAll();
+  }
+
+  @Test
+  public void testPushZipDoesNotStampRangeable() throws Exception
+  {
+    // The zip path uses the no-flag makeLoadSpec overload; openRangeReader returns null on the zip short circuit
+    // regardless, but the loadSpec stays compact for zipped segments by omitting the field entirely.
+    final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
+    Files.write(data, new File(tempFolder, "version.bin"));
+
+    DataSegment segmentToPush = newSegmentToPush(data.length);
+
+    GoogleDataSegmentPusher pusher = createMockBuilder(GoogleDataSegmentPusher.class)
+        .withConstructor(storage, googleAccountConfig, INPUT_DATA_CONFIG, ZIP_CONFIG)
+        .addMockedMethod("insert", File.class, String.class, String.class)
+        .createMock();
+
+    pusher.insert(EasyMock.anyObject(File.class), EasyMock.eq("application/zip"), EasyMock.anyString());
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    DataSegment segment = pusher.push(tempFolder, segmentToPush, false);
+
+    Assertions.assertFalse(segment.getLoadSpec().containsKey("rangeable"));
 
     verifyAll();
   }
@@ -214,6 +305,56 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
     Assertions.assertEquals("/path", pusher.buildPath("/path"));
     config.setPrefix(null);
     Assertions.assertEquals("/path", pusher.buildPath("/path"));
+  }
+
+  @Test
+  public void testUnsupportedCompressionFormatThrows()
+  {
+    Assertions.assertThrows(
+        IAE.class,
+        () -> new GoogleDataSegmentPusher(
+            storage,
+            googleAccountConfig,
+            INPUT_DATA_CONFIG,
+            new DeepStorageSegmentConfig(null, CompressionUtils.Format.LZ4)
+        )
+    );
+  }
+
+  @Test
+  public void testExplicitCompressionFormatZip()
+  {
+    final GoogleDataSegmentPusher pusher = new GoogleDataSegmentPusher(
+        storage,
+        googleAccountConfig,
+        INPUT_DATA_CONFIG,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.ZIP)
+    );
+    Assertions.assertNotNull(pusher);
+  }
+
+  @Test
+  public void testExplicitCompressionFormatNone()
+  {
+    final GoogleDataSegmentPusher pusher = new GoogleDataSegmentPusher(
+        storage,
+        googleAccountConfig,
+        INPUT_DATA_CONFIG,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+    Assertions.assertNotNull(pusher);
+  }
+
+  @Test
+  public void testDefaultCompressionFormatIsZip()
+  {
+    final GoogleDataSegmentPusher pusher = new GoogleDataSegmentPusher(
+        storage,
+        googleAccountConfig,
+        INPUT_DATA_CONFIG,
+        new DeepStorageSegmentConfig()
+    );
+    Assertions.assertNotNull(pusher);
   }
 
   private static DataSegment newSegmentToPush(long size)

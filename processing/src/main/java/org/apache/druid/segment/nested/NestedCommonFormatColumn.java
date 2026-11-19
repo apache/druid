@@ -35,6 +35,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -171,6 +172,28 @@ public interface NestedCommonFormatColumn extends BaseColumn
                                      .setHasNulls(hasNulls);
       }
       return ColumnCapabilitiesImpl.createDefault().setType(logicalType).setHasNulls(hasNulls);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      final Format that = (Format) o;
+      return hasNulls == that.hasNulls
+             && enforceLogicalType == that.enforceLogicalType
+             && Objects.equals(logicalType, that.logicalType)
+             && Objects.equals(columnFormatSpec, that.columnFormatSpec);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(logicalType, hasNulls, enforceLogicalType, columnFormatSpec);
     }
   }
 }

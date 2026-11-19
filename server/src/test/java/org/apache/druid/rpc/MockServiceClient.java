@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayDeque;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 
@@ -52,11 +53,14 @@ public class MockServiceClient implements ServiceClient
       final HttpResponseHandler<IntermediateType, FinalType> handler
   )
   {
-    final Expectation expectation = expectations.poll();
+    final Expectation expectation = Objects.requireNonNull(
+        expectations.poll(),
+        "No expectation configured for the next request"
+    );
 
     requestNumber++;
     Assertions.assertEquals(
-        expectation == null ? null : expectation.request,
+        expectation.request,
         requestBuilder,
         "request[" + requestNumber + "]"
     );

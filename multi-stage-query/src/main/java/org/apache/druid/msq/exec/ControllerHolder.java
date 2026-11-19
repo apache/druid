@@ -36,9 +36,9 @@ import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.http.StandardQueryState;
 import org.joda.time.DateTime;
@@ -198,7 +198,7 @@ public class ControllerHolder
               e,
               "Controller[%s] failed, queryId[%s], sqlQueryId[%s]",
               controller.queryId(),
-              controller.getQueryContext().getString(BaseQuery.QUERY_ID),
+              controller.getQueryContext().get(QueryContextParameters.QUERY_ID),
               sqlQueryId
           );
         }

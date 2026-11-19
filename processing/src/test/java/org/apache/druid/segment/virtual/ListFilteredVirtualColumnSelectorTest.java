@@ -27,13 +27,19 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -43,14 +49,20 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandlingTest
 {
@@ -282,6 +294,103 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Test
+  public void testListFilteredVirtualColumnExpressionDelegate() throws IOException
+  {
+    // expression maps many dictionary values to the same value, so the delegate selector has duplicate names
+    final ExpressionVirtualColumn expressionVirtualColumn = new ExpressionVirtualColumn(
+        "expr",
+        "if(placementish == 'preferred', 'p', 'x')",
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    );
+    final ListFilteredVirtualColumn allowVirtualColumn = new ListFilteredVirtualColumn(
+        ALLOW_VIRTUAL_NAME,
+        DefaultDimensionSpec.of("expr"),
+        ImmutableSet.of("x"),
+        true
+    );
+    final ListFilteredVirtualColumn denyVirtualColumn = new ListFilteredVirtualColumn(
+        DENY_VIRTUAL_NAME,
+        DefaultDimensionSpec.of("expr"),
+        ImmutableSet.of("x"),
+        false
+    );
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        expressionVirtualColumn,
+        allowVirtualColumn,
+        denyVirtualColumn
+    );
+    final QueryableIndex index = TestIndex.getMMappedTestIndex();
+
+    try (final Closer closer = Closer.create()) {
+      final CursorHolder cursorHolder = closer.register(
+          new QueryableIndexCursorFactory(index).makeCursorHolder(
+              CursorBuildSpec.builder().setVirtualColumns(virtualColumns).build()
+          )
+      );
+      final Cursor cursor = cursorHolder.asCursor();
+      final DimensionSelector baseSelector =
+          cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("placementish"));
+      final DimensionSelector allowSelector =
+          cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(ALLOW_VIRTUAL_NAME));
+      final DimensionSelector denySelector =
+          cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(DENY_VIRTUAL_NAME));
+
+      // delegate is dictionary backed, so the filtered selector can remap dictionary ids instead of evaluating the
+      // expression for every row
+      Assertions.assertEquals(
+          "org.apache.druid.query.dimension.ForwardingFilteredDimensionSelector",
+          allowSelector.getClass().getName()
+      );
+      Assertions.assertEquals(
+          "org.apache.druid.query.dimension.ForwardingFilteredDimensionSelector",
+          denySelector.getClass().getName()
+      );
+      Assertions.assertNull(allowSelector.idLookup());
+
+      int rows = 0;
+      while (!cursor.isDone()) {
+        final List<String> expectedAllow = new ArrayList<>();
+        final List<String> expectedDeny = new ArrayList<>();
+        final IndexedInts baseRow = baseSelector.getRow();
+        for (int i = 0; i < baseRow.size(); i++) {
+          if ("preferred".equals(baseSelector.lookupName(baseRow.get(i)))) {
+            expectedDeny.add("p");
+          } else {
+            expectedAllow.add("x");
+          }
+        }
+        Assertions.assertEquals(expectedAllow, lookupRow(allowSelector));
+        Assertions.assertEquals(expectedDeny, lookupRow(denySelector));
+        Assertions.assertEquals(!expectedAllow.isEmpty(), allowSelector.makeValueMatcher("x").matches(false));
+        Assertions.assertEquals(!expectedDeny.isEmpty(), denySelector.makeValueMatcher("p").matches(false));
+        rows++;
+        cursor.advance();
+      }
+      Assertions.assertEquals(index.getNumRows(), rows);
+
+      // the expression virtual column does not provide a dictionary index, so there are no list filtered indexes
+      final ColumnIndexSelector indexSelector = new ColumnCache(index, virtualColumns, closer);
+      final ColumnIndexSupplier indexSupplier = indexSelector.getIndexSupplier(ALLOW_VIRTUAL_NAME);
+      Assertions.assertNotNull(indexSupplier);
+      Assertions.assertNull(indexSupplier.as(DictionaryEncodedStringValueIndex.class));
+      Assertions.assertNull(indexSupplier.as(StringValueSetIndexes.class));
+      Assertions.assertNull(indexSupplier.as(DruidPredicateIndexes.class));
+      Assertions.assertNull(indexSupplier.as(NullValueIndex.class));
+    }
+  }
+
+  private static List<String> lookupRow(DimensionSelector selector)
+  {
+    final IndexedInts row = selector.getRow();
+    final List<String> values = new ArrayList<>(row.size());
+    for (int i = 0; i < row.size(); i++) {
+      values.add(selector.lookupName(row.get(i)));
+    }
+    return values;
   }
 
   private void assertCapabilities(VirtualizedColumnSelectorFactory selectorFactory, String columnName)

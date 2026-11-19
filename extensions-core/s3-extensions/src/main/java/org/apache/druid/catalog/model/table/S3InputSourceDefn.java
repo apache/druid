@@ -66,7 +66,7 @@ import java.util.Map;
  * and the {@code format}. The user must provide the list of columns.</li>
  * </ul>
  *
- * @see {@link S3InputSource} for details on the meaning of the various properties, and the rules
+ * @see S3InputSource for details on the meaning of the various properties, and the rules
  * about valid combinations
  */
 public class S3InputSourceDefn extends FormattedInputSourceDefn

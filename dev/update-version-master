@@ -40,6 +40,6 @@ npm version $VERSION
 npm install
 npm run jest -- -u
 cd ..
-mvn -q versions:set -DnewVersion=${VERSION}-SNAPSHOT
+mvn -q -N versions:set-property -Dproperty=revision -DnewVersion=${VERSION}-SNAPSHOT -DgenerateBackupPoms=false
 
 echo "Versions updated!"

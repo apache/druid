@@ -16,10 +16,76 @@
  * limitations under the License.
  */
 
+import { Api } from '../singletons';
+
 import type { SampleResponse } from './sampler';
-import { changeLookupInExpressionsSampling, guessDimensionsFromSampleResponse } from './sampler';
+import {
+  changeLookupInExpressionsSampling,
+  guessDimensionsFromSampleResponse,
+  sampleForConnect,
+} from './sampler';
+
+jest.mock('../singletons', () => ({
+  Api: {
+    instance: {
+      post: jest.fn(),
+    },
+  },
+}));
 
 describe('sampler', () => {
+  describe('sampleForConnect', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (Api.instance.post as jest.Mock).mockResolvedValue({ data: { data: [] } });
+    });
+
+    it('does not use schema discovery for Druid input sources', async () => {
+      await sampleForConnect(
+        {
+          type: 'index_parallel',
+          spec: {
+            ioConfig: {
+              type: 'index_parallel',
+              inputSource: {
+                type: 'druid',
+                dataSource: 'source',
+                interval: '2026-01-01/2026-01-02',
+              },
+            },
+          },
+        } as any,
+        'start',
+      );
+
+      const sampleSpec = (Api.instance.post as jest.Mock).mock.calls[0][1];
+      expect(sampleSpec.spec.dataSchema.dimensionsSpec).toEqual({});
+    });
+
+    it('uses schema discovery for Delta input sources', async () => {
+      await sampleForConnect(
+        {
+          type: 'index_parallel',
+          spec: {
+            ioConfig: {
+              type: 'index_parallel',
+              inputSource: {
+                type: 'delta',
+                tablePath: 's3://bucket/table',
+              },
+            },
+          },
+        } as any,
+        'start',
+      );
+
+      const sampleSpec = (Api.instance.post as jest.Mock).mock.calls[0][1];
+      expect(sampleSpec.spec.dataSchema.dimensionsSpec).toEqual({
+        useSchemaDiscovery: true,
+      });
+    });
+  });
+
   describe('getInferredDimensionsFromSampleResponse', () => {
     const sampleResponse: SampleResponse = {
       numRowsRead: 20,

@@ -159,6 +159,12 @@ public class NestedObjectVirtualColumn extends SpecializedExpressionVirtualColum
   }
 
   @Override
+  public NestedObjectVirtualColumn withOutputName(String outputName)
+  {
+    return new NestedObjectVirtualColumn(outputName, keyExprMap, macroTable);
+  }
+
+  @Override
   public String toString()
   {
     return "NestedObjectVirtualColumn{" +

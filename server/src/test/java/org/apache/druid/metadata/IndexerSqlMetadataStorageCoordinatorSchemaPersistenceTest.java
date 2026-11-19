@@ -241,17 +241,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     final Map<SegmentId, SchemaPayloadPlus> segmentIdSchemaMap = new HashMap<>();
 
     for (int i = 0; i < 105; i++) {
-      DataSegment segment = new DataSegment(
-          "fooDataSource",
-          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-          "version",
-          ImmutableMap.of(),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
+      DataSegment segment = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "version", i))
+                                       .loadSpec(ImmutableMap.of())
+                                       .dimensions(ImmutableList.of("dim1"))
+                                       .metrics(ImmutableList.of("m1"))
+                                       .shardSpec(new LinearShardSpec(i))
+                                       .binaryVersion(9)
+                                       .size(100)
+                                       .build();
       segments.add(segment);
 
       int randomNum = random.nextInt();
@@ -327,17 +324,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     Random permutationRandom = ThreadLocalRandom.current();
 
     for (int i = 0; i < 105; i++) {
-      DataSegment segment = new DataSegment(
-          "fooDataSource",
-          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-          "version",
-          ImmutableMap.of(),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
+      DataSegment segment = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "version", i))
+                                       .loadSpec(ImmutableMap.of())
+                                       .dimensions(ImmutableList.of("dim1"))
+                                       .metrics(ImmutableList.of("m1"))
+                                       .shardSpec(new LinearShardSpec(i))
+                                       .binaryVersion(9)
+                                       .size(100)
+                                       .build();
       segments.add(segment);
 
       int randomNum = random.nextInt();
@@ -414,17 +408,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     Map<String, SchemaPayload> schemaPayloadMapToPerist = new HashMap<>();
 
     for (int i = 0; i < 105; i++) {
-      DataSegment segment = new DataSegment(
-          "fooDataSource",
-          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-          "version",
-          ImmutableMap.of(),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(i),
-          9,
-          100
-      );
+      DataSegment segment = DataSegment.builder(SegmentId.of("fooDataSource", Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "version", i))
+                                       .loadSpec(ImmutableMap.of())
+                                       .dimensions(ImmutableList.of("dim1"))
+                                       .metrics(ImmutableList.of("m1"))
+                                       .shardSpec(new LinearShardSpec(i))
+                                       .binaryVersion(9)
+                                       .size(100)
+                                       .build();
       segments.add(segment);
 
       int randomNum = random.nextInt();
@@ -498,17 +489,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     Map<String, SchemaPayload> schemaPayloadMap = new HashMap<>();
 
     for (int i = 1; i < 9; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)),
-          "2023-01-0" + i,
-          ImmutableMap.of("path", "a-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new LinearShardSpec(0),
-          9,
-          100
-      );
+      final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)), "2023-01-0" + i, 0))
+                                             .loadSpec(ImmutableMap.of("path", "a-" + i))
+                                             .dimensions(ImmutableList.of("dim1"))
+                                             .metrics(ImmutableList.of("m1"))
+                                             .shardSpec(new LinearShardSpec(0))
+                                             .binaryVersion(9)
+                                             .size(100)
+                                             .build();
 
       RowSignature rowSignature = RowSignature.builder().add("c6", ColumnType.FLOAT).build();
 
@@ -546,17 +534,14 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
     final Set<DataSegment> replacingSegments = new HashSet<>();
     for (int i = 1; i < 9; i++) {
-      final DataSegment segment = new DataSegment(
-          "foo",
-          Intervals.of("2023-01-01/2023-02-01"),
-          "2023-02-01",
-          ImmutableMap.of("path", "b-" + i),
-          ImmutableList.of("dim1"),
-          ImmutableList.of("m1"),
-          new NumberedShardSpec(i, 9),
-          9,
-          100
-      );
+      final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01", i))
+                                             .loadSpec(ImmutableMap.of("path", "b-" + i))
+                                             .dimensions(ImmutableList.of("dim1"))
+                                             .metrics(ImmutableList.of("m1"))
+                                             .shardSpec(new NumberedShardSpec(i, 9))
+                                             .binaryVersion(9)
+                                             .size(100)
+                                             .build();
       int randomNum = random.nextInt();
       RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);

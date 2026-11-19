@@ -133,7 +133,7 @@ ORDER BY 1`,
         {currentTab === 'form' ? (
           defaultRules.map((rule, index) => <RuleEditor key={index} rule={rule} tiers={tiers} />)
         ) : (
-          <JsonInput value={defaultRules} jsonCompletions={RETENTION_RULE_COMPLETIONS} />
+          <JsonInput value={defaultRules} readOnly jsonCompletions={RETENTION_RULE_COMPLETIONS} />
         )}
       </FormGroup>
     ) : undefined;

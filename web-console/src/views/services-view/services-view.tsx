@@ -21,16 +21,21 @@ import { IconNames } from '@blueprintjs/icons';
 import { max, sum } from 'd3-array';
 import memoize from 'memoize-one';
 import React, { createContext, useContext } from 'react';
-import type { Column, Filter } from 'react-table';
-import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  type ColumnFilter,
+  ConsoleTable,
+  type ConsoleTableColumn,
+  DEFAULT_TABLE_CLASS_NAME,
   MoreButton,
   RefreshButton,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  suggestibleFilterInput,
   TableClickableCell,
   TableColumnSelector,
   type TableColumnSelectorColumn,
@@ -39,14 +44,8 @@ import {
 } from '../../components';
 import { AsyncActionDialog, ServiceTableActionDialog } from '../../dialogs';
 import type { CoordinatorDynamicConfig, QueryWithContext } from '../../druid-models';
-import { getConsoleViewIcon } from '../../druid-models';
+import { getConsoleViewIcon, getTierToAliasLookup } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
-import {
-  DEFAULT_TABLE_CLASS_NAME,
-  STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-  suggestibleFilterInput,
-} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import type { AuxiliaryQueryFn, NumberLike } from '../../utils';
 import {
@@ -84,6 +83,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Service',
     'Type',
     'Tier',
+    'Tier alias',
     'Host',
     'Port',
     'Assigned size',
@@ -101,6 +101,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Service',
     'Type',
     'Tier',
+    'Tier alias',
     'Host',
     'Port',
     'Assigned size',
@@ -137,7 +138,7 @@ export interface ServicesViewProps {
 
 export interface ServicesViewState {
   servicesState: QueryState<ServicesWithAuxiliaryInfo>;
-  groupServicesBy?: 'service_type' | 'tier';
+  groupServicesBy?: 'service_type' | 'tier' | 'tier_alias';
 
   middleManagerDisableWorkerHost?: string;
   middleManagerEnableWorkerHost?: string;
@@ -188,6 +189,7 @@ interface ServicesWithAuxiliaryInfo {
   readonly cloneStatus: Record<string, CloneStatusInfo>;
   readonly serverMode: ServerModeInfo;
   readonly workerInfo: Record<string, WorkerInfo>;
+  readonly tierToAlias: Record<string, string>;
 }
 
 export const LoadQueueInfoContext = createContext<Record<string, LoadQueueInfo>>({});
@@ -458,6 +460,7 @@ ORDER BY
 
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SERVICE_TABLE_COLUMN_SELECTION,
+        ['Tier alias'],
       ),
     };
 
@@ -567,9 +570,28 @@ ORDER BY
                       turboLoadingNodes: new Set<string>(configResp.turboLoadingNodes || []),
                       decommissioningNodes: new Set<string>(configResp.decommissioningNodes || []),
                     },
+                    tierToAlias: getTierToAliasLookup(configResp),
                   }
                 : {}),
             };
+          });
+        } else if (capabilities.hasCoordinatorAccess()) {
+          // The Detail column is hidden, so fetch the dynamic config only for the tier alias lookup. Errors are not
+          // surfaced because nothing visible depends on this beyond the optional tier alias grouping.
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
+            try {
+              const config = (
+                await Api.instance.get<CoordinatorDynamicConfig>('/druid/coordinator/v1/config', {
+                  signal,
+                })
+              ).data;
+              return {
+                ...servicesWithAuxiliaryInfo,
+                tierToAlias: getTierToAliasLookup(config),
+              };
+            } catch {
+              return servicesWithAuxiliaryInfo;
+            }
           });
         }
 
@@ -613,6 +635,7 @@ ORDER BY
             cloneStatus: {},
             serverMode: DEFAULT_SERVER_MODE,
             workerInfo: {},
+            tierToAlias: {},
           },
           auxiliaryQueries,
         );
@@ -671,12 +694,13 @@ ORDER BY
       serverMode: DEFAULT_SERVER_MODE,
       workerInfo: {},
     };
+    const tierToAlias = this.getTierToAlias();
 
     return (
-      <LoadQueueInfoContext.Provider value={loadQueueInfo}>
-        <CloneStatusContext.Provider value={cloneStatus}>
-          <ServerModeContext.Provider value={serverMode}>
-            <ReactTable
+      <LoadQueueInfoContext value={loadQueueInfo}>
+        <CloneStatusContext value={cloneStatus}>
+          <ServerModeContext value={serverMode}>
+            <ConsoleTable
               data={services}
               loading={servicesState.loading}
               noDataText={
@@ -692,11 +716,18 @@ ORDER BY
               defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
               pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
               showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
-              columns={this.getTableColumns(visibleColumns, filters, onFiltersChange, workerInfo)}
+              columns={this.getTableColumns(
+                visibleColumns,
+                filters,
+                onFiltersChange,
+                workerInfo,
+                tierToAlias,
+                groupServicesBy,
+              )}
             />
-          </ServerModeContext.Provider>
-        </CloneStatusContext.Provider>
-      </LoadQueueInfoContext.Provider>
+          </ServerModeContext>
+        </CloneStatusContext>
+      </LoadQueueInfoContext>
     );
   }
 
@@ -706,7 +737,9 @@ ORDER BY
       _filters: TableFilters,
       _onFiltersChange: (filters: TableFilters) => void,
       workerInfoLookup: Record<string, WorkerInfo>,
-    ): Column<ServiceResultRow>[] => {
+      tierToAlias: Record<string, string>,
+      groupServicesBy: ServicesViewState['groupServicesBy'],
+    ): ConsoleTableColumn<ServiceResultRow>[] => {
       const { capabilities } = this.props;
 
       return [
@@ -772,6 +805,19 @@ ORDER BY
             return workerInfoLookup[row.service]?.worker?.category;
           },
           Cell: this.renderFilterableCell('tier'),
+        },
+        {
+          Header: 'Tier alias',
+          show:
+            (visibleColumns.shown('Tier alias') && Object.keys(tierToAlias).length > 0) ||
+            groupServicesBy === 'tier_alias',
+          id: 'tier_alias',
+          width: 180,
+          accessor: row => {
+            if (row.tier) return tierToAlias[row.tier] || row.tier;
+            return workerInfoLookup[row.service]?.worker?.category;
+          },
+          Cell: this.renderFilterableCell('tier_alias'),
         },
         {
           Header: 'Host',
@@ -947,7 +993,7 @@ ORDER BY
           width: 220,
           Cell: this.renderFilterableCell('start_time', formatDate),
           Aggregated: () => '',
-          filterMethod: (filter: Filter, row: ServiceResultRow) => {
+          filterMethod: (filter: ColumnFilter, row: ServiceResultRow) => {
             const tableFilter = TableFilter.fromFilter(filter);
             const parsedRowTime = formatDate(row.start_time);
             if (tableFilter.mode === '~') {
@@ -1202,9 +1248,21 @@ ORDER BY
     );
   }
 
+  /**
+   * While auxiliary queries run, the intermediate data still carries the initial empty tierToAlias, so keep using the
+   * previous lookup to avoid the tier alias column, grouping, and button flickering on a manual refresh.
+   */
+  private getTierToAlias(): Record<string, string> {
+    const { servicesState } = this.state;
+    const data =
+      (servicesState.isAuxiliaryLoading() && servicesState.lastData) || servicesState.getSomeData();
+    return data?.tierToAlias || {};
+  }
+
   render() {
     const { capabilities } = this.props;
     const { groupServicesBy, visibleColumns } = this.state;
+    const hasTierAliases = Object.keys(this.getTierToAlias()).length > 0;
 
     return (
       <div className="services-view app-view">
@@ -1229,6 +1287,14 @@ ORDER BY
             >
               Tier
             </Button>
+            {(hasTierAliases || groupServicesBy === 'tier_alias') && (
+              <Button
+                active={groupServicesBy === 'tier_alias'}
+                onClick={() => this.setState({ groupServicesBy: 'tier_alias' })}
+              >
+                Tier alias
+              </Button>
+            )}
           </ButtonGroup>
           <RefreshButton
             onRefresh={auto => {
@@ -1239,7 +1305,9 @@ ORDER BY
           />
           {this.renderBulkServicesActions()}
           <TableColumnSelector
-            columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()]}
+            columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()].filter(
+              column => column !== 'Tier alias' || hasTierAliases,
+            )}
             onChange={column =>
               this.setState(prevState => ({
                 visibleColumns: prevState.visibleColumns.toggle(column),

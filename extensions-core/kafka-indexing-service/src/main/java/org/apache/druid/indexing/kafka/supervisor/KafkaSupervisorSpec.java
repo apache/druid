@@ -201,11 +201,13 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? ioConfig.getEarlyMessageRejectionPeriod().get().toPeriod() : null,
         ioConfig.getLateMessageRejectionStartDateTime().isPresent() ? ioConfig.getLateMessageRejectionStartDateTime().get() : null,
         ioConfig.getConfigOverrides(),
+        ioConfig.getHeaderBasedFilterConfig(),
         ioConfig.getIdleConfig(),
         ioConfig.getStopTaskCount(),
         ioConfig.isEmitTimeLagMetrics(),
         ioConfig.getServerPriorityToReplicas(),
-        boundedStreamConfig
+        boundedStreamConfig,
+        null
     );
     return new KafkaSupervisorSpec(
         backfillId,

@@ -795,6 +795,18 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testWithOutputName()
+  {
+    Assertions.assertTrue(X_PLUS_Y.supportsOutputNameRewrite());
+    final ExpressionVirtualColumn renamed = X_PLUS_Y.withOutputName("declared");
+    Assertions.assertEquals(
+        new ExpressionVirtualColumn("declared", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
+        renamed
+    );
+    Assertions.assertEquals(X_PLUS_Y.getEquivalanceKey(), renamed.getEquivalanceKey());
+  }
+
+  @Test
   public void testNowCacheKeyIsNotStableAcrossInstances()
   {
     ExpressionVirtualColumn vc1 = new ExpressionVirtualColumn(

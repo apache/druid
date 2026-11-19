@@ -585,6 +585,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       size = numCopied;
       updateMaxMergeBufferUsedBytes();
       tableBuffer = newTableBuffer;
+      heapIndexUpdater.setHashTableBuffer(newTableBuffer);
       growthCount++;
     }
 

@@ -16,38 +16,15 @@
  * limitations under the License.
  */
 
-import type * as playwright from 'playwright-chromium';
-
 import { WorkbenchOverview } from './component/workbench/overview';
-import { saveScreenshotIfError } from './util/debug';
-import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, UNIFIED_CONSOLE_URL } from './util/druid';
-import { createBrowser, createPage } from './util/playwright';
-import { waitTillWebConsoleReady } from './util/setup';
+import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR } from './util/druid';
+import { expect, test } from './util/fixtures';
 
-jest.setTimeout(5 * 60 * 1000);
+test.describe('Multi-stage query', () => {
+  test('runs a query that reads external data', async ({ page }) => {
+    const workbench = new WorkbenchOverview(page);
 
-describe('Multi-stage query', () => {
-  let browser: playwright.Browser;
-  let page: playwright.Page;
-
-  beforeAll(async () => {
-    await waitTillWebConsoleReady();
-    browser = await createBrowser();
-  });
-
-  beforeEach(async () => {
-    page = await createPage(browser);
-  });
-
-  afterAll(async () => {
-    await browser.close();
-  });
-
-  it('runs a query that reads external data', async () => {
-    const workbench = new WorkbenchOverview(page, UNIFIED_CONSOLE_URL);
-
-    await saveScreenshotIfError('multi-stage-query', page, async () => {
-      const results = await workbench.runQuery(`WITH ext AS (SELECT *
+    const results = await workbench.runQuery(`WITH ext AS (SELECT *
 FROM TABLE(
   EXTERN(
     '{"type":"local","filter":"wikiticker-2015-09-12-sampled.json.gz","baseDir":${JSON.stringify(
@@ -63,10 +40,8 @@ FROM ext
 GROUP BY 1
 ORDER BY COUNT(*) DESC
 LIMIT 10`);
-      expect(results).toBeDefined();
-      expect(results.length).toBe(10);
-      expect(results[0]).toStrictEqual(['#en.wikipedia', '11549']);
-      expect(results[1]).toStrictEqual(['#vi.wikipedia', '9747']);
-    });
+    expect(results.length).toBe(10);
+    expect(results[0]).toStrictEqual(['#en.wikipedia', '11549']);
+    expect(results[1]).toStrictEqual(['#vi.wikipedia', '9747']);
   });
 });

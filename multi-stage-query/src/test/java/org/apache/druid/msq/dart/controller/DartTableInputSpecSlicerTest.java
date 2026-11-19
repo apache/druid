@@ -41,9 +41,9 @@ import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.segment.VirtualColumns;
@@ -553,7 +553,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   @Test
   void test_withoutRealtime_twoSlices()
   {
-    final QueryContext queryContext = QueryContext.of(Map.of(MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE, SegmentSource.NONE.toString()));
+    final QueryContext queryContext = QueryContext.of(QueryContextParameters.INCLUDE_SEGMENT_SOURCE, SegmentSource.NONE.toString());
     slicer = DartTableInputSpecSlicer.createFromWorkerIds(WORKER_IDS, serverView, queryContext);
 
     // When 2 slices are requested, we assign segments to the servers that have those segments.

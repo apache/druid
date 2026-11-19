@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { CompactionConfigDialog } from './compaction-config-dialog';
 
 describe('CompactionConfigDialog', () => {
   it('matches snapshot without compactionConfig', () => {
-    const compactionDialog = shallow(
+    render(
       <CompactionConfigDialog
         onClose={() => {}}
         onSave={() => {}}
@@ -31,11 +31,11 @@ describe('CompactionConfigDialog', () => {
         compactionConfig={undefined}
       />,
     );
-    expect(compactionDialog).toMatchSnapshot();
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 
   it('matches snapshot with compactionConfig (dynamic partitionsSpec)', () => {
-    const compactionDialog = shallow(
+    render(
       <CompactionConfigDialog
         onClose={() => {}}
         onSave={() => {}}
@@ -47,11 +47,11 @@ describe('CompactionConfigDialog', () => {
         }}
       />,
     );
-    expect(compactionDialog).toMatchSnapshot();
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 
   it('matches snapshot with compactionConfig (hashed partitionsSpec)', () => {
-    const compactionDialog = shallow(
+    render(
       <CompactionConfigDialog
         onClose={() => {}}
         onSave={() => {}}
@@ -63,11 +63,11 @@ describe('CompactionConfigDialog', () => {
         }}
       />,
     );
-    expect(compactionDialog).toMatchSnapshot();
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 
   it('matches snapshot with compactionConfig (range partitionsSpec)', () => {
-    const compactionDialog = shallow(
+    render(
       <CompactionConfigDialog
         onClose={() => {}}
         onSave={() => {}}
@@ -79,6 +79,6 @@ describe('CompactionConfigDialog', () => {
         }}
       />,
     );
-    expect(compactionDialog).toMatchSnapshot();
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

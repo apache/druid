@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 
 import java.util.Objects;
 
@@ -51,9 +51,9 @@ public class TooManyInputFilesFault extends BaseMSQFault
         + " or increasing the number of workers to at least [%d] by setting %s in your query context.",
         numInputFiles,
         maxInputFiles,
-        MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER,
+        QueryContextParameters.MAX_INPUT_FILES_PER_WORKER,
         minNumWorkers,
-        MultiStageQueryContext.CTX_MAX_NUM_TASKS
+        QueryContextParameters.MAX_NUM_TASKS
     );
     this.numInputFiles = numInputFiles;
     this.maxInputFiles = maxInputFiles;

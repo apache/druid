@@ -19,14 +19,14 @@
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
-import type { DruidError, RowColumn } from '../../utils';
+import type { DruidError, LineColumn } from '../../utils';
 import { HighlightText } from '../highlight-text/highlight-text';
 
 import './query-error-pane.scss';
 
 export interface QueryErrorPaneProps {
   error: DruidError;
-  moveCursorTo: (rowColumn: RowColumn) => void;
+  moveCursorTo: (position: LineColumn) => void;
   queryString?: string;
   onQueryStringChange?: (newQueryString: string, run?: boolean) => void;
 }
@@ -39,7 +39,7 @@ export const QueryErrorPane = React.memo(function QueryErrorPane(props: QueryErr
     return <div className="query-error-pane">{error.message}</div>;
   }
 
-  const { startRowColumn, suggestion } = error;
+  const { startLineColumn, suggestion } = error;
   let suggestionElement: JSX.Element | undefined;
   if (suggestion && queryString && onQueryStringChange) {
     const newQuery = suggestion.fn(queryString);
@@ -69,14 +69,14 @@ export const QueryErrorPane = React.memo(function QueryErrorPane(props: QueryErr
       )}
       {error.errorMessageWithoutExpectation && (
         <p>
-          {startRowColumn ? (
+          {startLineColumn ? (
             <HighlightText
               text={error.errorMessageWithoutExpectation}
               find={/\(line \[\d+], column \[\d+]\)/}
               replace={found => (
                 <a
                   onClick={() => {
-                    moveCursorTo(startRowColumn);
+                    moveCursorTo(startLineColumn);
                   }}
                 >
                   {found}

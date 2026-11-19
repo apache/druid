@@ -50,7 +50,6 @@ import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogs;
 
 import javax.annotation.Nullable;
@@ -72,7 +71,6 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
   private final ConfigManager configManager;
   private final MultipleKubernetesTaskRunnerConfig runnerConfig;
   private final TaskConfig taskConfig;
-  private final StartupLoggingConfig startupLoggingConfig;
   private final DruidNode druidNode;
   private final Properties properties;
   private final DruidKubernetesHttpClientFactory httpClientFactory;
@@ -89,7 +87,6 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
       Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigSupplier,
       @Nullable ConfigManager configManager,
       TaskConfig taskConfig,
-      StartupLoggingConfig startupLoggingConfig,
       @Self DruidNode druidNode,
       DruidKubernetesHttpClientFactory httpClientFactory
   )
@@ -103,7 +100,6 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
     this.dynamicConfigSupplier = dynamicConfigSupplier;
     this.configManager = configManager;
     this.taskConfig = taskConfig;
-    this.startupLoggingConfig = startupLoggingConfig;
     this.druidNode = druidNode;
     this.properties = properties;
     this.httpClientFactory = httpClientFactory;
@@ -179,7 +175,8 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
                   peonClient,
                   taskLogs,
                   smileMapper,
-                  effectiveConfig.getLogSaveTimeout().toStandardDuration().getMillis()
+                  effectiveConfig.getLogSaveTimeout().toStandardDuration().getMillis(),
+                  effectiveConfig.getAdvertisedPlaintextPort()
               ),
               emitter,
               sharedExecutor,
@@ -365,7 +362,6 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
           client,
           effectiveConfig,
           taskConfig,
-          startupLoggingConfig,
           druidNode,
           smileMapper,
           taskLogs
@@ -386,7 +382,6 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
           client,
           effectiveConfig,
           taskConfig,
-          startupLoggingConfig,
           druidNode,
           smileMapper,
           taskLogs
@@ -467,7 +462,8 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
         this.runnerConfig.getTaskJoinTimeout(),
         this.runnerConfig.isUseK8sSharedInformers(),
         this.runnerConfig.getK8sSharedInformerResyncPeriod(),
-        this.runnerConfig.isAllowTaskPodTemplateSelection()
+        this.runnerConfig.isAllowTaskPodTemplateSelection(),
+        this.runnerConfig.getAdvertisedPlaintextPort()
     );
   }
 }

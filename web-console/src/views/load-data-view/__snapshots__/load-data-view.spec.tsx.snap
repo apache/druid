@@ -2,566 +2,625 @@
 
 exports[`LoadDataView matches snapshot batch 1`] = `
 <div
-  className="load-data-view app-view welcome"
+  class="load-data-view app-view welcome"
 >
   <div
-    className="step-nav"
+    class="step-nav"
   >
     <div
-      className="step-nav-inner"
+      class="step-nav-inner"
     >
       <div
-        className="step-section"
+        class="step-section"
       >
         <div
-          className="step-nav-l1"
+          class="step-nav-l1"
         >
           Connect and parse raw data
         </div>
-        <Blueprint5.ButtonGroup
-          className="step-nav-l2"
+        <div
+          class="bp6-button-group step-nav-l2"
         >
-          <Blueprint5.Button
-            active={true}
-            className="welcome"
-            disabled={false}
-            icon={false}
-            onClick={[Function]}
-            text="Start"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="connect"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Connect"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="parser"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Parse data"
-          />
-        </Blueprint5.ButtonGroup>
+          <button
+            class="bp6-button bp6-active welcome"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Start
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled connect"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Connect
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled parser"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Parse data
+            </span>
+          </button>
+        </div>
       </div>
       <div
-        className="step-section"
+        class="step-section"
       >
         <div
-          className="step-nav-l1"
+          class="step-nav-l1"
         >
           Transform data and configure schema
         </div>
-        <Blueprint5.ButtonGroup
-          className="step-nav-l2"
+        <div
+          class="bp6-button-group step-nav-l2"
         >
-          <Blueprint5.Button
-            active={false}
-            className="timestamp"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Parse time"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="transform"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Transform"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="filter"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Filter"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="schema"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Configure schema"
-          />
-        </Blueprint5.ButtonGroup>
+          <button
+            class="bp6-button bp6-disabled timestamp"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Parse time
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled transform"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Transform
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled filter"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Filter
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled schema"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Configure schema
+            </span>
+          </button>
+        </div>
       </div>
       <div
-        className="step-section"
+        class="step-section"
       >
         <div
-          className="step-nav-l1"
+          class="step-nav-l1"
         >
           Tune parameters
         </div>
-        <Blueprint5.ButtonGroup
-          className="step-nav-l2"
+        <div
+          class="bp6-button-group step-nav-l2"
         >
-          <Blueprint5.Button
-            active={false}
-            className="partition"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Partition"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="tuning"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Tune"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="publish"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Publish"
-          />
-        </Blueprint5.ButtonGroup>
+          <button
+            class="bp6-button bp6-disabled partition"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Partition
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled tuning"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Tune
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled publish"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Publish
+            </span>
+          </button>
+        </div>
       </div>
       <div
-        className="step-section"
+        class="step-section"
       >
         <div
-          className="step-nav-l1"
+          class="step-nav-l1"
         >
           Verify and submit
         </div>
-        <Blueprint5.ButtonGroup
-          className="step-nav-l2"
+        <div
+          class="bp6-button-group step-nav-l2"
         >
-          <Blueprint5.Button
-            active={false}
-            className="spec"
-            disabled={false}
-            icon="manually-entered-data"
-            onClick={[Function]}
-            text="Edit spec"
-          />
-        </Blueprint5.ButtonGroup>
+          <button
+            class="bp6-button spec"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-manually-entered-data"
+            >
+              <svg
+                data-icon="manually-entered-data"
+              />
+            </span>
+            <span
+              class="bp6-button-text"
+            >
+              Edit spec
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
-  <React.Fragment>
+  <div
+    class="main"
+  >
     <div
-      className="main"
+      class="ingestion-cards"
     >
       <div
-        className="ingestion-cards"
+        class="ingestion-card disabled bp6-card bp6-elevation-1 bp6-interactive"
       >
-        <React.Fragment>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for index_parallel:s3"
-              src="/some/base_url/assets/s3.png"
-            />
-            <p>
-              Amazon S3
-            </p>
-          </Blueprint5.Card>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for index_parallel:azureStorage"
-              src="/some/base_url/assets/azure-storage.png"
-            />
-            <p>
-              Azure Data Lake
-            </p>
-          </Blueprint5.Card>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for index_parallel:google"
-              src="/some/base_url/assets/google.png"
-            />
-            <p>
-              Google Cloud Storage
-            </p>
-          </Blueprint5.Card>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for index_parallel:delta"
-              src="/some/base_url/assets/delta.png"
-            />
-            <p>
-              Delta Lake
-            </p>
-          </Blueprint5.Card>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for index_parallel:hdfs"
-              src="/some/base_url/assets/hdfs.png"
-            />
-            <p>
-              HDFS
-            </p>
-          </Blueprint5.Card>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for index_parallel:druid"
-              src="/some/base_url/assets/druid.png"
-            />
-            <p>
-              Reindex from Druid
-            </p>
-          </Blueprint5.Card>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for index_parallel:http"
-              src="/some/base_url/assets/http.png"
-            />
-            <p>
-              HTTP(s)
-            </p>
-          </Blueprint5.Card>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for index_parallel:local"
-              src="/some/base_url/assets/local.png"
-            />
-            <p>
-              Local disk
-            </p>
-          </Blueprint5.Card>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for index_parallel:inline"
-              src="/some/base_url/assets/inline.png"
-            />
-            <p>
-              Paste data
-            </p>
-          </Blueprint5.Card>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for example"
-              src="/some/base_url/assets/example.png"
-            />
-            <p>
-              Example data
-            </p>
-          </Blueprint5.Card>
-        </React.Fragment>
-        <Blueprint5.Card
-          className="ingestion-card"
-          elevation={1}
-          interactive={true}
-          onClick={[Function]}
-        >
-          <img
-            alt="Ingestion tile for other"
-            src="/some/base_url/assets/other.png"
-          />
-          <p>
-            Other
-          </p>
-        </Blueprint5.Card>
+        <img
+          alt="Ingestion tile for index_parallel:s3"
+          src="/some/base_url/assets/s3.png"
+        />
+        <p>
+          Amazon S3
+        </p>
+      </div>
+      <div
+        class="ingestion-card disabled bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for index_parallel:azureStorage"
+          src="/some/base_url/assets/azure-storage.png"
+        />
+        <p>
+          Azure Data Lake
+        </p>
+      </div>
+      <div
+        class="ingestion-card disabled bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for index_parallel:google"
+          src="/some/base_url/assets/google.png"
+        />
+        <p>
+          Google Cloud Storage
+        </p>
+      </div>
+      <div
+        class="ingestion-card disabled bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for index_parallel:delta"
+          src="/some/base_url/assets/delta.png"
+        />
+        <p>
+          Delta Lake
+        </p>
+      </div>
+      <div
+        class="ingestion-card disabled bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for index_parallel:hdfs"
+          src="/some/base_url/assets/hdfs.png"
+        />
+        <p>
+          HDFS
+        </p>
+      </div>
+      <div
+        class="ingestion-card bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for index_parallel:druid"
+          src="/some/base_url/assets/druid.png"
+        />
+        <p>
+          Reindex from Druid
+        </p>
+      </div>
+      <div
+        class="ingestion-card bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for index_parallel:http"
+          src="/some/base_url/assets/http.png"
+        />
+        <p>
+          HTTP(s)
+        </p>
+      </div>
+      <div
+        class="ingestion-card bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for index_parallel:local"
+          src="/some/base_url/assets/local.png"
+        />
+        <p>
+          Local disk
+        </p>
+      </div>
+      <div
+        class="ingestion-card bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for index_parallel:inline"
+          src="/some/base_url/assets/inline.png"
+        />
+        <p>
+          Paste data
+        </p>
+      </div>
+      <div
+        class="ingestion-card bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for example"
+          src="/some/base_url/assets/example.png"
+        />
+        <p>
+          Example data
+        </p>
+      </div>
+      <div
+        class="ingestion-card bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for other"
+          src="/some/base_url/assets/other.png"
+        />
+        <p>
+          Other
+        </p>
       </div>
     </div>
+  </div>
+  <div
+    class="control"
+  >
     <div
-      className="control"
+      class="bp6-form-group"
     >
-      <Blueprint5.FormGroup>
-        <Blueprint5.Callout>
+      <div
+        class="bp6-form-content"
+      >
+        <div
+          class="bp6-callout bp6-callout-has-body-content"
+        >
           <p>
             Please specify where your raw data is located.
           </p>
-        </Blueprint5.Callout>
-      </Blueprint5.FormGroup>
+        </div>
+      </div>
     </div>
-  </React.Fragment>
+  </div>
 </div>
 `;
 
 exports[`LoadDataView matches snapshot streaming 1`] = `
 <div
-  className="load-data-view app-view welcome"
+  class="load-data-view app-view welcome"
 >
   <div
-    className="step-nav"
+    class="step-nav"
   >
     <div
-      className="step-nav-inner"
+      class="step-nav-inner"
     >
       <div
-        className="step-section"
+        class="step-section"
       >
         <div
-          className="step-nav-l1"
+          class="step-nav-l1"
         >
           Connect and parse raw data
         </div>
-        <Blueprint5.ButtonGroup
-          className="step-nav-l2"
+        <div
+          class="bp6-button-group step-nav-l2"
         >
-          <Blueprint5.Button
-            active={true}
-            className="welcome"
-            disabled={false}
-            icon={false}
-            onClick={[Function]}
-            text="Start"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="connect"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Connect"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="parser"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Parse data"
-          />
-        </Blueprint5.ButtonGroup>
+          <button
+            class="bp6-button bp6-active welcome"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Start
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled connect"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Connect
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled parser"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Parse data
+            </span>
+          </button>
+        </div>
       </div>
       <div
-        className="step-section"
+        class="step-section"
       >
         <div
-          className="step-nav-l1"
+          class="step-nav-l1"
         >
           Transform data and configure schema
         </div>
-        <Blueprint5.ButtonGroup
-          className="step-nav-l2"
+        <div
+          class="bp6-button-group step-nav-l2"
         >
-          <Blueprint5.Button
-            active={false}
-            className="timestamp"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Parse time"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="transform"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Transform"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="filter"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Filter"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="schema"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Configure schema"
-          />
-        </Blueprint5.ButtonGroup>
+          <button
+            class="bp6-button bp6-disabled timestamp"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Parse time
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled transform"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Transform
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled filter"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Filter
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled schema"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Configure schema
+            </span>
+          </button>
+        </div>
       </div>
       <div
-        className="step-section"
+        class="step-section"
       >
         <div
-          className="step-nav-l1"
+          class="step-nav-l1"
         >
           Tune parameters
         </div>
-        <Blueprint5.ButtonGroup
-          className="step-nav-l2"
+        <div
+          class="bp6-button-group step-nav-l2"
         >
-          <Blueprint5.Button
-            active={false}
-            className="partition"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Partition"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="tuning"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Tune"
-          />
-          <Blueprint5.Button
-            active={false}
-            className="publish"
-            disabled={true}
-            icon={false}
-            onClick={[Function]}
-            text="Publish"
-          />
-        </Blueprint5.ButtonGroup>
+          <button
+            class="bp6-button bp6-disabled partition"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Partition
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled tuning"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Tune
+            </span>
+          </button>
+          <button
+            class="bp6-button bp6-disabled publish"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <span
+              class="bp6-button-text"
+            >
+              Publish
+            </span>
+          </button>
+        </div>
       </div>
       <div
-        className="step-section"
+        class="step-section"
       >
         <div
-          className="step-nav-l1"
+          class="step-nav-l1"
         >
           Verify and submit
         </div>
-        <Blueprint5.ButtonGroup
-          className="step-nav-l2"
+        <div
+          class="bp6-button-group step-nav-l2"
         >
-          <Blueprint5.Button
-            active={false}
-            className="spec"
-            disabled={false}
-            icon="manually-entered-data"
-            onClick={[Function]}
-            text="Edit spec"
-          />
-        </Blueprint5.ButtonGroup>
+          <button
+            class="bp6-button spec"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-manually-entered-data"
+            >
+              <svg
+                data-icon="manually-entered-data"
+              />
+            </span>
+            <span
+              class="bp6-button-text"
+            >
+              Edit spec
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
-  <React.Fragment>
+  <div
+    class="main"
+  >
     <div
-      className="main"
+      class="ingestion-cards"
     >
       <div
-        className="ingestion-cards"
+        class="ingestion-card bp6-card bp6-elevation-1 bp6-interactive"
       >
-        <React.Fragment>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for kafka"
-              src="/some/base_url/assets/kafka.png"
-            />
-            <p>
-              Apache Kafka
-            </p>
-          </Blueprint5.Card>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for kinesis"
-              src="/some/base_url/assets/kinesis.png"
-            />
-            <p>
-              Amazon Kinesis
-            </p>
-          </Blueprint5.Card>
-          <Blueprint5.Card
-            className="ingestion-card"
-            elevation={1}
-            interactive={true}
-            onClick={[Function]}
-          >
-            <img
-              alt="Ingestion tile for azure-event-hubs"
-              src="/some/base_url/assets/azure-event-hubs.png"
-            />
-            <p>
-              Azure Event Hub
-            </p>
-          </Blueprint5.Card>
-        </React.Fragment>
-        <Blueprint5.Card
-          className="ingestion-card"
-          elevation={1}
-          interactive={true}
-          onClick={[Function]}
-        >
-          <img
-            alt="Ingestion tile for other"
-            src="/some/base_url/assets/other.png"
-          />
-          <p>
-            Other
-          </p>
-        </Blueprint5.Card>
+        <img
+          alt="Ingestion tile for kafka"
+          src="/some/base_url/assets/kafka.png"
+        />
+        <p>
+          Apache Kafka
+        </p>
+      </div>
+      <div
+        class="ingestion-card disabled bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for kinesis"
+          src="/some/base_url/assets/kinesis.png"
+        />
+        <p>
+          Amazon Kinesis
+        </p>
+      </div>
+      <div
+        class="ingestion-card bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for azure-event-hubs"
+          src="/some/base_url/assets/azure-event-hubs.png"
+        />
+        <p>
+          Azure Event Hub
+        </p>
+      </div>
+      <div
+        class="ingestion-card bp6-card bp6-elevation-1 bp6-interactive"
+      >
+        <img
+          alt="Ingestion tile for other"
+          src="/some/base_url/assets/other.png"
+        />
+        <p>
+          Other
+        </p>
       </div>
     </div>
+  </div>
+  <div
+    class="control"
+  >
     <div
-      className="control"
+      class="bp6-form-group"
     >
-      <Blueprint5.FormGroup>
-        <Blueprint5.Callout>
+      <div
+        class="bp6-form-content"
+      >
+        <div
+          class="bp6-callout bp6-callout-has-body-content"
+        >
           <p>
             Please specify where your raw data is located.
           </p>
-        </Blueprint5.Callout>
-      </Blueprint5.FormGroup>
+        </div>
+      </div>
     </div>
-  </React.Fragment>
+  </div>
 </div>
 `;

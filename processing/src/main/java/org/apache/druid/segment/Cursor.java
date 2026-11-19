@@ -50,7 +50,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexCursorHolder;
  * rather than query execution (as Cursor). If those abstractions could be collapsed (and if it is worthwhile) is yet to
  * be determined.
  *
- * @see org.apache.druid.segment.vector.VectorCursor, the vectorized version
+ * @see org.apache.druid.segment.vector.VectorCursor the vectorized version
  */
 public interface Cursor
 {

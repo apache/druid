@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-export * from './bootstrap/react-table-defaults';
 export * from './components';
 export * from './console-application';
 export * from './dialogs';

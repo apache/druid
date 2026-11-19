@@ -16,27 +16,28 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+
 import { Capabilities } from '../../../helpers';
-import { shallow } from '../../../utils/shallow-renderer';
 
 import { RestrictedMode } from './restricted-mode';
 
 describe('RestrictedMode', () => {
   it('matches snapshot when in auto capability detection mode', () => {
-    const headerBar = shallow(
+    const { container } = render(
       <RestrictedMode capabilities={Capabilities.COORDINATOR_OVERLORD} onUnrestrict={() => {}} />,
     );
-    expect(headerBar).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot when in manual capability detection mode', () => {
-    const headerBar = shallow(
+    const { container } = render(
       <RestrictedMode
         capabilities={Capabilities.COORDINATOR_OVERLORD}
         onUnrestrict={() => {}}
         onUseAutomaticCapabilityDetection={() => {}}
       />,
     );
-    expect(headerBar).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

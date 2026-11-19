@@ -58,6 +58,11 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
     }
   }
 
+  protected boolean isShutdown()
+  {
+    return isShutdown.get();
+  }
+
   protected boolean isPending()
   {
     return RunnerTaskState.PENDING.equals(getRunnerTaskState());
@@ -110,6 +115,7 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
     return task.getDataSource();
   }
 
+  @Override
   public Task getTask()
   {
     return task;

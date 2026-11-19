@@ -1,0 +1,267 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Derived from the stylesheet of react-table v6 (https://github.com/tannerlinsley/react-table/blob/v6/src/index.styl)
+// released under the MIT License
+
+@use '../../variables' as *;
+
+$easeOutBack: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+$expandSize: 7px;
+$border-color: rgba(0, 0, 0, 0.15);
+
+.console-table {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+
+  * {
+    box-sizing: border-box;
+  }
+
+  .ct-table {
+    flex: auto 1;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    border-collapse: collapse;
+    overflow: auto;
+  }
+
+  .ct-thead {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+
+    &.-headerGroups {
+      background: rgba(0, 0, 0, 0.03);
+      border-bottom: 1px solid $border-color;
+    }
+    &.-filters {
+      border-bottom: 1px solid $border-color;
+
+      .ct-th {
+        border-right: 1px solid $border-color;
+      }
+    }
+
+    &.-header {
+      box-shadow: 0 1px 0 0 $border-color;
+    }
+
+    .ct-tr {
+      text-align: left;
+    }
+
+    .ct-th,
+    .ct-td {
+      //padding: 5px 5px;
+      line-height: normal;
+      position: relative;
+      border-right: 1px solid $border-color;
+      transition: box-shadow 0.3s $easeOutBack;
+      box-shadow: inset 0 0 0 0 transparent;
+
+      &.-sort-asc {
+        box-shadow: inset 0 3px 0 0 #8489a1;
+      }
+
+      &.-sort-desc {
+        box-shadow: inset 0 -3px 0 0 #8489a1;
+      }
+
+      &.-cursor-pointer {
+        cursor: pointer;
+      }
+    }
+
+    .ct-resizable-header {
+      overflow: visible;
+      &:last-child {
+        overflow: hidden;
+      }
+    }
+    .ct-resizable-header-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+  .ct-tbody {
+    flex: 99999 1 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    overflow-x: hidden; // Prevents strange double horizontal scroll bar
+    // z-index:0
+    .ct-tr-group {
+      border-bottom: 1px solid $border-color;
+      &:last-child {
+        border-bottom: 0;
+      }
+    }
+    .ct-td {
+      border-right: 1px solid $border-color;
+    }
+    .ct-expandable {
+      cursor: pointer;
+      text-overflow: clip;
+    }
+  }
+
+  .ct-tr-group {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ct-tr {
+    flex: 1 0 auto;
+    display: inline-flex;
+  }
+  .ct-th,
+  .ct-td {
+    flex: 1 0 0px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    position: relative;
+    overflow: hidden;
+  }
+  .ct-expander {
+    display: inline-block;
+    position: relative;
+    color: transparent;
+    margin: 0 10px;
+    &:after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 0;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-90deg);
+      border-left: ($expandSize * 0.72) solid transparent;
+      border-right: ($expandSize * 0.72) solid transparent;
+      border-top: $expandSize solid rgba(255, 255, 255, 0.8);
+      transition: all 0.3s $easeOutBack;
+      cursor: pointer;
+    }
+    &.-open:after {
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+  }
+  .ct-resizer {
+    display: inline-block;
+    position: absolute;
+    width: 36px;
+    top: 0;
+    bottom: 0;
+    right: -18px;
+    cursor: col-resize;
+    z-index: 10;
+  }
+
+  &.-striped {
+    .ct-tr.-odd {
+      background: rgba(255, 255, 255, 0.025);
+    }
+  }
+  &.-highlight {
+    .ct-tbody {
+      .ct-tr:not(.-padRow):hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+  }
+
+  .ct-no-data {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
+    z-index: 1;
+    padding: 20px;
+    color: rgba(255, 255, 255, 0.5);
+    border-radius: 5px;
+  }
+  .ct-resizing {
+    .ct-th,
+    .ct-td {
+      cursor: col-resize;
+      user-select: none;
+    }
+  }
+
+  &.centered-table {
+    .ct-th {
+      align-content: start;
+    }
+
+    .ct-td {
+      align-content: center;
+    }
+  }
+  .ct-tr {
+    min-height: 38px;
+
+    .ct-th.padded,
+    .ct-td.padded,
+    .ct-expandable {
+      padding: $table-cell-v-padding $table-cell-h-padding;
+
+      .default-aggregated {
+        padding: 0;
+      }
+    }
+
+    .ct-th.wrapped,
+    .ct-td.wrapped {
+      white-space: normal;
+    }
+  }
+
+  &.padded-header .ct-thead .ct-th {
+    padding: $table-cell-v-padding $table-cell-h-padding;
+  }
+
+  .braced-text.table-padding {
+    display: inline-block;
+    margin: $table-cell-v-padding $table-cell-h-padding;
+  }
+
+  .generic-filter-input {
+    &.hide-icon:not(:hover) {
+      .filter-mode-button {
+        visibility: hidden;
+      }
+    }
+  }
+
+  .default-aggregated {
+    padding: 10px 5px;
+  }
+}
+
+.console-table-pagination {
+  position: relative;
+  padding-top: 5px;
+}

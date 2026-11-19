@@ -139,21 +139,18 @@ public class SqlSegmentsMetadataManagerTestBase
       int binaryVersion
   )
   {
-    return new DataSegment(
-        dataSource,
-        Intervals.of(interval),
-        version,
-        ImmutableMap.of(
-            "type", "s3_zip",
-            "bucket", "test",
-            "key", dataSource + "/" + bucketKey
-        ),
-        ImmutableList.of("dim1", "dim2", "dim3"),
-        ImmutableList.of("count", "value"),
-        NoneShardSpec.instance(),
-        binaryVersion,
-        1234L
-    );
+    return DataSegment.builder(SegmentId.of(dataSource, Intervals.of(interval), version, 0))
+                      .loadSpec(ImmutableMap.of(
+                              "type", "s3_zip",
+                              "bucket", "test",
+                              "key", dataSource + "/" + bucketKey
+                          ))
+                      .dimensions(ImmutableList.of("dim1", "dim2", "dim3"))
+                      .metrics(ImmutableList.of("count", "value"))
+                      .shardSpec(NoneShardSpec.instance())
+                      .binaryVersion(binaryVersion)
+                      .size(1234L)
+                      .build();
   }
 
   public static void publishSegment(

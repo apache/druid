@@ -189,10 +189,18 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       SegmentGenerationMetrics segmentGenerationMetrics = tester.getMetrics();
       Assertions.assertEquals(2, segmentGenerationMetrics.numPersists());
       Assertions.assertEquals(3, segmentGenerationMetrics.rowOutput());
-      Assertions.assertTrue(segmentGenerationMetrics.persistTimeMillis() > 0);
+      Assertions.assertTrue(segmentGenerationMetrics.persistTimeNanos() > 0);
+      Assertions.assertEquals(
+          segmentGenerationMetrics.persistTimeNanos() / 1_000_000,
+          segmentGenerationMetrics.persistTimeMillis()
+      );
       Assertions.assertTrue(segmentGenerationMetrics.persistCpuTime() > 0);
 
-      Assertions.assertTrue(segmentGenerationMetrics.mergeTimeMillis() > 0);
+      Assertions.assertTrue(segmentGenerationMetrics.mergeTimeNanos() > 0);
+      Assertions.assertEquals(
+          segmentGenerationMetrics.mergeTimeNanos() / 1_000_000,
+          segmentGenerationMetrics.mergeTimeMillis()
+      );
       Assertions.assertTrue(segmentGenerationMetrics.mergeCpuTime() > 0);
 
       // clear

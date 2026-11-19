@@ -1,0 +1,1104 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Blueprint 6 restyled its components with CSS design tokens, a 4px spacing grid and relative colors.
+// The rules below restore the Blueprint 5 metrics and dark theme styling that the console was designed
+// with (the console always renders in dark mode), using the same Sass variables Blueprint 5 used.
+// Must be loaded after Blueprint.
+
+@use 'sass:map';
+@use 'sass:math';
+@use 'index' as *;
+
+$icon-classes: ('.#{$ns}-icon', '.#{$ns}-icon-standard', '.#{$ns}-icon-large');
+
+// From node_modules/@blueprintjs/core/src/components/forms/_common.scss
+@function dark-input-transition-shadow(
+  $color: $dark-input-shadow-color-focus,
+  $focus: false,
+  $outer-shadow-focus-width: 1px
+) {
+  @if $focus {
+    @return inset 0 0 0 1px oklch(from $color l c h / 0.752),
+      0 0 0 $outer-shadow-focus-width oklch(from $color l c h / 0.752);
+  } @else {
+    @return 0 0 0 0 oklch(from $color l c h / 0), 0 0 0 0 oklch(from $color l c h / 0);
+  }
+}
+
+$input-icon-margin: math.div($pt-input-height - $pt-icon-size-standard, 2);
+
+// Blueprint 5 extended colors and minimal button text colors, removed in Blueprint 6
+$dark-minimal-hover-text-colors: (
+  'primary': $blue5,
+  'success': $green5,
+  'warning': $orange5,
+  'danger': $red5,
+);
+$dark-minimal-active-text-colors: (
+  'primary': #99c4ff,
+  'success': #7cd7a2,
+  'warning': #f5c186,
+  'danger': #ffa1a4,
+);
+
+@mixin dark-minimal-button() {
+  background: none;
+  box-shadow: none;
+  color: $white;
+
+  &:hover,
+  &:active,
+  &.#{$ns}-active {
+    background: none;
+    box-shadow: none;
+    color: $white;
+  }
+
+  &:hover {
+    background: $dark-minimal-button-background-color-hover;
+  }
+
+  &:active,
+  &.#{$ns}-active {
+    background: $dark-minimal-button-background-color-active;
+  }
+
+  &:disabled,
+  &:disabled:hover,
+  &.#{$ns}-disabled,
+  &.#{$ns}-disabled:hover {
+    background: none;
+    color: $pt-dark-text-color-disabled;
+
+    &.#{$ns}-active {
+      background: $dark-minimal-button-background-color-active;
+    }
+  }
+
+  @each $intent, $colors in $button-intents {
+    &.#{$ns}-intent-#{$intent} {
+      $intent-color: map.get($pt-intent-colors, $intent);
+      $dark-text-color: map.get($pt-dark-intent-text-colors, $intent);
+      color: $dark-text-color;
+
+      &:hover {
+        background: rgba($intent-color, 0.2);
+        color: map.get($dark-minimal-hover-text-colors, $intent);
+      }
+
+      &:active,
+      &.#{$ns}-active {
+        background: rgba($intent-color, 0.3);
+        color: map.get($dark-minimal-active-text-colors, $intent);
+      }
+
+      &:disabled,
+      &.#{$ns}-disabled {
+        background: none;
+        color: rgba($dark-text-color, 0.5);
+
+        &.#{$ns}-active {
+          background: rgba($intent-color, 0.3);
+        }
+      }
+    }
+  }
+}
+
+// Buttons
+
+.#{$ns}-button {
+  min-height: $pt-button-height;
+  min-width: $pt-button-height;
+  padding: $button-padding;
+
+  > *,
+  &::before {
+    margin-right: $button-icon-spacing;
+  }
+
+  #{$icon-classes} {
+    &.#{$ns}-align-right {
+      margin-left: $button-icon-spacing;
+    }
+  }
+
+  .#{$ns}-icon:first-child:last-child,
+  .#{$ns}-spinner + .#{$ns}-icon:last-child {
+    margin: 0 (-($pt-button-height - $pt-icon-size-standard) * 0.5);
+  }
+
+  &.#{$ns}-large,
+  .#{$ns}-large & {
+    font-size: $pt-font-size-large;
+    min-height: $pt-button-height-large;
+    min-width: $pt-button-height-large;
+    padding: $button-padding-large;
+
+    > *,
+    &::before {
+      margin-right: $button-icon-spacing-large;
+    }
+  }
+
+  &.#{$ns}-small,
+  .#{$ns}-small & {
+    min-height: $pt-button-height-small;
+    min-width: $pt-button-height-small;
+    padding: $button-padding-small;
+  }
+
+  .#{$ns}-dark & {
+    &:not([class*='#{$ns}-intent-']) {
+      background-color: $dark-button-background-color;
+      box-shadow: $dark-button-box-shadow;
+      color: $pt-dark-text-color;
+
+      &:hover,
+      &:active,
+      &.#{$ns}-active {
+        color: $pt-dark-text-color;
+      }
+
+      &:hover {
+        background-color: $dark-button-background-color-hover;
+        box-shadow: $dark-button-box-shadow-active;
+      }
+
+      &:active,
+      &.#{$ns}-active {
+        background-color: $dark-button-background-color-active;
+        box-shadow: $dark-button-box-shadow-active;
+      }
+
+      &:disabled,
+      &.#{$ns}-disabled {
+        background-color: $dark-button-background-color-disabled;
+        box-shadow: none;
+        color: $dark-button-color-disabled;
+
+        &.#{$ns}-active {
+          background: $dark-button-background-color-active-disabled;
+        }
+      }
+
+      &[class*='#{$ns}-icon-']::before {
+        color: $pt-dark-icon-color;
+      }
+
+      #{$icon-classes} {
+        &:not([class*='#{$ns}-intent-']) {
+          color: $pt-dark-icon-color;
+        }
+      }
+    }
+
+    &[class*='#{$ns}-intent-'] {
+      box-shadow: $dark-button-box-shadow;
+
+      &:hover {
+        box-shadow: $dark-button-box-shadow;
+      }
+
+      &:active,
+      &.#{$ns}-active {
+        box-shadow: $dark-button-box-shadow-active;
+      }
+
+      &:disabled,
+      &.#{$ns}-disabled {
+        box-shadow: none;
+        color: $dark-button-intent-color-disabled;
+      }
+    }
+
+    &.#{$ns}-minimal,
+    &.#{$ns}-outlined {
+      @include dark-minimal-button();
+    }
+  }
+}
+
+.#{$ns}-dark .#{$ns}-button-group {
+  &.#{$ns}-minimal,
+  &.#{$ns}-outlined {
+    .#{$ns}-button {
+      @include dark-minimal-button();
+    }
+  }
+}
+
+.#{$ns}-dark .#{$ns}-html-select.#{$ns}-minimal select {
+  @include dark-minimal-button();
+}
+
+.#{$ns}-button-group:not(.#{$ns}-minimal):not(.#{$ns}-outlined) {
+  > .#{$ns}-popover-wrapper:not(:last-child) .#{$ns}-button,
+  > .#{$ns}-button:not(:last-child) {
+    margin-right: -$button-border-width;
+  }
+}
+
+.#{$ns}-alert-footer .#{$ns}-button {
+  margin-left: $pt-grid-size;
+}
+
+// Inputs
+
+textarea.#{$ns}-input {
+  padding: $input-padding-horizontal;
+}
+
+.#{$ns}-input {
+  font-weight: 400;
+  height: $pt-input-height;
+  line-height: $pt-input-height;
+  padding: 0 $input-padding-horizontal;
+
+  &[type='search'],
+  &.#{$ns}-round {
+    border-radius: $pt-input-height;
+    padding-left: $input-padding-horizontal;
+  }
+
+  &.#{$ns}-large {
+    font-size: $pt-font-size-large;
+    height: $pt-input-height-large;
+    line-height: $pt-input-height-large;
+
+    &[type='search'],
+    &.#{$ns}-round {
+      padding: 0 ($pt-input-height-large * 0.375);
+    }
+  }
+
+  &.#{$ns}-small {
+    font-size: $pt-font-size-small;
+    height: $pt-input-height-small;
+    line-height: $pt-input-height-small;
+    padding-left: $input-small-padding;
+    padding-right: $input-small-padding;
+
+    &[type='search'],
+    &.#{$ns}-round {
+      padding: 0 ($pt-input-height-small * 0.5);
+    }
+  }
+
+  .#{$ns}-dark & {
+    background: $dark-input-background-color;
+    box-shadow:
+      dark-input-transition-shadow($dark-input-shadow-color-focus), $pt-dark-input-box-shadow;
+    color: $dark-input-color;
+
+    &::placeholder {
+      color: $dark-input-placeholder-color;
+    }
+
+    &:focus {
+      box-shadow: dark-input-transition-shadow($dark-input-shadow-color-focus, true);
+    }
+
+    &[readonly] {
+      box-shadow: inset 0 0 0 1px $pt-dark-divider-black;
+    }
+
+    &:disabled,
+    &.#{$ns}-disabled {
+      background: $dark-input-background-color-disabled;
+      box-shadow: none;
+      color: $dark-input-color-disabled;
+    }
+
+    @each $intent, $color in $pt-intent-text-colors {
+      &.#{$ns}-intent-#{$intent} {
+        $dark-color: map.get($pt-dark-intent-text-colors, $intent);
+        box-shadow:
+          dark-input-transition-shadow($dark-color),
+          inset 0 0 0 1px $dark-color,
+          $pt-dark-input-box-shadow;
+
+        &:focus {
+          box-shadow: dark-input-transition-shadow($dark-color, true);
+        }
+
+        &[readonly] {
+          box-shadow: inset 0 0 0 1px $dark-color;
+        }
+      }
+    }
+  }
+}
+
+.#{$ns}-tag-input {
+  height: auto;
+  line-height: inherit;
+  min-height: $pt-input-height;
+  padding-left: $pt-grid-size * 0.5;
+  padding-right: 0;
+
+  .#{$ns}-tag-input-icon {
+    margin-left: $pt-grid-size * 0.2;
+    margin-right: $pt-grid-size * 0.7;
+    margin-top: $pt-grid-size * 0.7;
+  }
+
+  .#{$ns}-tag-input-values {
+    margin-right: $pt-grid-size * 0.7;
+    margin-top: $pt-grid-size * 0.5;
+
+    &::before,
+    > * {
+      margin-right: $pt-grid-size * 0.5;
+    }
+
+    > * {
+      margin-bottom: $pt-grid-size * 0.5;
+    }
+
+    &:first-child .#{$ns}-input-ghost {
+      padding-left: $pt-grid-size * 0.5;
+    }
+  }
+
+  .#{$ns}-input-ghost {
+    line-height: $pt-input-height - $pt-grid-size;
+    width: $pt-grid-size * 8;
+  }
+
+  .#{$ns}-button,
+  .#{$ns}-spinner {
+    margin: math.div($pt-input-height - $pt-button-height-small, 2);
+    margin-left: 0;
+  }
+
+  .#{$ns}-button {
+    min-height: $pt-button-height-small;
+    min-width: $pt-button-height-small;
+    padding: 0 $pt-grid-size * 0.7;
+  }
+
+  &.#{$ns}-large {
+    height: auto;
+    min-height: $pt-input-height-large;
+
+    &::before,
+    > * {
+      margin-right: $pt-grid-size;
+    }
+
+    .#{$ns}-tag-input-icon {
+      margin-left: $pt-grid-size * 0.5;
+      margin-top: $pt-grid-size;
+    }
+
+    .#{$ns}-input-ghost {
+      line-height: $pt-input-height;
+    }
+
+    .#{$ns}-button {
+      margin: $pt-grid-size * 0.5;
+      margin-left: 0;
+      min-height: $pt-input-height;
+      min-width: $pt-input-height;
+      padding: $pt-grid-size * 0.5 $pt-grid-size * 1.3;
+    }
+
+    .#{$ns}-spinner {
+      margin: $pt-grid-size * 0.8;
+      margin-left: 0;
+    }
+  }
+}
+
+.#{$ns}-input-group {
+  .#{$ns}-input:not(:first-child) {
+    padding-left: $pt-input-height;
+  }
+
+  .#{$ns}-input:not(:last-child) {
+    padding-right: $pt-input-height;
+  }
+
+  > .#{$ns}-icon,
+  > .#{$ns}-input-left-container > .#{$ns}-icon {
+    margin: $input-icon-margin;
+  }
+
+  .#{$ns}-button {
+    margin: math.div($pt-input-height - $pt-button-height-small, 2);
+    min-height: $pt-button-height-small;
+    min-width: $pt-button-height-small;
+    padding: $button-padding-small;
+  }
+
+  .#{$ns}-tag {
+    margin: math.div($pt-input-height - $pt-button-height-smaller, 2);
+  }
+
+  &.#{$ns}-large {
+    .#{$ns}-button {
+      margin: math.div($pt-input-height-large - $pt-button-height, 2);
+      min-height: $pt-button-height;
+      min-width: $pt-button-height;
+    }
+
+    > .#{$ns}-icon,
+    > .#{$ns}-input-left-container > .#{$ns}-icon {
+      margin: math.div($pt-input-height-large - $pt-icon-size-standard, 2);
+    }
+
+    .#{$ns}-input:not(:first-child) {
+      padding-left: $pt-input-height-large;
+    }
+
+    .#{$ns}-input:not(:last-child) {
+      padding-right: $pt-input-height-large;
+    }
+  }
+
+  &.#{$ns}-small {
+    .#{$ns}-button,
+    .#{$ns}-tag {
+      margin: math.div($pt-input-height-small - $pt-button-height-smaller, 2);
+      min-height: $pt-button-height-smaller;
+      min-width: $pt-button-height-smaller;
+    }
+
+    > .#{$ns}-icon,
+    > .#{$ns}-input-left-container > .#{$ns}-icon {
+      margin: math.div($pt-input-height-small - $pt-icon-size-standard, 2);
+    }
+
+    .#{$ns}-input:not(:first-child) {
+      padding-left: $pt-icon-size-standard + $input-small-padding;
+    }
+
+    .#{$ns}-input:not(:last-child) {
+      padding-right: $pt-button-height-small + $input-small-padding;
+    }
+  }
+
+  &.#{$ns}-round {
+    .#{$ns}-button,
+    .#{$ns}-input,
+    .#{$ns}-tag {
+      border-radius: $pt-input-height;
+    }
+  }
+
+  .#{$ns}-dark & {
+    .#{$ns}-icon,
+    .#{$ns}-input:not(:focus) + .#{$ns}-button.#{$ns}-minimal:not(:hover):not(:focus),
+    .#{$ns}-input:not(:focus)
+      + .#{$ns}-input-action
+      .#{$ns}-button.#{$ns}-minimal:not(:hover):not(:focus) {
+      color: $pt-dark-icon-color;
+    }
+
+    &.#{$ns}-disabled .#{$ns}-icon {
+      color: $pt-dark-icon-color-disabled;
+    }
+
+    @each $intent, $color in $pt-intent-text-colors {
+      &.#{$ns}-intent-#{$intent} > .#{$ns}-icon {
+        color: map.get($pt-dark-intent-text-colors, $intent);
+      }
+    }
+  }
+}
+
+.#{$ns}-html-select {
+  select {
+    > *,
+    &::before {
+      margin-right: $button-icon-spacing;
+    }
+  }
+
+  .#{$ns}-icon {
+    right: $input-icon-margin + 3px;
+  }
+}
+
+.#{$ns}-form-group {
+  margin: 0 0 ($pt-grid-size * 1.5);
+
+  .#{$ns}-control {
+    margin-top: math.div($pt-input-height - $control-indicator-size, 2);
+  }
+
+  .#{$ns}-form-group-sub-label,
+  .#{$ns}-form-helper-text {
+    font-size: $pt-font-size-small;
+  }
+
+  .#{$ns}-form-group-sub-label {
+    margin-bottom: $pt-grid-size * 0.5;
+  }
+
+  .#{$ns}-form-helper-text {
+    margin-top: $pt-grid-size * 0.5;
+  }
+
+  .#{$ns}-dark & {
+    .#{$ns}-form-group-sub-label,
+    .#{$ns}-form-helper-text {
+      color: $pt-dark-text-color-muted;
+    }
+
+    &.#{$ns}-disabled {
+      .#{$ns}-form-group-sub-label,
+      .#{$ns}-form-helper-text {
+        color: $pt-dark-text-color-disabled;
+      }
+    }
+
+    @each $intent, $color in $pt-intent-text-colors {
+      &.#{$ns}-intent-#{$intent} .#{$ns}-form-helper-text {
+        color: map.get($pt-dark-intent-text-colors, $intent);
+      }
+    }
+  }
+}
+
+label.#{$ns}-label {
+  margin-bottom: $pt-grid-size * 1.5;
+
+  .#{$ns}-html-select,
+  .#{$ns}-input,
+  .#{$ns}-popover-wrapper,
+  .#{$ns}-popover-target,
+  .#{$ns}-button-group,
+  .#{$ns}-control-group {
+    margin-top: $pt-grid-size * 0.5;
+  }
+
+  .#{$ns}-form-group & {
+    margin-bottom: $pt-grid-size * 0.5;
+  }
+
+  .#{$ns}-dark & {
+    color: $pt-dark-text-color;
+  }
+}
+
+// Checkboxes, radios and switches
+
+.#{$ns}-control {
+  margin-bottom: $pt-grid-size;
+
+  .#{$ns}-control-indicator {
+    margin-inline-end: $pt-grid-size;
+  }
+
+  &:not(.#{$ns}-align-right) {
+    padding-inline-start: $control-indicator-size + $pt-grid-size;
+
+    .#{$ns}-control-indicator {
+      margin-inline-start: -($control-indicator-size + $pt-grid-size);
+    }
+  }
+
+  &.#{$ns}-large:not(.#{$ns}-align-right) {
+    padding-inline-start: $control-indicator-size-large + $pt-grid-size;
+
+    .#{$ns}-control-indicator {
+      margin-inline-start: -($control-indicator-size-large + $pt-grid-size);
+    }
+  }
+
+  &.#{$ns}-switch {
+    &:not(.#{$ns}-align-right) {
+      padding-inline-start: $control-indicator-size * 1.75 + $pt-grid-size;
+
+      .#{$ns}-control-indicator {
+        margin-inline-start: -($control-indicator-size * 1.75 + $pt-grid-size);
+      }
+    }
+
+    &.#{$ns}-large:not(.#{$ns}-align-right) {
+      padding-inline-start: $control-indicator-size-large * 1.75 + $pt-grid-size;
+
+      .#{$ns}-control-indicator {
+        margin-inline-start: -($control-indicator-size-large * 1.75 + $pt-grid-size);
+      }
+    }
+
+    .#{$ns}-control-indicator::before {
+      left: 0;
+      margin: 2px;
+      top: auto;
+      transform: none;
+    }
+
+    input:checked ~ .#{$ns}-control-indicator::before {
+      left: calc(100% - 1em);
+    }
+
+    .#{$ns}-dark & {
+      input ~ .#{$ns}-control-indicator {
+        background: rgba($black, 0.5);
+      }
+
+      .#{$ns}-control-indicator::before {
+        background: $pt-dark-icon-color;
+      }
+
+      input:checked ~ .#{$ns}-control-indicator::before {
+        background: $white;
+      }
+
+      input:disabled ~ .#{$ns}-control-indicator::before {
+        background: rgba($pt-dark-icon-color, 0.5);
+      }
+
+      input:checked:disabled ~ .#{$ns}-control-indicator::before {
+        background: rgba($white, 0.3);
+      }
+    }
+  }
+}
+
+// Menus
+
+.#{$ns}-menu {
+  padding: $pt-grid-size * 0.5;
+}
+
+.#{$ns}-submenu.#{$ns}-popover {
+  padding: 0 ($pt-grid-size * 0.5);
+}
+
+.#{$ns}-menu-item {
+  line-height: $pt-grid-size * 1.8;
+  padding: ($pt-grid-size * 0.6) ($pt-grid-size * 0.7);
+
+  > *,
+  &::before {
+    margin-right: $pt-grid-size * 0.7;
+  }
+
+  &::before,
+  .#{$ns}-submenu-icon {
+    margin-top: 1px;
+  }
+
+  .#{$ns}-menu-item-icon {
+    height: $pt-grid-size * 1.8;
+  }
+
+  .#{$ns}-large & {
+    line-height: $pt-grid-size * 2.2;
+
+    &::before {
+      margin-right: $pt-grid-size;
+    }
+  }
+
+  .#{$ns}-small & {
+    line-height: normal;
+    padding-bottom: $pt-grid-size * 0.3;
+    padding-top: $pt-grid-size * 0.3;
+  }
+}
+
+.#{$ns}-menu-divider,
+.#{$ns}-menu-header {
+  margin: ($pt-grid-size * 0.5) (-$pt-grid-size * 0.5);
+}
+
+.#{$ns}-menu-header {
+  padding-left: 2px;
+
+  > h6 {
+    padding: $pt-grid-size ($pt-grid-size * 0.7) 0 ($pt-grid-size * 0.6);
+  }
+
+  .#{$ns}-large & > h6 {
+    padding-bottom: $pt-grid-size * 0.5;
+    padding-top: $pt-grid-size * 1.5;
+  }
+}
+
+.#{$ns}-divider {
+  margin: $pt-grid-size * 0.5;
+}
+
+.#{$ns}-navbar-divider {
+  margin: 0 $pt-grid-size;
+}
+
+.#{$ns}-popover-arrow::before {
+  border-radius: 2px;
+}
+
+.#{$ns}-tooltip {
+  .#{$ns}-popover-content {
+    padding: $pt-grid-size ($pt-grid-size * 1.2);
+  }
+
+  &.#{$ns}-compact .#{$ns}-popover-content {
+    padding: ($pt-grid-size * 0.5) ($pt-grid-size * 0.7);
+  }
+}
+
+// Cards and elevation
+
+.#{$ns}-card {
+  padding: $card-padding;
+
+  &.#{$ns}-compact {
+    padding: $card-padding * 0.75;
+  }
+
+  &.#{$ns}-dark,
+  .#{$ns}-dark & {
+    background-color: $dark-card-background-color;
+    box-shadow: $pt-dark-elevation-shadow-0;
+
+    &.#{$ns}-interactive {
+      &:hover {
+        box-shadow: $pt-dark-elevation-shadow-3;
+      }
+
+      &:active {
+        box-shadow: $pt-dark-elevation-shadow-1;
+      }
+
+      &.#{$ns}-selected {
+        box-shadow:
+          0 0 0 3px rgba($blue5, 0.4),
+          0 0 0 1px $blue5;
+      }
+    }
+  }
+}
+
+@each $level,
+  $shadow
+    in (
+      0: $pt-dark-elevation-shadow-0,
+      1: $pt-dark-elevation-shadow-1,
+      2: $pt-dark-elevation-shadow-2,
+      3: $pt-dark-elevation-shadow-3,
+      4: $pt-dark-elevation-shadow-4
+    )
+{
+  .#{$ns}-elevation-#{$level}.#{$ns}-dark,
+  .#{$ns}-dark .#{$ns}-elevation-#{$level} {
+    box-shadow: $shadow;
+  }
+}
+
+// Tags
+
+.#{$ns}-tag {
+  font-size: $pt-font-size-small;
+  line-height: $pt-icon-size-standard;
+  min-height: $pt-button-height-smaller;
+  min-width: $pt-button-height-smaller;
+  padding: 2px ($pt-grid-size * 0.6);
+
+  > *,
+  &::before {
+    margin-right: 4px;
+  }
+
+  &.#{$ns}-round {
+    border-radius: $pt-button-height;
+    padding-left: $pt-grid-size * 0.8;
+    padding-right: $pt-grid-size * 0.8;
+  }
+
+  &.#{$ns}-large,
+  .#{$ns}-large & {
+    font-size: $pt-font-size;
+    line-height: $pt-icon-size-large;
+    min-height: $pt-button-height;
+    min-width: $pt-button-height;
+    padding: 5px $pt-grid-size;
+
+    > *,
+    &::before {
+      margin-right: 7px;
+    }
+
+    &.#{$ns}-round {
+      padding-left: $pt-grid-size * 1.2;
+      padding-right: $pt-grid-size * 1.2;
+    }
+  }
+
+  .#{$ns}-dark &.#{$ns}-minimal {
+    &:not([class*='#{$ns}-intent-']) {
+      background-color: rgba($gray3, 0.15);
+      color: $pt-dark-text-color;
+
+      &.#{$ns}-interactive {
+        &:hover {
+          background-color: rgba($gray3, 0.3);
+          color: $white;
+        }
+
+        &:active,
+        &.#{$ns}-active {
+          background-color: rgba($gray3, 0.35);
+          color: $white;
+        }
+      }
+
+      .#{$ns}-tag-remove {
+        color: $pt-dark-icon-color;
+
+        &:hover,
+        &:active {
+          color: $light-gray1;
+        }
+      }
+    }
+
+    @each $intent, $color in $pt-intent-colors {
+      &.#{$ns}-intent-#{$intent} {
+        $text-color: map.get($pt-dark-intent-text-colors, $intent);
+        $active-text-color: map.get($dark-minimal-active-text-colors, $intent);
+        background-color: rgba($color, 0.2);
+        color: $text-color;
+
+        &.#{$ns}-interactive {
+          &:hover {
+            background-color: rgba($color, 0.3);
+            color: $active-text-color;
+          }
+
+          &:active,
+          &.#{$ns}-active {
+            background-color: rgba($color, 0.35);
+            color: $active-text-color;
+          }
+        }
+
+        .#{$ns}-tag-remove {
+          color: $text-color;
+
+          &:hover,
+          &:active {
+            color: $active-text-color;
+          }
+        }
+      }
+    }
+  }
+}
+
+.#{$ns}-tag-remove {
+  margin-bottom: -2px;
+  margin-right: -($pt-grid-size * 0.6);
+  margin-top: -2px;
+  padding: 2px;
+  padding-left: 0;
+
+  .#{$ns}-large & {
+    margin-right: -$pt-grid-size;
+    padding: 0 5px 0 0;
+
+    &:empty::before {
+      font-size: $pt-icon-size-large;
+      height: $pt-icon-size-large;
+      width: $pt-icon-size-large;
+    }
+  }
+}
+
+// Typography
+
+p {
+  margin-bottom: $pt-grid-size;
+}
+
+.#{$ns}-heading {
+  margin: 0 0 $pt-grid-size;
+}
+
+// Callouts and code
+
+.#{$ns}-callout {
+  padding: $pt-grid-size * 1.5;
+
+  &[class*='#{$ns}-icon-'],
+  &.#{$ns}-callout-icon {
+    padding-left: $pt-grid-size * 1.5 + $pt-icon-size-standard + $pt-grid-size * 0.7;
+  }
+
+  &[class*='#{$ns}-icon-']::before,
+  &.#{$ns}-callout-icon > .#{$ns}-icon:first-child {
+    left: $pt-grid-size * 1.5;
+    top: $pt-grid-size * 1.5 + 2px;
+  }
+
+  &.#{$ns}-callout-has-body-content .#{$ns}-heading {
+    margin-bottom: $pt-grid-size * 0.5;
+  }
+
+  &.#{$ns}-compact {
+    padding: $pt-grid-size;
+
+    &.#{$ns}-callout-icon {
+      padding-left: $pt-grid-size + $pt-icon-size-standard + $pt-grid-size * 0.7;
+
+      > .#{$ns}-icon:first-child {
+        left: $pt-grid-size;
+        top: $pt-grid-size + 2px;
+      }
+    }
+  }
+}
+
+.#{$ns}-code {
+  padding: 2px 5px;
+}
+
+.#{$ns}-code-block {
+  margin: $pt-grid-size 0;
+  padding: 13px 15px 12px;
+}
+
+.#{$ns}-alert-footer {
+  margin-top: $pt-grid-size;
+}
+
+// Dialogs
+
+.#{$ns}-dialog {
+  border-radius: $pt-border-radius * 2;
+  margin: ($pt-grid-size * 3) 0;
+}
+
+.#{$ns}-dialog-header {
+  border-radius: ($pt-border-radius * 2) ($pt-border-radius * 2) 0 0;
+  min-height: $pt-icon-size-large + $pt-grid-size * 2;
+  padding: $pt-grid-size * 0.5;
+  padding-left: $pt-grid-size * 1.5;
+
+  .#{$ns}-icon,
+  .#{$ns}-icon-large {
+    margin-left: -3px;
+    margin-right: $pt-grid-size * 0.75;
+  }
+
+  .#{$ns}-heading {
+    font-size: $pt-grid-size * 1.4;
+    line-height: inherit;
+
+    &:last-child {
+      margin-right: $pt-grid-size * 1.5;
+    }
+  }
+}
+
+.#{$ns}-dialog-body {
+  margin: $pt-grid-size * 1.5;
+}
+
+.#{$ns}-dialog-body-scroll-container {
+  padding: $pt-grid-size * 1.5;
+}
+
+.#{$ns}-dialog-footer {
+  margin: $pt-grid-size * 1.5;
+}
+
+.#{$ns}-dialog-footer-actions .#{$ns}-button {
+  margin-left: $pt-grid-size;
+}
+
+.#{$ns}-dialog-footer-fixed {
+  border-radius: 0 0 ($pt-border-radius * 2) ($pt-border-radius * 2);
+  gap: $pt-grid-size * 1.5;
+  padding: $pt-grid-size $pt-grid-size $pt-grid-size ($pt-grid-size * 1.5);
+}
+
+// Trees, tabs and segmented controls
+
+.#{$ns}-tree-node-content {
+  padding-right: 5px;
+}
+
+.#{$ns}-tree-node-caret {
+  padding: 7px;
+}
+
+.#{$ns}-tree-node-icon {
+  margin-right: 7px;
+}
+
+@for $i from 1 through 15 {
+  .#{$ns}-tree-node-content-#{$i} {
+    padding-left: $pt-grid-size * 2.3 * $i;
+  }
+}
+
+.#{$ns}-tab-icon {
+  margin-right: $pt-grid-size * 0.7;
+}
+
+.#{$ns}-segmented-control {
+  gap: 3px;
+  padding: 3px;
+}
+
+// Date pickers
+
+.#{$ns}-datepicker {
+  padding: $pt-grid-size * 0.5;
+}
+
+.#{$ns}-datepicker-content {
+  gap: $pt-grid-size * 0.5;
+
+  > .#{$ns}-divider {
+    width: calc(100% - #{$pt-grid-size});
+  }
+}
+
+.#{$ns}-datepicker {
+  .rdp-month {
+    margin: 0 ($pt-grid-size * 0.5);
+  }
+
+  .rdp-caption {
+    padding-bottom: $pt-grid-size * 0.5;
+  }
+
+  .rdp-head_cell {
+    padding-top: $pt-grid-size * 0.5;
+  }
+}
+
+.#{$ns}-datepicker-caption {
+  margin: 0 25px ($pt-grid-size * 0.5);
+}
+
+.#{$ns}-datepicker-caption .#{$ns}-html-select select,
+.#{$ns}-datepicker-caption.rdp-caption .#{$ns}-html-select select,
+.#{$ns}-datepicker-caption-measure,
+.#{$ns}-datepicker-month-select select,
+.#{$ns}-datepicker-year-select select {
+  padding-left: $pt-grid-size * 0.5;
+}

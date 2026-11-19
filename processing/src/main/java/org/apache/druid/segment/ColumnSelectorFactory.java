@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 /**
  * Factory class for MetricSelectors
  *
- * @see org.apache.druid.segment.vector.VectorColumnSelectorFactory, the vectorized version
+ * @see org.apache.druid.segment.vector.VectorColumnSelectorFactory the vectorized version
  */
 @PublicApi
 public interface ColumnSelectorFactory extends ColumnInspector

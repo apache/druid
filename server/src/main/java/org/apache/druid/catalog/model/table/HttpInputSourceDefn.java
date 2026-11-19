@@ -53,6 +53,7 @@ import java.util.stream.Collectors;
  * {@code uriTemplate} table property in the table spec, then provides the partial URLs
  * in a table function to use for that one query. The final URIs are created by combining
  * the template and the arguments. Example:
+ * <ul>
  * <li>{@code uriTemplate} property): "http://example.com/data/kttm-{}.json"</li>
  * <li>{@code uris} function argument: "22-Nov-21, 22-Nov-22"</li>
  * </ul>

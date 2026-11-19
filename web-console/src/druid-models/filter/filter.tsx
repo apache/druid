@@ -39,8 +39,8 @@ export function splitFilter(filter: DruidFilter | null): DimensionFiltersWithRes
     ? filter.type === 'and' && Array.isArray(filter.fields)
       ? filter.fields
       : filter.type !== 'true'
-      ? [filter]
-      : EMPTY_ARRAY
+        ? [filter]
+        : EMPTY_ARRAY
     : EMPTY_ARRAY;
 
   const dimensionFilters: DruidFilter[] = inputAndFilters.filter(

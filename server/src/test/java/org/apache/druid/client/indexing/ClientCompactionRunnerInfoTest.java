@@ -426,4 +426,16 @@ public class ClientCompactionRunnerInfoTest
         2
     );
   }
+
+  @Test
+  public void testMalformedMaxNumTasksIsAValidationFailure()
+  {
+    final CompactionConfigValidationResult validationResult =
+        ClientCompactionRunnerInfo.validateMaxNumTasksForMSQ(Map.of("maxNumTasks", 2.5));
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertTrue(validationResult.getReason().startsWith("MSQ: "), validationResult.getReason());
+    Assertions.assertTrue(
+        ClientCompactionRunnerInfo.validateMaxNumTasksForMSQ(Map.of("maxNumTasks", "3")).isValid()
+    );
+  }
 }

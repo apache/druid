@@ -15,7 +15,7 @@
 
 #!bin/bash
 
-mvn -B dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ||
+./mvnw -B dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ||
 { echo "
     The dependency analysis has found a dependency that is either:
 

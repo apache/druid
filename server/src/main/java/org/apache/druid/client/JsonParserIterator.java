@@ -22,8 +22,10 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -35,11 +37,13 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -74,7 +78,7 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
     this.future = future;
     this.url = url;
     if (query != null) {
-      this.timeoutAt = query.context().getLong(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+      this.timeoutAt = query.context().getOrDefault(QueryContextParameters.QUERY_FAIL_TIME, -1L);
       this.queryId = query.getId();
     } else {
       this.timeoutAt = -1;
@@ -201,7 +205,7 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
           readNextToken();
           objectCodec = jp.getCodec();
         } else if (nextToken == JsonToken.START_OBJECT) {
-          throw convertException(readStructuredError());
+          throw readStructuredError();
         } else {
           String errMsg = jp.getValueAsString();
           if (errMsg != null) {
@@ -248,16 +252,25 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
   }
 
   /**
-   * Deserializes the structured error body {@link #init()} found in place of a result array, with the same
-   * unwrapped-{@link QueryException} handling as {@link #createParser}: the body can span chunks, so a later-chunk
-   * failure can surface from inside this read rather than from the deserialized value. An exception that comes off
-   * the stream is converted here and thrown; a QueryException that was successfully deserialized is returned for the
-   * caller to convert, so neither path is converted twice.
+   * Reads a structured error from a data server. Modern DruidException responses must retain their original
+   * persona, category, and error code. Legacy QueryException responses still use the existing conversion logic.
+   *
+   * A QueryException can also arrive directly from the transport while a response body is being read; normalize
+   * those exceptions to this iterator's host, as in the other parser methods.
    */
-  private QueryException readStructuredError() throws IOException
+  private RuntimeException readStructuredError() throws IOException
   {
     try {
-      return jp.getCodec().readValue(jp, QueryException.class);
+      final Map<String, Object> error = jp.getCodec().readValue(
+          jp,
+          new TypeReference<Map<String, Object>>()
+          {
+          }
+      );
+      if ("druidException".equals(error.get("error"))) {
+        return ErrorResponse.fromMap(error).getUnderlyingException();
+      }
+      return convertException(objectMapper.convertValue(error, QueryException.class));
     }
     catch (QueryException e) {
       throw convertException(e);

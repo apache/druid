@@ -49,7 +49,7 @@ import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.server.security.SensitiveProperties;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.assertj.core.util.Lists;
@@ -67,10 +67,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -241,18 +243,19 @@ public class ForkingTaskRunnerTest
             "-Dsome.somesecret=secretvalue",
             "-Dsome.somepassword = secret=value",
             "-Dsome.some=notasecret",
-            "-Dsome.otherSecret= =asfdhkj352872598====fasdlkjfa="
+            "-Dsome.otherSecret= =asfdhkj352872598====fasdlkjfa=",
+            // matched by hiddenProperties words and case-insensitively, which maskProperties did not do
+            "-Ddruid.s3.accessKey=accesskeyvalue",
+            "-Ddruid.zk.service.pwd=pwdvalue",
+            "-Dsome.PASSWORD=passwordvalue"
         ),
         "java -cp /path/to/somewhere:some-jars.jar /some===file /asecretFileNa=<masked> -Dsome.property=random -Dsome.otherproperty = random=random "
-        + "-Dsome.somesecret =<masked> -Dsome.somesecret=<masked> -Dsome.somepassword =<masked> -Dsome.some=notasecret -Dsome.otherSecret=<masked>"
+        + "-Dsome.somesecret =<masked> -Dsome.somesecret=<masked> -Dsome.somepassword =<masked> -Dsome.some=notasecret -Dsome.otherSecret=<masked> "
+        + "-Ddruid.s3.accessKey=<masked> -Ddruid.zk.service.pwd=<masked> -Dsome.PASSWORD=<masked>"
     );
-    StartupLoggingConfig startupLoggingConfig = new StartupLoggingConfig();
     assertEquals(
         originalAndExpectedCommand.rhs,
-        ForkingTaskRunner.getMaskedCommand(
-            startupLoggingConfig.getMaskProperties(),
-            originalAndExpectedCommand.lhs
-        )
+        ForkingTaskRunner.getMaskedCommand(new SensitiveProperties(null, null), originalAndExpectedCommand.lhs)
     );
   }
 
@@ -270,7 +273,7 @@ public class ForkingTaskRunnerTest
         new NoopTaskLogs(),
         new DefaultObjectMapper(),
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
-        new StartupLoggingConfig(),
+        new SensitiveProperties(null, null),
         TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
     )
     {
@@ -322,7 +325,7 @@ public class ForkingTaskRunnerTest
         new NoopTaskLogs(),
         mapper,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
-        new StartupLoggingConfig(),
+        new SensitiveProperties(null, null),
         TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
     )
     {
@@ -381,7 +384,7 @@ public class ForkingTaskRunnerTest
         new NoopTaskLogs(),
         mapper,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
-        new StartupLoggingConfig(),
+        new SensitiveProperties(null, null),
         dirTracker
     )
     {
@@ -502,7 +505,7 @@ public class ForkingTaskRunnerTest
         new NoopTaskLogs(),
         mapper,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
-        new StartupLoggingConfig(),
+        new SensitiveProperties(null, null),
         TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
     )
     {
@@ -526,6 +529,70 @@ public class ForkingTaskRunnerTest
     forkingTaskRunner.run(task).get();
     Assertions.assertTrue(xmxJavaOptsArrayIndex.get() > xmxJavaOptsIndex.get());
     Assertions.assertTrue(xmxJavaOptsIndex.get() >= 0);
+  }
+
+  @Test
+  public void testChildNeverInheritsAdvertisedPlaintextPort() throws ExecutionException, InterruptedException
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.advertisedPlaintextPort", "9443");
+    props.setProperty("druid.indexer.fork.property.druid.advertisedPlaintextPort", "9444");
+    final Task task = new NoopTask(
+        null,
+        null,
+        null,
+        1L,
+        0L,
+        Map.of("druid.indexer.fork.property.druid.advertisedPlaintextPort", 9445)
+    );
+    final AtomicReference<List<String>> childCommand = new AtomicReference<>();
+    final TaskConfig taskConfig = makeDefaultTaskConfigBuilder().build();
+    final WorkerConfig workerConfig = new WorkerConfig();
+    final ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
+        new ForkingTaskRunnerConfig(),
+        taskConfig,
+        workerConfig,
+        props,
+        new NoopTaskLogs(),
+        OBJECT_MAPPER,
+        new DruidNode("middleManager", "host", false, 8091, null, null, true, false, null, 9443),
+        new SensitiveProperties(null, null),
+        TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
+    )
+    {
+      @Override
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation)
+      {
+        childCommand.set(command);
+        return makeTestProcessHolder(logFile, taskLocation);
+      }
+
+      @Override
+      int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
+      {
+        return 1;
+      }
+    };
+
+    forkingTaskRunner.setNumProcessorsPerTask();
+    forkingTaskRunner.run(task).get();
+
+    final List<String> advertisedArgs = childCommand.get()
+                                                    .stream()
+                                                    .filter(arg -> arg.startsWith("-Ddruid.advertisedPlaintextPort="))
+                                                    .collect(Collectors.toList());
+    Assertions.assertTrue(
+        advertisedArgs.containsAll(
+            List.of(
+                "-Ddruid.advertisedPlaintextPort=9443",
+                "-Ddruid.advertisedPlaintextPort=9444",
+                "-Ddruid.advertisedPlaintextPort=9445"
+            )
+        ),
+        advertisedArgs.toString()
+    );
+    // The JVM keeps the last -D value, so the forced -1 must come after every inherited or overridden value.
+    Assertions.assertEquals("-Ddruid.advertisedPlaintextPort=-1", advertisedArgs.get(advertisedArgs.size() - 1));
   }
 
   @Test
@@ -556,7 +623,7 @@ public class ForkingTaskRunnerTest
         new NoopTaskLogs(),
         OBJECT_MAPPER,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
-        new StartupLoggingConfig(),
+        new SensitiveProperties(null, null),
         TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
     )
     {
@@ -612,7 +679,7 @@ public class ForkingTaskRunnerTest
         new NoopTaskLogs(),
         new DefaultObjectMapper(),
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
-        new StartupLoggingConfig(),
+        new SensitiveProperties(null, null),
         dirTracker
     )
     {
@@ -659,7 +726,7 @@ public class ForkingTaskRunnerTest
             exceptionTaskLogs,
             mapper,
             new DruidNode("middleManager", "host", false, 8091, null, true, false),
-            new StartupLoggingConfig(),
+            new SensitiveProperties(null, null),
             TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
     )
     {
@@ -725,7 +792,7 @@ public class ForkingTaskRunnerTest
         new NoopTaskLogs(),
         mapper,
         new DruidNode("middleManager", "host", false, 8091, null, true, false),
-        new StartupLoggingConfig(),
+        new SensitiveProperties(null, null),
         TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
     )
     {

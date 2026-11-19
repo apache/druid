@@ -155,6 +155,18 @@ public class ExpressionVirtualColumn implements VirtualColumn
   }
 
   @Override
+  public boolean supportsOutputNameRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public ExpressionVirtualColumn withOutputName(final String outputName)
+  {
+    return new ExpressionVirtualColumn(outputName, getExpression(), getOutputType(), expression.parsed);
+  }
+
+  @Override
   public DimensionSelector makeDimensionSelector(
       final DimensionSpec dimensionSpec,
       final ColumnSelectorFactory columnSelectorFactory

@@ -159,7 +159,7 @@ export class Measure extends ExpressionMeta {
   static extractQueryMeasures(query: SqlQuery): Measure[] {
     if (query.hasGroupBy()) return [];
     return filterMap(query.getSpace('preFromClause', '').split('\n'), line => {
-      const m = /^\s*--:MEASURE\s+(.+)$/i.exec(line);
+      const m = /^\s*--:MEASURE\s+(\S.*)$/i.exec(line);
       if (!m) return;
       const ex = SqlExpression.maybeParse(m[1]);
       if (!(ex instanceof SqlAlias)) return;

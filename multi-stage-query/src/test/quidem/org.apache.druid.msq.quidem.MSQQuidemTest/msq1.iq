@@ -82,7 +82,6 @@ order by 1;
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
@@ -191,7 +190,6 @@ order by 1;
           "type" : "NoopLimitSpec"
         },
         "context" : {
-          "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",

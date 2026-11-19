@@ -122,6 +122,18 @@ data: {
       "DruidType()"
     ]
 
+    # Binary operators tokens.
+    # Example: "< INFIX_CAST: \"::\" >".
+    binaryOperatorsTokens: [
+      "< INFIX_CAST: \"::\" >"
+    ]
+
+    # Binary operators initialization.
+    # Example: "InfixCast".
+    extraBinaryExpressions: [
+      "InfixCast"
+    ]
+
     # List of files in @includes directory that have parser method
     # implementations for parsing custom SQL statements, literals or types
     # given as part of "statementParserMethods", "literalParserMethods" or

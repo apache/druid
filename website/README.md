@@ -36,7 +36,9 @@ NPM is also supported, but Docusaurus recommends `yarn`.
 
 ## Dependencies
 
-* [NodeJS](https://nodejs.org/en/download/). Use the version Docusaurus specifies, not a
+* [mise](https://mise.jdx.dev/getting-started.html). Run `mise trust` and `mise install`
+in the `website` directory to get the correct Node.js version (pinned in `.node-version`).
+* [NodeJS](https://nodejs.org/en/download/), if you are not using mise. Use the version Docusaurus specifies, not a
 newer one. (For example, if 12.x is requested, don't install 16.x.)
 Docusaurus may require a version
 newer than that available in your Linux package repository, but older than the

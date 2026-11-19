@@ -45,6 +45,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -149,7 +150,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
         new MultipleSpecificSegmentSpec(segmentDescriptors),
         new AllColumnIncluderator(),
         false,
-        QueryContexts.override(Collections.emptyMap(), QueryContexts.BROKER_PARALLEL_MERGE_KEY, false),
+        QueryContexts.override(Collections.emptyMap(), QueryContextParameters.ENABLE_PARALLEL_MERGE, false),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,
@@ -203,7 +204,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
         new MultipleSpecificSegmentSpec(segmentDescriptors),
         new AllColumnIncluderator(),
         false,
-        QueryContexts.override(Collections.emptyMap(), QueryContexts.BROKER_PARALLEL_MERGE_KEY, false),
+        QueryContexts.override(Collections.emptyMap(), QueryContextParameters.ENABLE_PARALLEL_MERGE, false),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,
@@ -270,7 +271,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
         new MultipleSpecificSegmentSpec(segmentDescriptors),
         new AllColumnIncluderator(),
         false,
-        QueryContexts.override(Collections.emptyMap(), QueryContexts.BROKER_PARALLEL_MERGE_KEY, false),
+        QueryContexts.override(Collections.emptyMap(), QueryContextParameters.ENABLE_PARALLEL_MERGE, false),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,

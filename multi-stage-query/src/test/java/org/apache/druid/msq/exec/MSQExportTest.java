@@ -22,9 +22,9 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -36,6 +36,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -130,7 +131,7 @@ public class MSQExportTest extends MSQTestBase
   public void testExportRestricted(String unusedContextName, Map<String, Object> context) throws IOException
   {
     // Set expected results based on query's end user
-    boolean isSuperUser = context.get(MSQTaskQueryMaker.USER_KEY).equals(CalciteTests.TEST_SUPERUSER_NAME);
+    boolean isSuperUser = QueryContext.of(context).get(QueryContextParameters.USER).equals(CalciteTests.TEST_SUPERUSER_NAME);
     List<String> expectedResultRows = isSuperUser
                                       ? Arrays.asList("m1", "1.0", "2.0", "3.0", "4.0", "5.0", "6.0")
                                       : Arrays.asList("m1", "6.0");
@@ -176,7 +177,7 @@ public class MSQExportTest extends MSQTestBase
     File exportDir = newTempFolder("export");
 
     Map<String, Object> queryContext = new HashMap<>(context);
-    queryContext.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 1);
+    QueryContextParameters.ROWS_PER_PAGE.set(queryContext, 1);
 
     final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select cnt, dim1 from foo", exportDir.getAbsolutePath());
 
@@ -368,7 +369,7 @@ public class MSQExportTest extends MSQTestBase
   private List<String> readResultsFromFile(File resultFile) throws IOException
   {
     List<String> results = new ArrayList<>();
-    try (BufferedReader br = new BufferedReader(new InputStreamReader(Files.newInputStream(resultFile.toPath()), StringUtils.UTF8_STRING))) {
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(Files.newInputStream(resultFile.toPath()), StandardCharsets.UTF_8))) {
       String line;
       while (!(line = br.readLine()).isEmpty()) {
         results.add(line);
@@ -390,7 +391,7 @@ public class MSQExportTest extends MSQTestBase
     File exportDir = newTempFolder("export");
 
     Map<String, Object> queryContext = new HashMap<>(context);
-    queryContext.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 1);
+    QueryContextParameters.ROWS_PER_PAGE.set(queryContext, 1);
 
     final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select cnt, dim1 from foo limit 3", exportDir.getAbsolutePath());
 
@@ -430,7 +431,7 @@ public class MSQExportTest extends MSQTestBase
     final File manifestFile = new File(exportDir, ExportMetadataManager.MANIFEST_FILE);
     try (
         BufferedReader bufferedReader = new BufferedReader(
-            new InputStreamReader(Files.newInputStream(manifestFile.toPath()), StringUtils.UTF8_STRING)
+            new InputStreamReader(Files.newInputStream(manifestFile.toPath()), StandardCharsets.UTF_8)
         )
     ) {
       for (File file : resultFiles) {
@@ -445,7 +446,7 @@ public class MSQExportTest extends MSQTestBase
     final File metaFile = new File(exportDir, ExportMetadataManager.META_FILE);
     try (
         BufferedReader bufferedReader = new BufferedReader(
-            new InputStreamReader(Files.newInputStream(metaFile.toPath()), StringUtils.UTF8_STRING)
+            new InputStreamReader(Files.newInputStream(metaFile.toPath()), StandardCharsets.UTF_8)
         )
     ) {
       Assertions.assertEquals(

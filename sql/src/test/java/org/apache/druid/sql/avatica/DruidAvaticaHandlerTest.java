@@ -53,10 +53,11 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -71,8 +72,11 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
@@ -103,7 +107,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.skife.jdbi.v2.DBI;
@@ -165,6 +171,11 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
+
+  /**
+   * Tag of tests that run against a Broker that accepts unknown query context parameters.
+   */
+  private static final String ACCEPT_UNKNOWN_CONTEXT_PARAMETERS = "acceptUnknownContextParameters";
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static SpecificSegmentsQuerySegmentWalker walker;
@@ -273,8 +284,11 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @BeforeEach
-  public void setUp() throws Exception
+  public void setUp(final TestInfo testInfo) throws Exception
   {
+    final QueryContextConfig queryContextConfig = testInfo.getTags().contains(ACCEPT_UNKNOWN_CONTEXT_PARAMETERS)
+                                                  ? new QueryContextConfig(false)
+                                                  : QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG;
     final DruidSchemaCatalogProvider rootSchemaProvider = makeRootSchemaProvider();
     testRequestLogger = new TestRequestLogger();
 
@@ -294,6 +308,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               binder.bind(DefaultQueryConfig.class)
                     .toInstance(new DefaultQueryConfig(ImmutableMap.of("forbidden-key", "system-default-value")));
               binder.bind(QueryConfigProvider.class).to(DefaultQueryConfig.class);
+              binder.bind(QueryContextConfig.class).toInstance(queryContextConfig);
               binder.bind(RequestLogger.class).toInstance(testRequestLogger);
               binder.bind(DruidSchemaCatalogProvider.class).toInstance(rootSchemaProvider);
               binder.bind(QueryLifecycleFactory.class)
@@ -333,9 +348,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
 
     final Properties propertiesLosAngeles = new Properties();
-    propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
+    propertiesLosAngeles.setProperty(QueryContextParameters.SQL_TIME_ZONE.getName(), "America/Los_Angeles");
     propertiesLosAngeles.setProperty("user", "regularUserLA");
-    propertiesLosAngeles.setProperty(BaseQuery.SQL_QUERY_ID, DUMMY_SQL_QUERY_ID);
+    propertiesLosAngeles.setProperty(QueryContextParameters.SQL_QUERY_ID.getName(), DUMMY_SQL_QUERY_ID);
     clientLosAngeles = DriverManager.getConnection(server.url, propertiesLosAngeles);
   }
 
@@ -370,6 +385,46 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @Test
+  public void testUnknownContextKey()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("user", "regularUserLA");
+    properties.setProperty("useCahce", "false");
+    // The connection properties are the context of every statement, so they're validated when the connection opens.
+    final Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> DriverManager.getConnection(server.url, properties)
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains("Unknown query context parameter [useCahce]. Did you mean [useCache]?"),
+        e.getMessage()
+    );
+  }
+
+  @Test
+  @Tag(ACCEPT_UNKNOWN_CONTEXT_PARAMETERS)
+  public void testInvalidContextValue()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("user", "regularUserLA");
+    properties.setProperty("maxRowsQueuedForOrdering", "0");
+    final Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> DriverManager.getConnection(server.url, properties)
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains(
+            "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]"
+        ),
+        e.getMessage()
+    );
+  }
+
+  /**
+   * The authorizer only denies context keys with "forbidden" in their name, which are not query context parameters.
+   */
+  @Test
+  @Tag(ACCEPT_UNKNOWN_CONTEXT_PARAMETERS)
   public void testForbiddenContextKey() throws SQLException
   {
     final Properties propertiesSetForbiddenKey = new Properties();
@@ -1108,6 +1163,84 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @Test
+  public void testStatementExecutionFailsAuthenticationAndFreesConnectionSlot() throws Exception
+  {
+    final AvaticaServerConfig config = new AvaticaServerConfig();
+    config.maxConnections = 1;
+    config.maxStatementsPerConnection = STATEMENT_LIMIT;
+
+    final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testCreateStatementAuthFailure");
+    final List<Authenticator> authenticators = ImmutableList.of(
+        new AllowAllAuthenticator()
+        {
+          @Override
+          public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
+          {
+            if (!"druid".equals(context.get("password"))) {
+              return null;
+            }
+            return new AuthenticationResult((String) context.get("user"), AuthConfig.ALLOW_ALL_NAME, null, null);
+          }
+        }
+    );
+
+    final DruidMeta druidMeta = new DruidMeta(
+        makeStatementFactory(),
+        DefaultQueryConfig.NIL,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG,
+        config,
+        new ErrorHandler(new ServerConfig()),
+        exec,
+        authenticators,
+        new ResultFetcherFactory(config.fetchTimeoutMs)
+    );
+
+    try (final ServerWrapper authServer = new ServerWrapper(druidMeta)) {
+      try (final Connection badConnection = authServer.getConnection("regularUser", "wrong-password")) {
+        // openConnection() and createStatement() succeed even with bad credentials;
+        // authentication is deferred until the statement is actually executed.
+        final Statement badStatement = badConnection.createStatement();
+        final AvaticaSqlException ex = Assertions.assertThrows(
+            AvaticaSqlException.class,
+            () -> badStatement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo")
+        );
+        Assertions.assertTrue(ex.getMessage().contains("Unauthorized"));
+      }
+
+      // The failed connection must not have consumed the only available slot: a correctly
+      // authenticated connection should succeed immediately afterward, with no need to wait
+      // for the idle timeout or for another connection attempt to trigger closeIfEmpty() eviction.
+      try (final Connection goodConnection = authServer.getConnection("regularUser", "druid")) {
+        // Statement/ResultSet are kept open (then closed in the finally block below) because
+        // closing them immediately would let closeIfEmpty() reclaim the connection's slot before
+        // the sanity check below runs.
+        final Statement statement = goodConnection.createStatement();
+        final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+        try {
+          Assertions.assertTrue(resultSet.next());
+
+          // Sanity check the other direction: once the single slot is legitimately occupied by a
+          // connection with a real statement on it, a new connection attempt must still be blocked.
+          // The fix only frees slots on authentication failure; it must not otherwise weaken
+          // maxConnections enforcement.
+          final AvaticaClientRuntimeException blockedEx = Assertions.assertThrows(
+              AvaticaClientRuntimeException.class,
+              () -> authServer.getConnection("regularUser", "druid")
+          );
+          Assertions.assertTrue(blockedEx.getMessage().contains("Too many connections"));
+        }
+        finally {
+          resultSet.close();
+          statement.close();
+        }
+      }
+    }
+    finally {
+      exec.shutdown();
+    }
+  }
+
+  @Test
   public void testConnectionsCloseStatements() throws SQLException
   {
     for (int i = 0; i < CONNECTION_LIMIT * 2; i++) {
@@ -1163,6 +1296,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
         DefaultQueryConfig.NIL,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,
@@ -1221,6 +1355,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
         DefaultQueryConfig.NIL,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,
@@ -1401,6 +1536,27 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               new ClientSqlParameter(SqlType.VARCHAR.toString(), "abc"),
               new ClientSqlParameter(SqlType.VARCHAR.toString(), "def")
           ),
+          testRequestLogger.getSqlQueryLogs().get(0).getSqlParameters()
+      );
+    }
+  }
+
+  @Test
+  public void testFloatParameterBinding() throws SQLException
+  {
+    testRequestLogger.clear();
+    try (PreparedStatement statement = client.prepareStatement(
+        "SELECT CAST(? AS VARCHAR) AS c FROM druid.foo LIMIT 1")) {
+      statement.setFloat(1, 0.1f);
+      final ResultSet resultSet = statement.executeQuery();
+      Assertions.assertEquals(
+          ImmutableList.of(
+              ImmutableMap.of("c", "0.1")
+          ),
+          getRows(resultSet)
+      );
+      Assertions.assertEquals(
+          List.of(new ClientSqlParameter(SqlType.FLOAT.toString(), 0.1f)),
           testRequestLogger.getSqlQueryLogs().get(0).getSqlParameters()
       );
     }
@@ -1760,6 +1916,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     DruidMeta druidMeta = new DruidMeta(
         makeStatementFactory(),
         DefaultQueryConfig.NIL,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,

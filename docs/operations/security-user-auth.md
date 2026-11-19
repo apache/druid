@@ -36,6 +36,7 @@ Druid uses the following resource types:
 * DATASOURCE &ndash; Each Druid table (i.e., `tables` in the `druid` schema in SQL) is a resource.
 * CONFIG &ndash; Configuration resources exposed by the cluster components. 
 * EXTERNAL &ndash; External data read through the [EXTERN function](../multi-stage-query/concepts.md#read-external-data-with-extern) in SQL.
+* LOOKUP &ndash; Lookup configuration, status, and introspection endpoints when `druid.auth.enableLookupAuthorization` is true.
 * STATE &ndash; Cluster-wide state resources.
 * SYSTEM_TABLE &ndash; when the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true, then Druid uses this resource type to authorize the system tables in the `sys` schema in SQL.
 
@@ -80,6 +81,24 @@ This section describes the resource names available for each resource type.
 
 ### `DATASOURCE`
 Resource names for this type are datasource names. Specifying a datasource permission allows the administrator to grant users access to specific datasources.
+
+:::info
+Any authenticated user can read the contents of any [lookup](../querying/lookups.md). Avoid storing sensitive data in lookups.
+:::
+
+### `LOOKUP`
+
+When `druid.auth.enableLookupAuthorization` is true, lookup endpoints authorize against `LOOKUP` resources named `tier/lookup`. The tier comes from the URL, bulk request body, coordinator lookup state or the serving node. `READ` covers GET requests, including lookup configuration, status, node status and introspection. `WRITE` covers POST, PUT and DELETE requests.
+
+In resource names, `%` and `/` in each tier or lookup name are encoded as `%25` and `%2F` before the parts are joined. For example, lookup `x/y` in tier `a` uses `LOOKUP:a/x%2Fy`, while lookup `y` in tier `a/x` uses `LOOKUP:a%2Fx/y`.
+
+The setting is false by default, so existing lookup endpoints continue to use `CONFIG:CONFIG` until it is enabled. Before enabling it with Druid basic security, add `LOOKUP` `READ` and `WRITE` on `.*` to the existing permissions for the `admin` and `druid_system` roles. Existing roles are not updated automatically when the resource type is added.
+
+This setting applies to lookup HTTP endpoints. It does not currently change lookup use in SQL or native queries, i.e., query execution does not check `LOOKUP` permissions.
+
+Bulk GET responses omit lookups for which the caller lacks `READ` authorization. To list an empty tier, grant `READ` on `LOOKUP:<tier>`.
+
+Bulk writes check `WRITE` on every affected lookup before making changes. Deleting an empty tier checks `WRITE` on `LOOKUP:<tier>`. An empty coordinator-wide write, such as `POST /druid/coordinator/v1/lookups/config` with `{}`, checks `WRITE` on `LOOKUP:LOOKUP`.
 
 ### `CONFIG`
 There are two possible resource names for the "CONFIG" resource type, "CONFIG" and "security". Granting a user access to CONFIG resources allows them to access the following endpoints.
@@ -160,6 +179,7 @@ Queries on the [system schema tables](../querying/sql-metadata-tables.md#system-
 - `server_segments`: The user requires STATE READ permissions. Druid filters segments according to DATASOURCE READ permissions.
 - `tasks`: Druid filters tasks according to DATASOURCE READ permissions.
 - `supervisors`: Druid filters supervisors according to DATASOURCE READ permissions.
+- `query_context_parameters`: No additional permissions are required. The `effective_value` and `effective_source` columns require CONFIG READ permissions; without them, they show null and `UNAUTHORIZED`.
 
 When the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true, users also require  `SYSTEM_TABLE` authorization on a system schema table to query it.
 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+@use '../../variables' as *;
 
 .services-view {
   height: 100%;
@@ -26,7 +26,7 @@
     margin-bottom: $standard-padding;
   }
 
-  .ReactTable {
+  .console-table {
     position: absolute;
     top: $view-control-bar-height + $standard-padding;
     bottom: 0;

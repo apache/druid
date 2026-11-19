@@ -54,6 +54,7 @@ import org.apache.druid.query.aggregation.SingleValueAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
@@ -76,10 +77,10 @@ import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactor
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -124,11 +125,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testExactCountDistinctUsingSubqueryWithWhereToOuterFilter(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     final Map<String, Object> contextWithLexicographicTopN =
-        QueryContexts.override(queryContext, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+        QueryContexts.override(queryContext, QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N, true);
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
@@ -171,7 +172,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testSubqueryOnDataSourceWithMissingColumnsInSegments(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     testQuery(
@@ -442,7 +443,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testGroupByWithPostAggregatorReferencingTimeFloorColumnOnTimeseries(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     cannotVectorizeUnlessFallback();
@@ -603,7 +604,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testMinMaxAvgDailyCountWithLimit(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     testQuery(
@@ -739,8 +740,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   private void testMaxSubqueryRowsWithoutMemoryLimit(String testName, Map<String, Object> queryContext)
   {
     Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-    modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
-    modifiedQueryContext.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+    modifiedQueryContext.put(QueryContextParameters.MAX_SUBQUERY_ROWS.getName(), 1);
+    QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N.set(modifiedQueryContext, true);
 
     testQueryThrows(
         "SELECT\n"
@@ -767,8 +768,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     // Since the results are materializable as frames, we are able to use the memory limit and donot rely on the
     // row limit for the subquery
     Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-    modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
-    modifiedQueryContext.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+    modifiedQueryContext.put(QueryContextParameters.MAX_SUBQUERY_ROWS.getName(), 1);
+    QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N.set(modifiedQueryContext, true);
 
     testQuery(
         "SELECT\n"
@@ -816,7 +817,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     Throwable exception = assertThrows(UOE.class, () -> {
 
       Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-      modifiedQueryContext.put(QueryContexts.MAX_NUMERIC_IN_FILTERS, 0);
+      modifiedQueryContext.put(QueryContextParameters.MAX_NUMERIC_IN_FILTERS.getName(), 0);
 
 
       testQuery(
@@ -839,7 +840,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUseTimeFloorInsteadOfGranularityOnJoinResult(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     testQuery(
@@ -961,7 +962,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testUsingSubqueryWithLimit(String testName, Map<String, Object> queryContext)
   {
-    if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
+    if (!queryContext.containsKey(QueryContextParameters.MAX_SUBQUERY_BYTES.getName())) {
       cannotVectorize();
     }
     testQuery(
@@ -1317,7 +1318,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT  count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 2 OFFSET 6)",
         RuntimeException.class,
-        "java.util.concurrent.ExecutionException: org.apache.druid.error.DruidException: Subquery expression returned more than one row"
+            "Subquery expression returned more than one row"
     );
   }
 
@@ -1451,7 +1452,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
 
     final Map<String, Object> contextWithTopN =
-        QueryContexts.override(queryContext, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+        QueryContexts.override(queryContext, QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N, true);
     testQuery(
         "SELECT a.dim1, a.e_dim2, b.dim1 "
         + "FROM ("
@@ -1701,10 +1702,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
 
       super.addSegmentsToWalker(walker, jsonMapper);
       walker.add(
-          DataSegment.builder()
-              .dataSource(datasource1)
-              .interval(Intervals.ETERNITY)
-              .version("1")
+          DataSegment.builder(SegmentId.of(datasource1, Intervals.ETERNITY, "1", 0))
               .shardSpec(new LinearShardSpec(0))
               .size(0)
               .build(),
@@ -1712,10 +1710,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
       );
 
       walker.add(
-          DataSegment.builder()
-                     .dataSource(datasource1)
-                     .interval(Intervals.ETERNITY)
-                     .version("1")
+          DataSegment.builder(SegmentId.of(datasource1, Intervals.ETERNITY, "1", 1))
                      .shardSpec(new LinearShardSpec(1))
                      .size(0)
                      .build(),

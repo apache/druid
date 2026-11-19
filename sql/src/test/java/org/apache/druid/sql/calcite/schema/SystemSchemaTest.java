@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -80,6 +81,7 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -152,7 +154,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
@@ -320,7 +324,7 @@ public class SystemSchemaTest extends CalciteTestBase
                  .dimensions(ImmutableList.of("dim1", "dim2"))
                  .metrics(ImmutableList.of("met1", "met2"))
                  .projections(ImmutableList.of())
-                 .binaryVersion(1)
+                 .binaryVersion(10)
                  .size(47000L)
                  .build();
 
@@ -329,7 +333,7 @@ public class SystemSchemaTest extends CalciteTestBase
                  .dimensions(ImmutableList.of("dim1", "dim2"))
                  .metrics(ImmutableList.of("met1", "met2"))
                  .projections(ImmutableList.of("proj1", "proj2"))
-                 .binaryVersion(1)
+                 .binaryVersion(9)
                  .size(100L)
                  .totalRows(100)
                  .build();
@@ -353,14 +357,14 @@ public class SystemSchemaTest extends CalciteTestBase
       DataSegment.builder(SegmentId.of("test4", Intervals.of("2014/2015"), "version4", null))
                  .dimensions(ImmutableList.of("dim1", "dim2"))
                  .metrics(ImmutableList.of("met1", "met2"))
-                 .binaryVersion(1)
+                 .binaryVersion(0)
                  .size(100L)
                  .build();
   private final DataSegment segment5 =
       DataSegment.builder(SegmentId.of("test5", Intervals.of("2015/2016"), "version5", null))
                  .dimensions(ImmutableList.of("dim1", "dim2"))
                  .metrics(ImmutableList.of("met1", "met2"))
-                 .binaryVersion(1)
+                 .binaryVersion(0)
                  .size(100L)
                  .build();
 
@@ -570,17 +574,35 @@ public class SystemSchemaTest extends CalciteTestBase
         httpClient,
         () -> new SqlEngineRegistry(Collections.emptySet()),
         plannerConfig,
+        new DefaultQueryConfig(null),
+        new Properties(),
         createAuthResult(Users.SUPER),
         SystemSchemaProvider.computeAllTableNames(plannerConfig)
     );
 
     Assertions.assertEquals(
-        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "server_properties"),
+        ImmutableSet.of(
+            "segments",
+            "servers",
+            "server_segments",
+            "tasks",
+            "supervisors",
+            "server_properties",
+            "query_context_parameters"
+        ),
         schema.getTableNames()
     );
 
     Assertions.assertEquals(
-        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "server_properties"),
+        ImmutableSet.of(
+            "segments",
+            "servers",
+            "server_segments",
+            "tasks",
+            "supervisors",
+            "server_properties",
+            "query_context_parameters"
+        ),
         schema.tables().getNames(LikePattern.any())
     );
 
@@ -588,7 +610,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assertions.assertEquals(20, fields.size());
+    Assertions.assertEquals(21, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.tables().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
@@ -707,7 +729,9 @@ public class SystemSchemaTest extends CalciteTestBase
         new SegmentStatusInCluster(segment2, false, 0, null, false)
     ));
 
-    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject())).andReturn(publishedSegments.iterator()).once();
+    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
+            .andReturn(CloseableIterators.withEmptyBaggage(publishedSegments.iterator()))
+            .once();
 
     EasyMock.replay(request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext();
@@ -727,8 +751,8 @@ public class SystemSchemaTest extends CalciteTestBase
         "2010-01-01T00:00:00.000Z", "2011-01-01T00:00:00.000Z", 100L, "version1", 0L, 1L, 100L,
         //  is_active, is_published, is_available, is_realtime, is_overshadowed, shard_spec
         0L, 1L, 1L, 0L, 1L, MAPPER.writeValueAsString(SHARD_SPEC),
-        // dimensions, metrics, projections, last_compaction_state, replication_factor
-        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", "[\"proj1\",\"proj2\"]", null, 2L
+        // dimensions, metrics, projections, last_compaction_state, replication_factor, binary_version
+        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", "[\"proj1\",\"proj2\"]", null, 2L, 9L
     };
     Assertions.assertArrayEquals(segment1Expected, rows.get(0));
     Object[] segment2Expected = new Object[]{
@@ -738,8 +762,8 @@ public class SystemSchemaTest extends CalciteTestBase
         "2011-01-01T00:00:00.000Z", "2012-01-01T00:00:00.000Z", 100L, "version2", 0L, 2L, 200L,
         //  is_active, is_published, is_available, is_realtime, is_overshadowed, shard_spec
         1L, 1L, 1L, 0L, 0L, MAPPER.writeValueAsString(SHARD_SPEC),
-        // dimensions, metrics, projections, last_compaction_state, replication_factor
-        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, null, 0L
+        // dimensions, metrics, projections, last_compaction_state, replication_factor, binary_version
+        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, null, 0L, 1L
     };
     Assertions.assertArrayEquals(segment2Expected, rows.get(1));
     //segment test3 is unpublished and has a NumberedShardSpec with partitionNum = 2, is served by historical but unpublished or unused
@@ -750,8 +774,8 @@ public class SystemSchemaTest extends CalciteTestBase
         "2012-01-01T00:00:00.000Z", "2013-01-01T00:00:00.000Z", 100L, "version3", 2L, 1L, 2L,
         //  is_active, is_published, is_available, is_realtime, is_overshadowed, shard_spec
         0L, 0L, 1L, 0L, 0L, MAPPER.writeValueAsString(new NumberedShardSpec(2, 3)),
-        // dimensions, metrics, projections, last_compaction_state, replication_factor
-        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, null, -1L
+        // dimensions, metrics, projections, last_compaction_state, replication_factor, binary_version
+        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, null, -1L, 1L
     };
     Assertions.assertArrayEquals(segment3Expected, rows.get(2));
     // segments test4, test5 are not published but available (realtime segments)
@@ -762,8 +786,8 @@ public class SystemSchemaTest extends CalciteTestBase
         "2014-01-01T00:00:00.000Z", "2015-01-01T00:00:00.000Z", 100L, "version4", 0L, 1L, 0L,
         //  is_active, is_published, is_available, is_realtime, is_overshadowed, shard_spec
         1L, 0L, 1L, 1L, 0L, MAPPER.writeValueAsString(SHARD_SPEC),
-        // dimensions, metrics, projections, last_compaction_state, replication_factor
-        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, null, -1L
+        // dimensions, metrics, projections, last_compaction_state, replication_factor, binary_version
+        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, null, -1L, null
     };
     Assertions.assertArrayEquals(segment4Expected, rows.get(3));
     Object[] segment5Expected = new Object[]{
@@ -773,8 +797,8 @@ public class SystemSchemaTest extends CalciteTestBase
         "2015-01-01T00:00:00.000Z", "2016-01-01T00:00:00.000Z", 100L, "version5", 0L, 1L, 0L,
         //  is_active, is_published, is_available, is_realtime, is_overshadowed, shard_spec
         1L, 0L, 1L, 1L, 0L, MAPPER.writeValueAsString(SHARD_SPEC),
-        // dimensions, metrics, projections, last_compaction_state, replication_factor
-        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, null, -1L
+        // dimensions, metrics, projections, last_compaction_state, replication_factor, binary_version
+        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, null, -1L, null
     };
     Assertions.assertArrayEquals(segment5Expected, rows.get(4));
 
@@ -786,8 +810,8 @@ public class SystemSchemaTest extends CalciteTestBase
         "2007-01-01T00:00:00.000Z", "2008-01-01T00:00:00.000Z", 53_000L, "version1", 0L, 0L, 0L,
         //  is_active, is_published, is_available, is_realtime, is_overshadowed, shard_spec
         0L, 1L, 0L, 0L, 1L, MAPPER.writeValueAsString(SHARD_SPEC),
-        // dimensions, metrics, projections, last_compaction_state, replication_factor
-        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, MAPPER.writeValueAsString(expectedCompactionState), 2L
+        // dimensions, metrics, projections, last_compaction_state, replication_factor, binary_version
+        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, MAPPER.writeValueAsString(expectedCompactionState), 2L, 1L
     };
     Assertions.assertArrayEquals(wikiSegment1Expected, rows.get(5));
     Object[] wikiSegment2Expected = new Object[]{
@@ -797,8 +821,8 @@ public class SystemSchemaTest extends CalciteTestBase
         "2008-01-01T00:00:00.000Z", "2009-01-01T00:00:00.000Z", 83_000L, "version2", 0L, 0L, 0L,
         //  is_active, is_published, is_available, is_realtime, is_overshadowed, shard_spec
         1L, 1L, 0L, 0L, 0L, MAPPER.writeValueAsString(SHARD_SPEC),
-        // dimensions, metrics, projections, last_compaction_state, replication_factor
-        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, MAPPER.writeValueAsString(expectedCompactionState), 0L
+        // dimensions, metrics, projections, last_compaction_state, replication_factor, binary_version
+        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", null, MAPPER.writeValueAsString(expectedCompactionState), 0L, 1L
     };
     Assertions.assertArrayEquals(wikiSegment2Expected, rows.get(6));
     // wikipedia segment 3 are not compacted, and is projection aware.
@@ -809,8 +833,8 @@ public class SystemSchemaTest extends CalciteTestBase
         "2009-01-01T00:00:00.000Z", "2010-01-01T00:00:00.000Z", 47_000L, "version3", 0L, 0L, 0L,
         //  is_active, is_published, is_available, is_realtime, is_overshadowed, shard_spec
         1L, 1L, 0L, 0L, 0L, MAPPER.writeValueAsString(SHARD_SPEC),
-        // dimensions, metrics, projections, last_compaction_state, replication_factor
-        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", "[]", null, 2L
+        // dimensions, metrics, projections, last_compaction_state, replication_factor, binary_version
+        "[\"dim1\",\"dim2\"]", "[\"met1\",\"met2\"]", "[]", null, 2L, 10L
     };
     Assertions.assertArrayEquals(wikiSegment3Expected, rows.get(7));
   }
@@ -828,7 +852,9 @@ public class SystemSchemaTest extends CalciteTestBase
         new SegmentStatusInCluster(segment2, false, 0, null, false)
     ));
 
-    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject())).andReturn(publishedSegments.iterator()).once();
+    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
+            .andReturn(CloseableIterators.withEmptyBaggage(publishedSegments.iterator()))
+            .once();
 
     EasyMock.replay(request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext();
@@ -837,7 +863,8 @@ public class SystemSchemaTest extends CalciteTestBase
         Collections.emptyList(),
         new int[]{
             SystemSchema.SEGMENTS_SIGNATURE.indexOf("last_compaction_state"),
-            SystemSchema.SEGMENTS_SIGNATURE.indexOf("segment_id")
+            SystemSchema.SEGMENTS_SIGNATURE.indexOf("segment_id"),
+            SystemSchema.SEGMENTS_SIGNATURE.indexOf("binary_version")
         }
     ).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[1]).compareTo(row2[1]));
@@ -852,15 +879,18 @@ public class SystemSchemaTest extends CalciteTestBase
 
     Assertions.assertNull(rows.get(0)[0]);
     Assertions.assertEquals("test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1", rows.get(0)[1]);
+    Assertions.assertEquals(9L, rows.get(0)[2]);
 
     Assertions.assertNull(rows.get(1)[0]);
     Assertions.assertEquals("test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2", rows.get(1)[1]);
 
     Assertions.assertNull(rows.get(2)[0]);
     Assertions.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3_2", rows.get(2)[1]);
+    Assertions.assertEquals(1L, rows.get(2)[2]);
 
     Assertions.assertNull(rows.get(3)[0]);
     Assertions.assertEquals("test4_2014-01-01T00:00:00.000Z_2015-01-01T00:00:00.000Z_version4", rows.get(3)[1]);
+    Assertions.assertNull(rows.get(3)[2]);
 
     Assertions.assertNull(rows.get(4)[0]);
     Assertions.assertEquals("test5_2015-01-01T00:00:00.000Z_2016-01-01T00:00:00.000Z_version5", rows.get(4)[1]);
@@ -873,6 +903,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     Assertions.assertNull(rows.get(7)[0]);
     Assertions.assertEquals("wikipedia3_2009-01-01T00:00:00.000Z_2010-01-01T00:00:00.000Z_version3", rows.get(7)[1]);
+    Assertions.assertEquals(10L, rows.get(7)[2]);
 
     // Verify value types.
     verifyTypes(
@@ -880,8 +911,45 @@ public class SystemSchemaTest extends CalciteTestBase
         RowSignature.builder()
                     .add("last_compaction_state", ColumnType.STRING)
                     .add("segment_id", ColumnType.STRING)
+                    .add("binary_version", ColumnType.LONG)
                     .build()
     );
+  }
+
+  @Test
+  public void testSegmentsTableReleasesTheCoordinatorResponseWhenClosedEarly()
+  {
+    final SegmentsTable segmentsTable =
+        new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
+    final List<SegmentStatusInCluster> publishedSegments = List.of(
+        new SegmentStatusInCluster(segment1, true, 2, null, false),
+        new SegmentStatusInCluster(segment2, false, 0, null, false)
+    );
+    final AtomicBoolean closed = new AtomicBoolean(false);
+
+    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
+            .andReturn(CloseableIterators.wrap(publishedSegments.iterator(), () -> closed.set(true)))
+            .once();
+
+    EasyMock.replay(request, responseHolder, responseHandler, metadataView);
+    final Enumerator<Object[]> rows =
+        segmentsTable.scan(createDataContext(), Collections.emptyList(), null).enumerator();
+    Assertions.assertTrue(rows.moveNext());
+    rows.close();
+
+    Assertions.assertTrue(closed.get());
+  }
+
+  @Test
+  public void testSegmentsTableDefersTheCoordinatorFetchUntilRowsAreRead()
+  {
+    final SegmentsTable segmentsTable =
+        new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
+
+    EasyMock.replay(request, responseHolder, responseHandler, metadataView);
+    segmentsTable.scan(createDataContext(), Collections.emptyList(), null).enumerator().close();
+
+    EasyMock.verify(metadataView);
   }
 
   @Test

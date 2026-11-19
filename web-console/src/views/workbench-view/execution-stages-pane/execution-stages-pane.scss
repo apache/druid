@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-@import '../../../variables';
+@use '../../../variables' as *;
 
 .execution-stages-pane {
-  .rt-td {
+  .ct-td {
     cursor: default;
   }
 

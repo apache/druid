@@ -31,6 +31,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -122,10 +123,7 @@ public class OmniDataSegmentKillerTest
   {
     // tombstone
     DataSegment tombstone =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(Intervals.of("2021-01-01/P1D"))
-                   .version("version")
+        DataSegment.builder(SegmentId.of("test", Intervals.of("2021-01-01/P1D"), "version", 0))
                    .size(1)
                    .loadSpec(ImmutableMap.of("type", "tombstone", "path", "null"))
                    .shardSpec(new TombstoneShardSpec())

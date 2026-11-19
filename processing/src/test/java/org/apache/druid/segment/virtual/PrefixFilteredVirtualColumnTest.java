@@ -23,7 +23,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -43,6 +46,25 @@ public class PrefixFilteredVirtualColumnTest
     PrefixFilteredVirtualColumn roundTrip = MAPPER.readValue(MAPPER.writeValueAsString(virtualColumn), PrefixFilteredVirtualColumn.class);
     Assertions.assertEquals(virtualColumn, roundTrip);
     Assertions.assertArrayEquals(virtualColumn.getCacheKey(), roundTrip.getCacheKey());
+  }
+
+  @Test
+  public void testCapabilitiesSingleValuedDelegate()
+  {
+    // filtering can leave rows with no values, so the virtual column is multi-valued even if the delegate is not
+    PrefixFilteredVirtualColumn virtualColumn = new PrefixFilteredVirtualColumn(
+        "hello",
+        new DefaultDimensionSpec("column", "column", ColumnType.STRING),
+        "a"
+    );
+    final ColumnInspector inspector =
+        column -> "column".equals(column) ? ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities() : null;
+    final ColumnCapabilities capabilities = virtualColumn.capabilities(inspector, "hello");
+    Assertions.assertEquals(ColumnType.STRING, capabilities.toColumnType());
+    Assertions.assertTrue(capabilities.hasMultipleValues().isTrue());
+    Assertions.assertTrue(capabilities.hasNulls().isTrue());
+    Assertions.assertTrue(virtualColumn.capabilities("hello").hasMultipleValues().isTrue());
+    Assertions.assertNull(virtualColumn.capabilities(column -> null, "hello"));
   }
 
   @Test

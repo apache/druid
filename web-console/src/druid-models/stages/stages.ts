@@ -252,10 +252,7 @@ export interface SegmentGenerationProgressCounter {
 }
 
 export type SegmentGenerationProgressFields =
-  | 'rowsProcessed'
-  | 'rowsPersisted'
-  | 'rowsMerged'
-  | 'rowsPushed';
+  'rowsProcessed' | 'rowsPersisted' | 'rowsMerged' | 'rowsPushed';
 
 export interface WarningCounter {
   type: 'warnings';

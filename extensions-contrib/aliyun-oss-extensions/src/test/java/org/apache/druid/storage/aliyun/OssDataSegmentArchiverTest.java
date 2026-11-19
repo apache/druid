@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -77,12 +78,9 @@ public class OssDataSegmentArchiverTest
   private static final Supplier<OSS> OSS_CLIENT = Suppliers.ofInstance(EasyMock.createStrictMock(OSSClient.class));
   private static final OssDataSegmentPuller PULLER = new OssDataSegmentPuller(OSS_CLIENT.get());
   private static final DataSegment SOURCE_SEGMENT = DataSegment
-      .builder()
+      .builder(SegmentId.of("dataSource", Intervals.of("2015/2016"), "version", 0))
       .binaryVersion(1)
-      .dataSource("dataSource")
       .dimensions(ImmutableList.of())
-      .interval(Intervals.of("2015/2016"))
-      .version("version")
       .loadSpec(ImmutableMap.of(
           "type",
           OssStorageDruidModule.SCHEME_ZIP,

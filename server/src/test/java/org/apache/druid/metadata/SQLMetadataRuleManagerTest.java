@@ -42,6 +42,7 @@ import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -405,21 +406,18 @@ public class SQLMetadataRuleManagerTest
     Assertions.assertEquals(1, allRules.get(TestDataSource.WIKI).size());
 
     // Add segment metadata to segment table so that the datasource is considered active
-    DataSegment dataSegment = new DataSegment(
-        TestDataSource.WIKI,
-        Intervals.of("2015-01-01/2015-02-01"),
-        "1",
-        ImmutableMap.of(
-            "type", "s3_zip",
-            "bucket", "test",
-            "key", "test_dataSource/xxx"
-        ),
-        ImmutableList.of("dim1", "dim2", "dim3"),
-        ImmutableList.of("count", "value"),
-        NoneShardSpec.instance(),
-        1,
-        1234L
-    );
+    DataSegment dataSegment = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2015-01-01/2015-02-01"), "1", 0))
+                                         .loadSpec(ImmutableMap.of(
+                                                 "type", "s3_zip",
+                                                 "bucket", "test",
+                                                 "key", "test_dataSource/xxx"
+                                             ))
+                                         .dimensions(ImmutableList.of("dim1", "dim2", "dim3"))
+                                         .metrics(ImmutableList.of("count", "value"))
+                                         .shardSpec(NoneShardSpec.instance())
+                                         .binaryVersion(1)
+                                         .size(1234L)
+                                         .build();
     SqlSegmentsMetadataManagerTestBase.publishSegment(connector, tablesConfig, mapper, dataSegment);
 
     // This will not delete the rule as the datasource has segment in the segment metadata table

@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -39,7 +40,7 @@ import java.io.IOException;
 /**
  * Initializes the gRPC endpoint (server). This version uses a Netty-based server
  * separate from Druid's primary Jetty-based server. We may want to consider a
- * <link a="https://github.com/grpc/grpc-java/tree/master/examples/example-servlet">
+ * <a href="https://github.com/grpc/grpc-java/tree/master/examples/example-servlet">
  * recent addition to the gRPC examples</a> to run gRPC as a servlet. However, trying
  * that turned out to incur many issues, including the fact that there was no way
  * to pass the AuthenticationResult down through the many layers of gRPC into the
@@ -67,7 +68,8 @@ public class GrpcEndpointInitializer
       final QueryLifecycleFactory queryLifecycleFactory,
       final QueryConfigProvider queryConfigProvider,
       final AuthenticatorMapper authMapper,
-      final QueryScheduler queryScheduler
+      final QueryScheduler queryScheduler,
+      final QueryContextConfig queryContextConfig
   )
   {
     this.config = config;
@@ -77,7 +79,8 @@ public class GrpcEndpointInitializer
         sqlStatementFactory,
         queryConfigProvider,
         queryLifecycleFactory,
-        queryScheduler
+        queryScheduler,
+        queryContextConfig
     );
   }
 

@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.view;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -30,7 +31,6 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngines;
 import org.apache.druid.sql.destination.IngestDestination;
 
-import java.util.Map;
 
 /**
  * Engine used for getting the row type of views. Does not do any actual planning or execution of the view.
@@ -88,7 +88,7 @@ public class ViewSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(Map<String, Object> queryContext)
+  public void validateContext(QueryContext queryContext)
   {
     // No query context validation for view row typing.
   }
@@ -97,7 +97,7 @@ public class ViewSqlEngine implements SqlEngine
   public RelDataType resultTypeForSelect(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   )
   {
     return validatedRowType;
@@ -107,7 +107,7 @@ public class ViewSqlEngine implements SqlEngine
   public RelDataType resultTypeForInsert(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   )
   {
     // Can't have views of INSERT or REPLACE statements.

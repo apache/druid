@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestConfig;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchUtils;
@@ -38,6 +39,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.OperandType;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
@@ -111,10 +113,8 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           );
 
           if (matches) {
-            // Found existing one. Use this.
-            return Aggregation.create(
-                theFactory
-            );
+            // Refer to the existing sketch without adding its aggregator again.
+            return Aggregation.create(new FieldAccessPostAggregator(name, theFactory.getName()));
           }
         }
       }
@@ -154,7 +154,10 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           DefaultOperandTypeChecker
               .builder()
               .operandNames("column", "compression")
-              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+              .operandTypes(
+                  OperandType.numeric().orComplex(TDigestSketchAggregatorFactory.TYPE).coerceStrings().nullable(),
+                  OperandType.of(SqlTypeFamily.NUMERIC)
+              )
               .requiredOperandCount(1)
               .literalOperands(1)
               .build(),

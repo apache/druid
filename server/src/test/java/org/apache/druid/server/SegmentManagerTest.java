@@ -59,6 +59,7 @@ import org.apache.druid.test.utils.TestSegmentCacheManager;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
@@ -423,23 +424,20 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   @Test
   public void testLoadAndDropNonRootGenerationSegment() throws SegmentLoadingException, IOException
   {
-    final DataSegment segment = new DataSegment(
-        "small_source",
-        Intervals.of("0/1000"),
-        "0",
-        ImmutableMap.of("type", "test", "interval", Intervals.of("0/1000"), "version", 0),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        new NumberedOverwriteShardSpec(
-            PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 10,
-            10,
-            20,
-            (short) 1,
-            (short) 1
-        ),
-        0,
-        10
-    );
+    final DataSegment segment = DataSegment.builder(SegmentId.of("small_source", Intervals.of("0/1000"), "0", PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 10))
+                                           .loadSpec(ImmutableMap.of("type", "test", "interval", Intervals.of("0/1000"), "version", 0))
+                                           .dimensions(new ArrayList<>())
+                                           .metrics(new ArrayList<>())
+                                           .shardSpec(new NumberedOverwriteShardSpec(
+                                                   PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 10,
+                                                   10,
+                                                   20,
+                                                   (short) 1,
+                                                   (short) 1
+                                               ))
+                                           .binaryVersion(0)
+                                           .size(10)
+                                           .build();
 
     segmentManager.loadSegment(segment);
     assertResult(ImmutableList.of(segment));
@@ -499,7 +497,9 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     );
 
     final AcquireSegmentAction action = virtualSegmentManager.acquireSegment(toLoad, AcquireMode.FULL);
-    AcquireSegmentResult result = action.getSegmentFuture().get();
+    // await but do not release or close: the un-released action keeps the delivered segment reference open so the
+    // entry remains cached for the getSegmentsBundle call below
+    AcquireSegmentResult result = action.await();
     Assertions.assertNotNull(result);
     Assertions.assertEquals(1L, result.getLoadSizeBytes());
     Assertions.assertTrue(result.getLoadTimeNanos() > 0);

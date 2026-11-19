@@ -25,23 +25,14 @@ import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.StandardRetryPolicy;
 
 /**
- * Retry policy for {@link DartWorkerClientImpl}. This is a {@link StandardRetryPolicy#unlimited()} with
- * {@link #retryHttpResponse(HttpResponse)} customized to retry fewer HTTP error codes.
+ * Retry policy for worker-to-worker requests from {@link DartWorkerClientImpl}.
+ *
+ * <p>This is a {@link StandardRetryPolicy#unlimited()} with {@link #retryHttpResponse(HttpResponse)} customized
+ * to retry only {@link HttpResponseStatus#SERVICE_UNAVAILABLE}. This is necessary in case worker A starts up
+ * before worker B, and needs to contact it immediately.
  */
 public class DartWorkerRetryPolicy implements ServiceRetryPolicy
 {
-  private final boolean retryOnWorkerUnavailable;
-
-  /**
-   * Create a retry policy.
-   *
-   * @param retryOnWorkerUnavailable whether this policy should retry on {@link HttpResponseStatus#SERVICE_UNAVAILABLE}
-   */
-  public DartWorkerRetryPolicy(boolean retryOnWorkerUnavailable)
-  {
-    this.retryOnWorkerUnavailable = retryOnWorkerUnavailable;
-  }
-
   @Override
   public long maxAttempts()
   {
@@ -63,11 +54,7 @@ public class DartWorkerRetryPolicy implements ServiceRetryPolicy
   @Override
   public boolean retryHttpResponse(HttpResponse response)
   {
-    if (retryOnWorkerUnavailable) {
-      return HttpResponseStatus.SERVICE_UNAVAILABLE.equals(response.getStatus());
-    } else {
-      return false;
-    }
+    return HttpResponseStatus.SERVICE_UNAVAILABLE.equals(response.status());
   }
 
   @Override

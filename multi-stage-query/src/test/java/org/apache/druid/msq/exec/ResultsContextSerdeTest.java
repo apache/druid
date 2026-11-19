@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
@@ -98,7 +99,7 @@ public class ResultsContextSerdeTest
         engine,
         null, // No authentication result needed for this test
         Collections.emptySet(),
-        Collections.emptyMap(),
+        QueryContext.empty(),
         null
     );
     this.resultsContext = new ResultsContext(

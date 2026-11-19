@@ -22,7 +22,7 @@ package org.apache.druid.data.input.protobuf;
 import com.google.protobuf.Struct;
 import com.google.protobuf.Value;
 import com.google.protobuf.util.JsonFormat;
-import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.error.DruidException;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -115,8 +115,8 @@ public class FileBasedProtobufBytesDecoderTest
   public void testBadProto()
   {
     final var ex = assertThrows(
-        ParseException.class,
-        () -> new FileBasedProtobufBytesDecoder("proto_test_event.desc", "BadName")
+        DruidException.class,
+        () -> new FileBasedProtobufBytesDecoder("proto_test_event.desc", "BadName").getDescriptor()
     );
 
     assertEquals(
@@ -128,10 +128,9 @@ public class FileBasedProtobufBytesDecoderTest
   @Test
   public void testMalformedDescriptorUrl()
   {
-    final var ex = assertThrows(
-        ParseException.class,
-        () -> new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName")
-    );
+    // Construction must not touch the URL; the failure surfaces only on first use.
+    final var decoder = assertDoesNotThrow(() -> new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName"));
+    final var ex = assertThrows(DruidException.class, decoder::getDescriptor);
 
     assertEquals(
         "Failed to initialize descriptor at [file:/nonexist.desc]",

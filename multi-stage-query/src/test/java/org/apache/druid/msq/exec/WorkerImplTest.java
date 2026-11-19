@@ -21,8 +21,8 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +58,7 @@ public class WorkerImplTest
   public void test_makeWorkOrderToUse_missingOutputChannelModeAndWorkerContext()
   {
     final Map<String, Object> taskContext =
-        ImmutableMap.of("foo", "bar", MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true);
+        QueryContext.builder().putRaw("foo", "bar").put(QueryContextParameters.DURABLE_SHUFFLE_STORAGE, true).toMap();
 
     final WorkOrder workOrder = new WorkOrder(
         QueryValidatorTest.createQueryDefinition(10, 2),

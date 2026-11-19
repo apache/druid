@@ -22,8 +22,8 @@ package org.apache.druid.sql.calcite.run;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.query.QueryContext;
 
-import java.util.Map;
 import java.util.Set;
 
 public class SqlEngines
@@ -37,11 +37,11 @@ public class SqlEngines
    * This is a helper function used by {@link SqlEngine#validateContext} implementations.
    */
   public static void validateNoSpecialContextKeys(
-      final Map<String, Object> queryContext,
+      final QueryContext queryContext,
       final Set<String> specialContextKeys
   )
   {
-    for (String contextParameterName : queryContext.keySet()) {
+    for (String contextParameterName : queryContext.asMap().keySet()) {
       if (specialContextKeys.contains(contextParameterName)) {
         throw InvalidInput.exception("Query context parameter [%s] is not allowed", contextParameterName);
       }

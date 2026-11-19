@@ -25,9 +25,10 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultQueryMetricsTest;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -69,7 +70,7 @@ public class DefaultGroupByQueryMetricsTest extends InitializedNullHandlingTest
         )).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
-        .setContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true));
+        .setContext(QueryContext.ofMap(QueryContextParameters.BY_SEGMENT, true));
     GroupByQuery query = builder.build();
     queryMetrics.query(query);
 
@@ -87,7 +88,7 @@ public class DefaultGroupByQueryMetricsTest extends InitializedNullHandlingTest
     Assertions.assertEquals("true", actualEvent.get("hasFilters"));
     Assertions.assertEquals(expectedInterval.toDuration().toString(), actualEvent.get("duration"));
     Assertions.assertEquals("", actualEvent.get(DruidMetrics.ID));
-    Assertions.assertEquals(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true), actualEvent.get("context"));
+    Assertions.assertEquals(QueryContext.ofMap(QueryContextParameters.BY_SEGMENT, true), actualEvent.get("context"));
 
     // GroupBy-specific dimensions
     Assertions.assertEquals("1", actualEvent.get("numDimensions"));

@@ -16,46 +16,13 @@
  * limitations under the License.
  */
 
-import type * as playwright from 'playwright-chromium';
+import { WorkbenchOverview } from './component/workbench/overview';
+import { expect, test } from './util/fixtures';
 
-import { QueryOverview } from './component/query/overview';
-import { saveScreenshotIfError } from './util/debug';
-import { UNIFIED_CONSOLE_URL } from './util/druid';
-import { createBrowser, createPage } from './util/playwright';
-import { waitTillWebConsoleReady } from './util/setup';
-
-jest.setTimeout(5 * 60 * 1000);
-
-describe('Cancel query', () => {
-  let browser: playwright.Browser;
-  let page: playwright.Page;
-
-  beforeAll(async () => {
-    await waitTillWebConsoleReady();
-    browser = await createBrowser();
-  });
-
-  beforeEach(async () => {
-    page = await createPage(browser);
-  });
-
-  afterAll(async () => {
-    await browser.close();
-  });
-
-  it('delete accepted', async () => {
-    const testName = 'cancel-query';
-    await saveScreenshotIfError(testName, page, async () => {
-      await validateCancelQuery(page);
-    });
+test.describe('Cancel query', () => {
+  test('delete accepted', async ({ page }) => {
+    const workbench = new WorkbenchOverview(page);
+    const status = await workbench.cancelQuery('SELECT sleep(40)');
+    expect(status).toBe(202);
   });
 });
-
-async function validateCancelQuery(page: playwright.Page) {
-  const queryOverview = new QueryOverview(page, UNIFIED_CONSOLE_URL);
-  const query = 'SELECT sleep(40)';
-  const results = await queryOverview.cancelQuery(query);
-  expect(results).toBeDefined();
-  expect(results).toBeGreaterThan(0);
-  expect(results).toStrictEqual(202);
-}

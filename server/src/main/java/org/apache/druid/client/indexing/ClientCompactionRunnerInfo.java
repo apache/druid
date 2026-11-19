@@ -26,8 +26,10 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -135,7 +137,8 @@ public class ClientCompactionRunnerInfo
       validationResults.add(validatePartitionsSpecForMSQ(
           newConfig.getTuningConfig().getPartitionsSpec(),
           dimensionSchemas,
-          newConfig.getTransformSpec() == null ? VirtualColumns.EMPTY : newConfig.getTransformSpec().getVirtualColumns()
+          newConfig.getTransformSpec() == null ? VirtualColumns.EMPTY : newConfig.getTransformSpec().getVirtualColumns(),
+          newConfig.isSealed()
       ));
     }
     if (newConfig.getGranularitySpec() != null) {
@@ -160,6 +163,22 @@ public class ClientCompactionRunnerInfo
       @Nullable PartitionsSpec partitionsSpec,
       @Nullable List<DimensionSchema> dimensionSchemas,
       VirtualColumns virtualColumns
+  )
+  {
+    return validatePartitionsSpecForMSQ(partitionsSpec, dimensionSchemas, virtualColumns, true);
+  }
+
+  /**
+   * {@code schemaIsComplete} says whether {@code dimensionSchemas} is the whole schema the segments will have. When it
+   * is not, as for an unsealed base table whose undeclared columns are only discovered by analyzing the segments, a
+   * partition dimension missing from it is left alone rather than read as a non-string column: it may yet be
+   * inferred, and the type is checked again at task time against the schema inference produced.
+   */
+  public static CompactionConfigValidationResult validatePartitionsSpecForMSQ(
+      @Nullable PartitionsSpec partitionsSpec,
+      @Nullable List<DimensionSchema> dimensionSchemas,
+      VirtualColumns virtualColumns,
+      boolean schemaIsComplete
   )
   {
     if (partitionsSpec == null) {
@@ -200,6 +219,9 @@ public class ClientCompactionRunnerInfo
                 virtualColumn.capabilities(inspector, virtualColumn.getOutputName())
             );
           }
+        }
+        if (partitionType == null && !schemaIsComplete) {
+          continue;
         }
         if (!ColumnType.STRING.equals(partitionType)) {
           nonString = dim;
@@ -242,8 +264,13 @@ public class ClientCompactionRunnerInfo
   public static CompactionConfigValidationResult validateMaxNumTasksForMSQ(Map<String, Object> context)
   {
     if (context != null) {
-      int maxNumTasks = QueryContext.of(context)
-                                    .getInt(ClientMSQContext.CTX_MAX_NUM_TASKS, ClientMSQContext.DEFAULT_MAX_NUM_TASKS);
+      final int maxNumTasks;
+      try {
+        maxNumTasks = QueryContext.of(context).getOrDefault(QueryContextParameters.MAX_NUM_TASKS);
+      }
+      catch (BadQueryContextException e) {
+        return CompactionConfigValidationResult.failure("MSQ: %s", e.getMessage());
+      }
       if (maxNumTasks < 2) {
         return CompactionConfigValidationResult.failure(
             "MSQ: Context maxNumTasks[%,d] must be at least 2 (1 controller + 1 worker)",

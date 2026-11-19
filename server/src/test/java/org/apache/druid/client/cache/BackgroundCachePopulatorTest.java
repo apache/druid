@@ -180,7 +180,7 @@ public class BackgroundCachePopulatorTest
 
   /**
   *
-  * Method: wrap(final Sequence<T> sequence, final Function<T, CacheType> cacheFn, final Cache cache, final Cache.NamedKey cacheKey)
+  * Method: {@code wrap(final Sequence<T> sequence, final Function<T, CacheType> cacheFn, final Cache cache, final Cache.NamedKey cacheKey)}
   *
   */
   @Test

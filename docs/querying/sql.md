@@ -45,7 +45,8 @@ For more information and SQL querying options see:
 
 For information about APIs, see:
 - [Druid SQL API](../api-reference/sql-api.md) for information on the HTTP API.
-- [SQL JDBC driver API](../api-reference/sql-jdbc.md) for information about the JDBC driver API.
+- [Druid JDBC driver](./sql-jdbc.md) for information about the recommended JDBC driver.
+- [Avatica JDBC driver](./sql-jdbc-avatica.md) for information about the alternative Avatica JDBC driver.
 - [SQL query context](./sql-query-context.md) for information about the query context parameters that affect SQL planning.
 
 ## Syntax
@@ -342,11 +343,11 @@ Certain limitations apply when you use a top-level UNION ALL. For all top-level 
 
 ### Table-level
 
-In table-level queries, you must use UNION ALL in a subquery in the FROM clause, and create the lower-level subqueries that are inputs to the UNION ALL operator as simple table SELECTs. You can't use features like expressions, column aliasing, JOIN, GROUP BY, or ORDER BY in table-level queries.
+In table-level queries, you must use UNION or UNION ALL in a subquery in the FROM clause, and create the lower-level subqueries that are inputs to the UNION operator as simple table SELECTs. Each input can filter its table with WHERE, and can select expressions and alias columns, but can't use features like JOIN, GROUP BY, or ORDER BY.
 
 The query runs natively using a [union datasource](datasource.md#union).
 
-At table-level queries, you must select the same columns from each table in the same order, and those columns must either have the same types, or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally more robust to write your queries to select specific columns. If you use `SELECT *`, you must modify your queries if a new column is added to one table but not to the others.
+At table-level queries, you must select the same number of columns from each table, which are matched up by position, and those columns must either have the same types, or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally more robust to write your queries to select specific columns. If you use `SELECT *`, you must modify your queries if a new column is added to one table but not to the others.
 
 For example:
 
@@ -381,7 +382,7 @@ Request logs show the exact native query that will be run. Alternatively, to see
 
 ## SET
 
-SET statements allow you to specify SQL query context parameters that modify the behavior of a Druid SQL query. You can include one or more SET statements before the main SQL query. Druid supports using SET in the Druid SQL [JSON API](../api-reference/sql-api.md) and the [web console](../operations/web-console.md). 
+SET statements allow you to specify SQL query context parameters that modify the behavior of a Druid SQL query. You can include one or more SET statements before the main SQL query. Druid supports using SET in the Druid SQL [JSON API](../api-reference/sql-api.md), the [web console](../operations/web-console.md), and the [Druid JDBC driver](./sql-jdbc.md#set-statements). 
 
 The syntax of a `SET` statement is:
 
@@ -398,13 +399,31 @@ SET timeout = 90000;
 SELECT some_column, COUNT(*) FROM druid.foo WHERE other_column = 'foo' GROUP BY 1 ORDER BY 2 DESC
 ```
 
-SET statements only apply to the query in the same request. Subsequent requests are not affected.
+In the JSON API and the web console, SET statements only apply to the query in the same request. Subsequent requests are not affected. With the [Druid JDBC driver](./sql-jdbc.md#set-statements), they apply to all subsequent queries on the same connection.
 
 SET statements work with SELECT, INSERT, and REPLACE queries.
 
 If you use the [JSON API](../api-reference/sql-api.md), you can also include query context parameters using the `context` field. If you include both, the parameter value in SET takes precedence over the parameter value in `context`.
 
 Note that you can only use SET to assign literal values, such as numbers, strings, or Booleans. To set a query context parameter to an array or JSON object, use the `context` field rather than SET.
+
+A Boolean parameter accepts `true` or `false`, as a Boolean or as a string in any case, and `1` or `0`, as an integer or as a string. Other values, including floating-point numbers such as `1.0`, are rejected. For example, these statements are all valid:
+
+```sql
+SET useCache = false;
+SET useCache = 'FALSE';
+SET useCache = 0;
+SET populateCache = '1';
+```
+
+An integer or long parameter also accepts a [human-readable number](../configuration/human-readable-byte.md) as a string. The unit can follow the number directly or after a space, such as `'1MiB'` or `'1 MiB'`. Unlike in runtime properties, a human-readable number here can also be negative, such as `'-2K'`, for a parameter that allows negative values. For example:
+
+```sql
+SET maxSubqueryRows = '100K';
+SET maxScatterGatherBytes = '1MiB';
+SET maxScatterGatherBytes = '1 MiB';
+SET priority = '-2K';
+```
 
 For other approaches to set the query context, see [Set query context](./query-context.md).
 
@@ -426,7 +445,8 @@ written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL 
 Druid SQL supports dynamic parameters using question mark (`?`) syntax, where parameters are bound to `?` placeholders
 at execution time. To use dynamic parameters, replace any literal in the query with a `?` character and provide a
 corresponding parameter value when you execute the query. Parameters are bound to the placeholders in the order in
-which they are passed. Parameters are supported in both the [HTTP POST](../api-reference/sql-api.md) and [JDBC](../api-reference/sql-jdbc.md) APIs.
+which they are passed. Parameters are supported in the [HTTP POST](../api-reference/sql-api.md) API and by both the
+[Druid](./sql-jdbc.md) and [Avatica](./sql-jdbc-avatica.md) JDBC drivers.
 
 Druid supports double and null values in arrays for dynamic queries.
 The following example query uses the [ARRAY_CONTAINS](./sql-functions.md#array_contains) function to return `doubleArrayColumn` when the reference array `[-25.7, null, 36.85]` contains all elements of the value of `doubleArrayColumn`:
@@ -462,7 +482,7 @@ SELECT arrayColumn from druid.table where ARRAY_CONTAINS(arrayColumn, ?)
 ```
 
 You can replace an IN filter with many values by dynamically passing a parameter into [SCALAR_IN_ARRAY](sql-functions.md#scalar_in_array).
-For example Java queries, see [Dynamic parameters](../api-reference/sql-jdbc.md#dynamic-parameters).
+For example Java queries, see [Dynamic parameters](./sql-jdbc-avatica.md#dynamic-parameters).
 
 ```sql
 SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)

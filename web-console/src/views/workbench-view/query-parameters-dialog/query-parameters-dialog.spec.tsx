@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { QueryParametersDialog } from './query-parameters-dialog';
 
 describe('QueryParametersDialog', () => {
   it('matches snapshot', () => {
-    const comp = shallow(
+    render(
       <QueryParametersDialog
         queryParameters={[
           { type: 'VARCHAR', value: 'Hello world' },
@@ -36,11 +36,11 @@ describe('QueryParametersDialog', () => {
       />,
     );
 
-    expect(comp).toMatchSnapshot();
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 
   it('handles ARRAY type parameters correctly', () => {
-    const comp = shallow(
+    render(
       <QueryParametersDialog
         queryParameters={[
           { type: 'ARRAY', value: [1, 2, 3] },
@@ -52,6 +52,6 @@ describe('QueryParametersDialog', () => {
       />,
     );
 
-    expect(comp).toMatchSnapshot();
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

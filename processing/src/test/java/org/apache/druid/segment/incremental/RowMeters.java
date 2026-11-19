@@ -31,6 +31,7 @@ public class RowMeters
   private long processedWithError;
   private long unparseable;
   private final Map<String, Long> thrownAwayByReason = new HashMap<>();
+  private long filtered;
 
   /**
    * Creates a new {@link RowMeters}, that can be used to build an instance of
@@ -71,8 +72,14 @@ public class RowMeters
     return this;
   }
 
+  public RowMeters filtered(long filtered)
+  {
+    this.filtered = filtered;
+    return this;
+  }
+
   public RowIngestionMetersTotals totalProcessed(long processed)
   {
-    return new RowIngestionMetersTotals(processed, processedBytes, processedWithError, thrownAwayByReason, unparseable);
+    return new RowIngestionMetersTotals(processed, processedBytes, processedWithError, thrownAwayByReason, unparseable, filtered);
   }
 }

@@ -22,6 +22,8 @@ package org.apache.druid.segment.file;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 /**
  * Relative starting offset and size of an internal 'file' of a {@link SegmentFileContainerMetadata}
  */
@@ -59,5 +61,24 @@ public class SegmentInternalFileMetadata
   public long getSize()
   {
     return size;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final SegmentInternalFileMetadata that = (SegmentInternalFileMetadata) o;
+    return container == that.container && startOffset == that.startOffset && size == that.size;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(container, startOffset, size);
   }
 }

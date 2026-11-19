@@ -27,10 +27,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.api.container.ContainerException;
 import com.sun.jersey.api.core.HttpContext;
-import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -49,7 +47,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * See {@link ClientSqlQuery} for the equivalent POJO class used on the client side to interact with the Broker.
@@ -58,22 +55,12 @@ import java.util.stream.Collectors;
  */
 public class SqlQuery
 {
-  public static List<TypedValue> getParameterList(List<SqlParameter> parameters)
-  {
-    return parameters.stream()
-                     // null params are not good!
-                     // we pass them to the planner, so that it can generate a proper error message.
-                     // see SqlParameterizerShuttle and RelParameterizerShuttle.
-                     .map(p -> p == null ? null : p.getTypedValue())
-                     .collect(Collectors.toList());
-  }
-
   private final String query;
   private final ResultFormat resultFormat;
   private final boolean header;
   private final boolean typesHeader;
   private final boolean sqlTypesHeader;
-  private final Map<String, Object> context;
+  private final QueryContext queryContext;
   private final List<SqlParameter> parameters;
 
   @JsonCreator
@@ -92,7 +79,7 @@ public class SqlQuery
     this.header = header;
     this.typesHeader = typesHeader;
     this.sqlTypesHeader = sqlTypesHeader;
-    this.context = context == null ? ImmutableMap.of() : context;
+    this.queryContext = QueryContext.of(context);
     this.parameters = parameters == null ? ImmutableList.of() : parameters;
 
     if (typesHeader && !header) {
@@ -153,23 +140,18 @@ public class SqlQuery
   @JsonProperty
   public Map<String, Object> getContext()
   {
-    return context;
+    return queryContext.asMap();
   }
 
   public QueryContext queryContext()
   {
-    return QueryContext.of(context);
+    return queryContext;
   }
 
   @JsonProperty
   public List<SqlParameter> getParameters()
   {
     return parameters;
-  }
-
-  public List<TypedValue> getParameterList()
-  {
-    return getParameterList(parameters);
   }
 
   @Override
@@ -187,14 +169,14 @@ public class SqlQuery
            sqlTypesHeader == sqlQuery.sqlTypesHeader &&
            Objects.equals(query, sqlQuery.query) &&
            resultFormat == sqlQuery.resultFormat &&
-           Objects.equals(context, sqlQuery.context) &&
+           Objects.equals(queryContext, sqlQuery.queryContext) &&
            Objects.equals(parameters, sqlQuery.parameters);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, resultFormat, header, typesHeader, sqlTypesHeader, context, parameters);
+    return Objects.hash(query, resultFormat, header, typesHeader, sqlTypesHeader, queryContext, parameters);
   }
 
   @Override
@@ -206,7 +188,7 @@ public class SqlQuery
            ", header=" + header +
            ", typesHeader=" + typesHeader +
            ", sqlTypesHeader=" + sqlTypesHeader +
-           ", context=" + context +
+           ", context=" + queryContext +
            ", parameters=" + parameters +
            '}';
   }

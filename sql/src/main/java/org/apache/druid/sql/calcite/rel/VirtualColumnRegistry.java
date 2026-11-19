@@ -78,16 +78,23 @@ public class VirtualColumnRegistry
     this.forceExpressionVirtualColumns = forceExpressionVirtualColumns;
   }
 
+  /**
+   * Creates a registry whose virtual columns are named so as to collide with neither the columns of
+   * {@code rowSignature} nor {@code reservedNames}.
+   */
   public static VirtualColumnRegistry create(
       final RowSignature rowSignature,
       final ExpressionParser expressionParser,
-      final boolean forceExpressionVirtualColumns
+      final boolean forceExpressionVirtualColumns,
+      final Collection<String> reservedNames
   )
   {
+    final List<String> names = new ArrayList<>(rowSignature.getColumnNames());
+    names.addAll(reservedNames);
     return new VirtualColumnRegistry(
         rowSignature,
         expressionParser,
-        Calcites.findUnusedPrefixForDigits("v", rowSignature.getColumnNames()),
+        Calcites.findUnusedPrefixForDigits("v", names),
         forceExpressionVirtualColumns,
         new HashMap<>(),
         new HashMap<>()

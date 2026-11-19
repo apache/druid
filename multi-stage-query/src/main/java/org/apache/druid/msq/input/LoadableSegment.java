@@ -26,6 +26,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 
@@ -76,9 +77,19 @@ public interface LoadableSegment
   Optional<Segment> acquireIfCached(AcquireMode acquireMode);
 
   /**
-   * Acquire the actual segment. Non-blocking operation. Once this is called, callers are responsible for closing the
-   * {@link AcquireSegmentAction}.
-   *
+   * Acquire the actual segment. Non-blocking operation; the load (if one is needed) starts immediately. The returned
+   * {@link AcquireSegmentAction} is an async handle: register it with cleanup machinery right away (safe at any
+   * lifecycle point), wait for readiness via {@link AcquireSegmentAction#addReadyCallback} or
+   * {@link AcquireSegmentAction#await}, then {@link AcquireSegmentAction#release()} to take ownership of the
+   * {@link AcquireSegmentResult}. Closing the delivered {@link Segment} of the result releases everything associated
+   * with the acquisition. Closing the action without releasing cancels an in-flight load or discards a delivered
+   * result; close-after-release is a no-op, and closing before the action becomes ready fires any pending ready
+   * callbacks (release/get then throw {@link org.apache.druid.common.asyncresource.AsyncResourceCanceledException}).
+   * <p>
+   * Load accounting is automatic: implementations install an {@link AcquireSegmentAction#setOnRelease} hook on the
+   * returned action, so a successful release counts the load exactly once. The file itself is counted only when the
+   * consumer calls {@link #countHandedOut()}.
+   * <p>
    * The {@code acquireMode} selects how the segment is loaded; see {@link AcquireMode}. With {@link AcquireMode#PARTIAL}
    * the returned {@link Segment} is mounted but, for a partial-download (virtual storage) segment, may not be fully
    * downloaded yet: its data is fetched on demand at cursor-build time. Callers must therefore access it through the
@@ -88,6 +99,14 @@ public interface LoadableSegment
    * @throws DruidException if the segment has already been acquired
    */
   AcquireSegmentAction acquire(AcquireMode acquireMode);
+
+  /**
+   * Counts this segment as a file read, using the row and byte counts recorded when it was acquired. The consumer
+   * should only call this on segments that are handed out for processing to ensure counters don't overcount segments
+   * acquired but subsequently skipped. Does nothing if the segment has not been acquired, or if it has already been
+   * counted.
+   */
+  void countHandedOut();
 
   /**
    * Returns a future for the {@link DataSegment} object. For {@link RegularLoadableSegment}, the future is created
