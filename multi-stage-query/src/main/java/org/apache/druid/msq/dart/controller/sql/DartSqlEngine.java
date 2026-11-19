@@ -112,6 +112,42 @@ public class DartSqlEngine implements SqlEngine
       QueryContextConfig queryContextConfig
   )
   {
+    this(
+        controllerContextFactory,
+        controllerRegistry,
+        controllerConfig,
+        controllerThreadPool,
+        queryKitSpecFactory,
+        queryKit,
+        serverConfig,
+        queryConfigProvider,
+        toolbox,
+        sqlClients,
+        queryContextConfig,
+        DartModules.DART_PROPERTY_BASE + ".query.context"
+    );
+  }
+
+  /**
+   * Constructor for subclasses whose default query context is bound from another runtime property.
+   *
+   * @param defaultQueryContextProperty runtime property of the default query context, named when it is invalid
+   */
+  protected DartSqlEngine(
+      DartControllerContextFactory controllerContextFactory,
+      DartControllerRegistry controllerRegistry,
+      DartControllerConfig controllerConfig,
+      ControllerThreadPool controllerThreadPool,
+      DartQueryKitSpecFactory queryKitSpecFactory,
+      MultiQueryKit queryKit,
+      ServerConfig serverConfig,
+      QueryConfigProvider queryConfigProvider,
+      SqlToolbox toolbox,
+      DartSqlClients sqlClients,
+      QueryContextConfig queryContextConfig,
+      String defaultQueryContextProperty
+  )
+  {
     try {
       QueryContextParameterValidator.validate(
           queryConfigProvider.getContext().asMap(),
@@ -122,7 +158,7 @@ public class DartSqlEngine implements SqlEngine
       throw new IAE(
           e,
           "Invalid default query context [%s]: %s",
-          DartModules.DART_PROPERTY_BASE + ".query.context",
+          defaultQueryContextProperty,
           e.getMessage()
       );
     }
