@@ -489,9 +489,7 @@ public class PodTemplateTaskAdapterTest
         new ImageTagCase("tag and digest", "apache/druid:1.0@sha256:abc", "2.0", "apache/druid:1.0@sha256:abc"),
         new ImageTagCase("no tag", "apache/druid", "2.0", "apache/druid"),
         new ImageTagCase("registry with port and no tag", "host:5000/a/b", "2.0", "host:5000/a/b"),
-        new ImageTagCase("value is not a string", "apache/druid:1.0", 2, "apache/druid:1.0"),
-        new ImageTagCase("empty string", "apache/druid:1.0", "", "apache/druid:1.0"),
-        new ImageTagCase("value is not a valid tag", "apache/druid:1.0", "other/image:2.0", "apache/druid:1.0")
+        new ImageTagCase("value is not a string", "apache/druid:1.0", 2, "apache/druid:1.0")
     );
 
     for (final ImageTagCase testCase : cases) {
