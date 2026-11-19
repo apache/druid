@@ -249,16 +249,33 @@ public class JsonConfiguratorTest
   @Test
   public void testNestedViolationNamesFullPath()
   {
+    assertViolationPath("inner.count", "0", "inner.count");
+  }
+
+  @Test
+  public void testListElementViolationNamesFullPath()
+  {
+    assertViolationPath("items", "[{\"count\":0}]", "items[0].count");
+  }
+
+  @Test
+  public void testInheritedFieldViolationNamesFullPath()
+  {
+    assertViolationPath("child.count", "0", "child.count");
+  }
+
+  private void assertViolationPath(String property, String value, String expectedPath)
+  {
     final JsonConfigurator configurator = new JsonConfigurator(
         jsonMapper,
         Validation.buildDefaultValidatorFactory().getValidator()
     );
-    properties.setProperty(PROP_PREFIX + "inner.count", "0");
+    properties.setProperty(PROP_PREFIX + property, value);
     final ProvisionException e = Assertions.assertThrows(
         ProvisionException.class,
         () -> configurator.configurate(properties, PROP_PREFIX, Outer.class)
     );
-    Assertions.assertTrue(e.getMessage().contains(PROP_PREFIX + "inner.count - "), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains(PROP_PREFIX + expectedPath + " - "), e.getMessage());
   }
 
   static class Outer
@@ -266,6 +283,14 @@ public class JsonConfiguratorTest
     @JsonProperty
     @Valid
     Inner inner;
+
+    @JsonProperty
+    @Valid
+    List<Inner> items;
+
+    @JsonProperty
+    @Valid
+    InnerChild child;
   }
 
   static class Inner
@@ -273,6 +298,10 @@ public class JsonConfiguratorTest
     @JsonProperty
     @Min(1)
     int count = 1;
+  }
+
+  static class InnerChild extends Inner
+  {
   }
 }
 
