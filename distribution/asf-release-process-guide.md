@@ -376,7 +376,7 @@ Once the release branch is good for an RC, you can build a new tag with:
 
 ```bash
 $ git checkout --detach 37.0.0
-$ mvn -N versions:set-property -Dproperty=revision -DnewVersion=37.0.0 -DgenerateBackupPoms=false
+$ mvn -N versions:set-property versions:set-scm-tag -Dproperty=revision -DnewVersion=37.0.0 -DnewTag=druid-37.0.0-rc1 -DgenerateBackupPoms=false
 $ git commit -am "Prepare release druid-37.0.0-rc1"
 $ git tag druid-37.0.0-rc1
 $ git push origin tag druid-37.0.0-rc1

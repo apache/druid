@@ -1599,7 +1599,7 @@
                 <!-- Resolves ${revision} in installed/deployed POMs so that consumers can resolve parent POMs. -->
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.7.0</version>
+                <version>1.8.0</version>
                 <configuration>
                     <updatePomFile>true</updatePomFile>
                     <flattenMode>resolveCiFriendliesOnly</flattenMode>
