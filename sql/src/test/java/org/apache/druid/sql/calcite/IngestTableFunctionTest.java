@@ -692,13 +692,14 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         httpDataSource.getSignature()
     );
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT *\n" +
-             "FROM TABLE(http(userName => 'bob',\n" +
-             "                password => 'secret',\n" +
-             "                uris => ARRAY['http://example.com/foo.csv', 'http://example.com/a-longer-name.csv'],\n" +
-             "                format => 'csv'))\n" +
-             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
-             "PARTITIONED BY ALL TIME")
+        .sql("""
+            INSERT INTO dst SELECT *
+            FROM TABLE(http(userName => 'bob',
+                            password => 'secret',
+                            uris => ARRAY['http://example.com/foo.csv', 'http://example.com/a-longer-name.csv'],
+                            format => 'csv'))
+                 EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
+            PARTITIONED BY ALL TIME""")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", differentLengthDataSource.getSignature())
         .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
@@ -758,13 +759,14 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testHttpFnDifferentLengthArrayElementCastLiteralRejected()
   {
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT *\n" +
-             "FROM TABLE(http(userName => 'bob',\n" +
-             "                password => 'secret',\n" +
-             "                uris => ARRAY['http://foo.com/a-longer-name.csv', CAST('http://foo.com/bar.csv' AS VARCHAR)],\n" +
-             "                format => 'csv'))\n" +
-             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
-             "PARTITIONED BY ALL TIME")
+        .sql("""
+            INSERT INTO dst SELECT *
+            FROM TABLE(http(userName => 'bob',
+                            password => 'secret',
+                            uris => ARRAY['http://foo.com/a-longer-name.csv', CAST('http://foo.com/bar.csv' AS VARCHAR)],
+                            format => 'csv'))
+                 EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
+            PARTITIONED BY ALL TIME""")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectValidationError(
             DruidExceptionMatcher.invalidSqlInput().expectMessageContains(
