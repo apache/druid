@@ -169,8 +169,10 @@ public class BaseUserDefinedTableMacro extends SqlUserDefinedTableMacro
     switch (node.getKind()) {
       case CAST:
         final SqlNode operand = ((SqlCall) node).operand(0);
-        if (node.getParserPosition().equals(operand.getParserPosition())) {
+        if (node.getParserPosition().equals(operand.getParserPosition())
+            || node.getParserPosition().getLineNum() == 0) {
           // Implicit CAST added by type coercion, which gives the CAST the position of its operand.
+          // Coercion of ARRAY and MAP elements starts the position at line 0, which the parser never assigns.
           return containsExplicitCast(operand, validator);
         }
         return !(validator instanceof DruidSqlValidator
