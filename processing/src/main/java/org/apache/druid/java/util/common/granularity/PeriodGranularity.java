@@ -128,6 +128,15 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   @Override
   public long increment(long t)
   {
+    if (hasImplicitHourAlignment()) {
+      final int hours = period.getHours();
+      final long boundary = getUnroundedHourBucketStart(t, hours);
+      // Only adjust bucket starts. Other timestamps retain ordinary period addition.
+      if (chronology.hourOfDay().roundFloor(boundary) == t) {
+        // Advance before rounding so the bucket end matches the next bucket start across offset changes.
+        return chronology.hourOfDay().roundFloor(chronology.hours().add(boundary, hours));
+      }
+    }
     return chronology.add(period, t, 1);
   }
 
@@ -493,20 +502,8 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     final int hours = period.getHours();
     if (hours > 0) {
       if (hours > 1 || hasOrigin) {
-        // align on multiples from origin
-        long h = chronology.hours().getDifferenceAsLong(t, origin);
-        h -= h % hours;
-        long tt = chronology.hours().add(origin, h);
-        // always round down to the previous period (for timestamps prior to origin)
-        if (t < tt && origin > 0) {
-          t = chronology.hours().add(tt, -hours);
-        } else if (t > tt && origin < 0) {
-          t = chronology.minuteOfHour().roundFloor(tt);
-          t = chronology.minuteOfHour().set(t, 0);
-        } else {
-          t = tt;
-        }
-        return t;
+        final long boundary = getUnroundedHourBucketStart(t, hours);
+        return hasImplicitHourAlignment() ? chronology.hourOfDay().roundFloor(boundary) : boundary;
       } else {
         return chronology.hourOfDay().roundFloor(t);
       }
@@ -569,6 +566,39 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     }
 
     return t;
+  }
+
+  /**
+   * Preserve local clock-hour boundaries for simple multi-hour periods when no origin is supplied and the
+   * default origin is before the Unix epoch. Explicit origins retain their exact alignment.
+   * Compound periods use separate calculations.
+   */
+  private boolean hasImplicitHourAlignment()
+  {
+    return !hasOrigin && origin < 0 && !isCompound && period.getHours() > 1;
+  }
+
+  /**
+   * Find the origin-based boundary that becomes the bucket start after any required local-hour rounding.
+   * Return it unrounded so {@link #increment(long)} can calculate the next boundary before rounding it.
+   */
+  private long getUnroundedHourBucketStart(final long timestamp, final int hours)
+  {
+    long h = chronology.hours().getDifferenceAsLong(timestamp, origin);
+    h -= h % hours;
+    long boundary = chronology.hours().add(origin, h);
+    // Always round down, including for timestamps before the origin.
+    if (timestamp < boundary) {
+      boundary = chronology.hours().add(boundary, -hours);
+    }
+    if (hasImplicitHourAlignment()) {
+      final long nextBoundary = chronology.hours().add(boundary, hours);
+      // Select the bucket using rounded boundaries, since those are the starts returned to the caller.
+      if (chronology.hourOfDay().roundFloor(nextBoundary) <= timestamp) {
+        boundary = nextBoundary;
+      }
+    }
+    return boundary;
   }
 
   private long truncateCompoundPeriod(long t)
