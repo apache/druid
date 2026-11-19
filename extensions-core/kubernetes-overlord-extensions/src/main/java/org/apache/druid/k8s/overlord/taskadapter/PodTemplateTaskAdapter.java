@@ -57,7 +57,6 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * A PodTemplate {@link TaskAdapter} to transform tasks to kubernetes jobs and kubernetes pods to tasks
@@ -77,6 +76,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 {
   public static final String TYPE = "customTemplateAdapter";
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
+
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
   private final TaskConfig taskConfig;
   private final DruidNode node;
