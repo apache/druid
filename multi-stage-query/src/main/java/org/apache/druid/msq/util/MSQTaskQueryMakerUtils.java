@@ -41,12 +41,17 @@ import java.util.stream.Collectors;
 public class MSQTaskQueryMakerUtils
 {
 
-  public static final Set<String> SENSISTIVE_JSON_KEYS = ImmutableSet.of("accessKeyId", "secretAccessKey", "sessionToken");
+  public static final Set<String> SENSISTIVE_JSON_KEYS = ImmutableSet.of(
+      "accessKeyId",
+      "secretAccessKey",
+      "sessionToken",
+      "httpAuthenticationPassword"
+  );
   public static final Set<Pattern> SENSITIVE_KEYS_REGEX_PATTERNS = SENSISTIVE_JSON_KEYS.stream()
                                                                                        .map(sensitiveKey ->
                                                                                                  Pattern.compile(
                                                                                                      StringUtils.format(
-                                                                                                         "\\\\\"%s\\\\\"(\\s)*:(\\s)*(?<sensitive>\\{(\\s)*(\\S)+?(\\s)*\\})",
+                                                                                                         "\\\\?\"%s\"\\\\?(\\s)*:(\\s)*(?<sensitive>(\\{[^{}]*\\})|(\\\\?\"[^\"\\\\]*\\\\?\"))",
                                                                                                          sensitiveKey
                                                                                                      ),
                                                                                                      Pattern.CASE_INSENSITIVE
@@ -55,25 +60,30 @@ public class MSQTaskQueryMakerUtils
 
   /**
    * This method masks the sensitive json keys that might be present in the SQL query matching the regex
-   * {@code key(\s)+:(\s)+{sensitive_data}}
-   * The regex pattern matches a json entry of form "key":{value} and replaces it with {@code "key":<masked>}
-   * It checks the sensitive keys for the match, greedily matches the first occuring brace pair ("{" and "}")
-   * into a regex group named "sensitive" and performs a string replace on the group. The whitespaces are accounted
-   * for in the regex.
+   * {@code key(\s)+:(\s)+{sensitive_data}} or {@code key(\s)+:(\s)+"sensitive_data"}.
+   * The regex pattern matches a json entry of form "key":{value} or "key":"value" and replaces the value
+   * with {@code <masked>}. The key may be written with plain quotes, as in SQL submitted by the user, or with
+   * backslash-escaped quotes, as in a serialized task JSON. The value may be a password-provider object or a
+   * plain string. It checks the sensitive keys for the match and performs a string replace on the value group.
+   * The whitespaces are accounted for in the regex.
    */
   public static String maskSensitiveJsonKeys(String sqlQuery)
   {
-    StringBuilder maskedSqlQuery = new StringBuilder(sqlQuery);
+    String maskedSqlQuery = sqlQuery;
     for (Pattern p : SENSITIVE_KEYS_REGEX_PATTERNS) {
-      Matcher m = p.matcher(sqlQuery);
+      Matcher m = p.matcher(maskedSqlQuery);
+      StringBuilder sb = new StringBuilder();
+      int pos = 0;
       while (m.find()) {
-        String sensitiveData = m.group("sensitive");
-        int start = maskedSqlQuery.indexOf(sensitiveData);
-        int end = start + sensitiveData.length();
-        maskedSqlQuery.replace(start, end, "<masked>");
+        // Replace only the matched value, keeping the key, colon and whitespace as written.
+        sb.append(maskedSqlQuery, pos, m.start("sensitive"));
+        sb.append("<masked>");
+        pos = m.end("sensitive");
       }
+      sb.append(maskedSqlQuery, pos, maskedSqlQuery.length());
+      maskedSqlQuery = sb.toString();
     }
-    return maskedSqlQuery.toString();
+    return maskedSqlQuery;
   }
 
   /**
