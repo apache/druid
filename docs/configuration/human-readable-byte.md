@@ -51,6 +51,7 @@ druid.segmentCache.locations=[{"path":"/segment-cache-00","maxSize":"1t"},{"path
 
 Note: in above example, both `1t` and `1T` are acceptable since it's case-insensitive.
 Also, only integers are valid as the number part. For example, you can't replace `1200g` with `1.2t`.
+Negative numbers, such as `-1g`, are not accepted.
 
 ### Supported Units
 In the world of computer, a unit like `K` is ambiguous. It means 1000 or 1024 in different contexts, for more information please see [Here](https://en.wikipedia.org/wiki/Binary_prefix).
@@ -77,6 +78,8 @@ To make it clear, the base of units are defined in Druid as below
 
 Unit is case-insensitive. `k`, `kib`, `ki`, `KiB`, `Ki`, `kiB` are all acceptable.
 
+The unit can follow the number directly or after a space. For example, both `1MiB` and `1 MiB` are acceptable.
+
 Here are some examples
 
 ```properties
@@ -92,6 +95,12 @@ druid.cache.sizeInBytes=256MiB
 ```properties
 # 256Mi = 256MiB = 256 * 1024 * 1024 bytes
 druid.cache.sizeInBytes=256Mi
+```
+
+```properties
+# 1 MiB = 1 * 1024 * 1024 bytes, with a space between the number and the unit.
+# Don't put the value in quotes, such as "1 MiB", since the quotes become part of the value.
+druid.cache.sizeInBytes=1 MiB
 ```
 
 

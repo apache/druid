@@ -27,6 +27,7 @@ import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
@@ -47,10 +48,13 @@ public class IndexerControllerContextTest
         QueryContextParameters.QUERY_ID.getName(), "query-id",
         QueryContextParameters.SQL_QUERY_ID.getName(), "sql-query-id",
         QueryContextParameters.MAX_THREADS.getName(), 2,
-        Tasks.STORE_EMPTY_COLUMNS_KEY, false,
+        QueryContextParameters.STORE_EMPTY_COLUMNS.getName(), false,
         QueryContextParameters.FINALIZE_AGGREGATIONS.getName(), false,
         QueryContextParameters.ARRAY_INGEST_MODE.getName(), "array"
     );
+
+    // The Broker accepts these keys even when it rejects unknown parameters.
+    QueryContextParameterValidator.validate(queryContext, true);
 
     final LegacyMSQSpec querySpec =
         LegacyMSQSpec.builder()

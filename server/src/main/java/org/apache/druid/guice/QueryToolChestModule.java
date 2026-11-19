@@ -32,6 +32,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.datasourcemetadata.DataSourceQueryQueryToolChest;
 import org.apache.druid.query.groupby.DefaultGroupByQueryMetricsFactory;
@@ -120,6 +121,7 @@ public class QueryToolChestModule implements Module
     JsonConfigProvider.bind(binder, "druid.query.default", DefaultQueryConfig.class);
     // DefaultQueryContext defaults to the static DefaultQueryConfig; brokers override this binding.
     binder.bind(QueryConfigProvider.class).to(DefaultQueryConfig.class);
+    JsonConfigProvider.bind(binder, "druid.query.context", QueryContextConfig.class);
     if (queryTypes.contains(GroupByQuery.class)) {
       JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
     }

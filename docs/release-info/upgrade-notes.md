@@ -323,8 +323,8 @@ Validation is in place to prevent mixing `VARCHAR` and `VARCHAR ARRAY` columns i
 The `arrayIngestMode` option of `none` has been removed. It was introduced prior to the table validation logic as a means for cluster operators to force query writers to explicitly set `array` or `mvd` on their query contexts, but provides little utility in Druid 31.
 
 See the following topics for more information:
-* [Ingest multi-value dimensions](https://druid.apache.org/docs/latest/querying/multi-value-dimensions.md#sql-based-ingestion) for how to ingest multi-value strings.
-* [Ingest arrays](https://druid.apache.org/docs/latest/querying/arrays.md#sql-based-ingestion) for ingesting arrays.
+* [Ingest multi-value dimensions](https://druid.apache.org/docs/latest/querying/multi-value-dimensions#sql-based-ingestion) for how to ingest multi-value strings.
+* [Ingest arrays](https://druid.apache.org/docs/latest/querying/arrays#sql-based-ingestion) for ingesting arrays.
 
 [#16789](https://github.com/apache/druid/pull/16789)
 

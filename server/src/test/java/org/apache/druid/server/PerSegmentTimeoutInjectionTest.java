@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
@@ -189,7 +190,7 @@ public class PerSegmentTimeoutInjectionTest
         authzMapper,
         new AuthConfig(),
         NoopPolicyEnforcer.instance(),
-        new QueryConfigSnapshot(resolvedDefaultQueryContext, dynamicConfig),
+        new QueryConfigSnapshot(QueryContext.of(resolvedDefaultQueryContext), dynamicConfig),
         Map.of(),
         System.currentTimeMillis(),
         System.nanoTime()

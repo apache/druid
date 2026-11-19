@@ -3070,7 +3070,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, HumanReadableBytes.valueOf(0)))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, 0L))
         .overrideContext(QueryContext.ofMap(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, 1))
         .build();
 
@@ -3124,7 +3124,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, HumanReadableBytes.valueOf(1)))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, 1L))
         .overrideContext(QueryContext.ofMap(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, 1))
         .build();
 
@@ -3160,7 +3160,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 null
             )
         )
-        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, HumanReadableBytes.valueOf(Integer.MAX_VALUE)))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, (long) Integer.MAX_VALUE))
         .overrideContext(QueryContext.ofMap(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, Integer.MAX_VALUE))
         .build();
 
@@ -3169,7 +3169,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new ArrayList<>()).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
-        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, HumanReadableBytes.valueOf(0)))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.MAX_ON_DISK_STORAGE, 0L))
         .overrideContext(QueryContext.ofMap(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, 0))
         .build();
 

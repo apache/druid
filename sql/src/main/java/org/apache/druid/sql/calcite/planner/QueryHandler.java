@@ -801,7 +801,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       return handlerContext.engine().resultTypeForSelect(
           typeFactory,
           rootQueryRel.validatedRowType,
-          handlerContext.plannerContext().queryContextMap()
+          handlerContext.queryContext()
       );
     }
 

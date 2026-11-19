@@ -22,6 +22,7 @@ package org.apache.druid.server.broker;
 
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,7 @@ class QueryConfigSnapshotTest
                                         .build();
 
     final QueryConfigSnapshot snapshot =
-        new QueryConfigSnapshot(Map.of("key", "default", "key2", "default2"), null);
+        new QueryConfigSnapshot(QueryContext.of(Map.of("key", "default", "key2", "default2")), null);
     Assertions.assertEquals(
         Map.of("key", "default", "key2", "user-provided-value"),
         snapshot.resolveContext(query, Set.of("key", "key2"))

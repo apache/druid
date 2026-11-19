@@ -177,11 +177,12 @@ public interface CatalogTableWriter
 
     private static DruidException notAvailable()
     {
-      return DruidException.forPersona(DruidException.Persona.USER)
+      // Target OPERATOR because only the cluster operator can fix this, by loading the extension
+      return DruidException.forPersona(DruidException.Persona.OPERATOR)
                            .ofCategory(DruidException.Category.UNSUPPORTED)
-                           .build(
-                               "Catalog DDL statements require the [druid-catalog] extension, which is not loaded"
-                           );
+                           .build("""
+                               Catalog DDL statements require the [druid-catalog] extension, which is not loaded. \
+                               Ask your administrator to add [druid-catalog] to [druid.extensions.loadList].""");
     }
   }
 }

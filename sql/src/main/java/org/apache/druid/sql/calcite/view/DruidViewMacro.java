@@ -28,6 +28,7 @@ import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.ViewTable;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
@@ -71,7 +72,7 @@ public class DruidViewMacro implements TableMacro
                  DruidSqlParser.parse(viewSql, false).getMainStatement(), // views cannot embed SET
                  escalator.createEscalatedAuthenticationResult(),
                  Collections.emptySet(),
-                 Collections.emptyMap(),
+                 QueryContext.empty(),
                  null
              )
     ) {

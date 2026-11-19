@@ -40,6 +40,7 @@ import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.QueryInfoAndReport;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
+import org.apache.druid.msq.dart.guice.DartModules;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
@@ -50,6 +51,9 @@ import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -104,9 +108,60 @@ public class DartSqlEngine implements SqlEngine
       ServerConfig serverConfig,
       @Dart QueryConfigProvider queryConfigProvider,
       SqlToolbox toolbox,
-      DartSqlClients sqlClients
+      DartSqlClients sqlClients,
+      QueryContextConfig queryContextConfig
   )
   {
+    this(
+        controllerContextFactory,
+        controllerRegistry,
+        controllerConfig,
+        controllerThreadPool,
+        queryKitSpecFactory,
+        queryKit,
+        serverConfig,
+        queryConfigProvider,
+        toolbox,
+        sqlClients,
+        queryContextConfig,
+        DartModules.DART_PROPERTY_BASE + ".query.context"
+    );
+  }
+
+  /**
+   * Constructor for subclasses whose default query context is bound from another runtime property.
+   *
+   * @param defaultQueryContextProperty runtime property of the default query context, named when it is invalid
+   */
+  protected DartSqlEngine(
+      DartControllerContextFactory controllerContextFactory,
+      DartControllerRegistry controllerRegistry,
+      DartControllerConfig controllerConfig,
+      ControllerThreadPool controllerThreadPool,
+      DartQueryKitSpecFactory queryKitSpecFactory,
+      MultiQueryKit queryKit,
+      ServerConfig serverConfig,
+      QueryConfigProvider queryConfigProvider,
+      SqlToolbox toolbox,
+      DartSqlClients sqlClients,
+      QueryContextConfig queryContextConfig,
+      String defaultQueryContextProperty
+  )
+  {
+    try {
+      QueryContextParameterValidator.validate(
+          queryConfigProvider.getContext().asMap(),
+          queryContextConfig.isRejectUnknownParameters()
+      );
+    }
+    catch (BadQueryContextException e) {
+      throw new IAE(
+          e,
+          "Invalid default query context [%s]: %s",
+          defaultQueryContextProperty,
+          e.getMessage()
+      );
+    }
     this.controllerContextFactory = controllerContextFactory;
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
@@ -170,20 +225,20 @@ public class DartSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(Map<String, Object> queryContext)
+  public void validateContext(QueryContext queryContext)
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, MSQTaskSqlEngine.SYSTEM_CONTEXT_PARAMETERS);
-    QueryContext.of(queryContext).verifyMaxQueryTimeout(serverConfig.getMaxQueryTimeout());
+    queryContext.verifyMaxQueryTimeout(serverConfig.getMaxQueryTimeout());
   }
 
   @Override
   public RelDataType resultTypeForSelect(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   )
   {
-    if (QueryContext.of(queryContext).getFullReport()) {
+    if (queryContext.getFullReport()) {
       return typeFactory.createStructType(
           ImmutableList.of(
               Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
@@ -199,7 +254,7 @@ public class DartSqlEngine implements SqlEngine
   public RelDataType resultTypeForInsert(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   )
   {
     // Defensive, because we expect this method will not be called without the CAN_INSERT and CAN_REPLACE features.
@@ -237,18 +292,18 @@ public class DartSqlEngine implements SqlEngine
   }
 
   @Override
-  public void initContextMap(Map<String, Object> contextMap)
+  public QueryContext initContext(QueryContext context)
   {
     // Default context keys from dartQueryConfig.
-    for (Map.Entry<String, Object> entry : queryConfigProvider.getContext().entrySet()) {
-      contextMap.putIfAbsent(entry.getKey(), entry.getValue());
-    }
+    final Map<String, Object> contextMap =
+        QueryContexts.withDefaults(queryConfigProvider.getContext().asMap(), context.asMap());
 
     // Set default query timeout if not already specified.
     contextMap.putIfAbsent(QueryContextParameters.TIMEOUT.getName(), serverConfig.getDefaultQueryTimeout());
 
     // Add execution ID.
     QueryContextParameters.DART_QUERY_ID.set(contextMap, generateExecutionId());
+    return QueryContext.of(contextMap);
   }
 
   @Override

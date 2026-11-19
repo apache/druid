@@ -72,6 +72,7 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
@@ -218,6 +219,8 @@ public class CliCoordinator extends ServerRunnable
     } else if (SystemTableModule.isEnabled(properties)) {
       modules.add(NativeQueryEngineModule.builder().scanOnly().enableSystemTableQuery(true).build());
     }
+    // The native query engine's QueryToolChestModule binds QueryContextConfig itself.
+    final boolean nativeQueryEngineInstalled = isSegmentSchemaCacheEnabled || SystemTableModule.isEnabled(properties);
 
     modules.add(
         new Module()
@@ -235,6 +238,10 @@ public class CliCoordinator extends ServerRunnable
 
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator", CoordinatorRunConfig.class);
+            if (!nativeQueryEngineInstalled) {
+              // Checks the queryContext of Broker dynamic configuration updates
+              JsonConfigProvider.bind(binder, "druid.query.context", QueryContextConfig.class);
+            }
             JsonConfigProvider.bind(binder, "druid.coordinator.kill", CoordinatorKillConfigs.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.period", CoordinatorPeriodConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);
