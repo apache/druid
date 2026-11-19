@@ -210,16 +210,13 @@ public class SegmentTransactionalAppendFromShareInboxActionTest
 
   private static DataSegment segment(String version)
   {
-    return new DataSegment(
-        DATA_SOURCE,
-        INTERVAL,
-        version,
-        Map.of(),
-        List.of("dim"),
-        List.of("metric"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    return DataSegment.builder(org.apache.druid.timeline.SegmentId.of(DATA_SOURCE, INTERVAL, version, 0))
+                      .loadSpec(Map.of())
+                      .dimensions(List.of("dim"))
+                      .metrics(List.of("metric"))
+                      .shardSpec(new LinearShardSpec(0))
+                      .binaryVersion(9)
+                      .size(100)
+                      .build();
   }
 }

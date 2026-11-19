@@ -120,7 +120,7 @@ public class StreamChunkReader<RecordType extends ByteEntity>
    *                     the parse cost is the point of pre-ingestion filtering. The record still flows through so that
    *                     stream offsets advance.
    */
-  List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard, boolean isFiltered)
+  List<InputRow> parse(@Nullable List<? extends RecordType> streamChunk, boolean isEndOfShard, boolean isFiltered)
       throws IOException
   {
     if (isFiltered) {
