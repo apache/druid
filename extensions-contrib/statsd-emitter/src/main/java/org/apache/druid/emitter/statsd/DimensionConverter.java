@@ -31,7 +31,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -40,10 +42,15 @@ public class DimensionConverter
 
   private static final Logger log = new Logger(DimensionConverter.class);
   private Map<String, StatsDMetric> metricMap;
+  private final List<Map.Entry<String, StatsDMetric>> serviceMetricEntries;
 
   public DimensionConverter(ObjectMapper mapper, String dimensionMapPath)
   {
     metricMap = readMap(mapper, dimensionMapPath);
+    serviceMetricEntries = metricMap.entrySet()
+                                    .stream()
+                                    .filter(entry -> entry.getKey().indexOf('-') > 0)
+                                    .collect(Collectors.toList());
   }
 
   @Nullable
@@ -61,8 +68,8 @@ public class DimensionConverter
     StatsDMetric statsDMetric = null;
     if (metricMap.containsKey(metric)) {
       statsDMetric = metricMap.get(metric);
-    } else if (metricMap.containsKey(service + "-" + metric)) {
-      statsDMetric = metricMap.get(service + "-" + metric);
+    } else {
+      statsDMetric = findServiceMetric(service, metric);
     }
     if (statsDMetric != null) {
       for (String dim : statsDMetric.dimensions) {
@@ -74,6 +81,30 @@ public class DimensionConverter
     } else {
       return null;
     }
+  }
+
+  /**
+   * Finds the service-specific mapping {@code <mapped service>-<metric>} whose mapped service is the longest prefix of
+   * {@code service}, so a service such as {@code druid/historical/glacier} or {@code druid/historical-hot} uses the
+   * {@code druid/historical} mapping.
+   */
+  @Nullable
+  private StatsDMetric findServiceMetric(String service, String metric)
+  {
+    StatsDMetric match = null;
+    int matchLength = 0;
+    for (Map.Entry<String, StatsDMetric> entry : serviceMetricEntries) {
+      final String key = entry.getKey();
+      final int mappedServiceLength = key.length() - metric.length() - 1;
+      if (mappedServiceLength > matchLength
+          && key.endsWith(metric)
+          && key.charAt(mappedServiceLength) == '-'
+          && service.regionMatches(0, key, 0, mappedServiceLength)) {
+        match = entry.getValue();
+        matchLength = mappedServiceLength;
+      }
+    }
+    return match;
   }
 
   private Map<String, StatsDMetric> readMap(ObjectMapper mapper, String dimensionMapPath)
