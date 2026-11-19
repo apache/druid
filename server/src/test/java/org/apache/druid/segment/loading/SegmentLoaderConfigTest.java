@@ -21,10 +21,13 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.utils.RuntimeInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.io.File;
 
 class SegmentLoaderConfigTest
 {
@@ -135,5 +138,36 @@ class SegmentLoaderConfigTest
     Assertions.assertTrue(plainCopy.isLazyLoadOnStart());
     Assertions.assertFalse(plainCopy.isDeleteOnRemove());
     Assertions.assertEquals(4, plainCopy.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload());
+  }
+
+  @Test
+  void testEffectiveInfoDirUsesConfiguredInfoDir()
+  {
+    final File infoDir = new File("/configured/info");
+    final SegmentLoaderConfig config = SegmentLoaderConfig.builder()
+                                                          .infoDir(infoDir)
+                                                          .locations(new StorageLocationConfig(new File("/loc"), 1L, null))
+                                                          .build();
+
+    Assertions.assertEquals(infoDir, config.getEffectiveInfoDir());
+  }
+
+  @Test
+  void testEffectiveInfoDirUsesFirstConfiguredLocation()
+  {
+    final SegmentLoaderConfig config = SegmentLoaderConfig.builder()
+                                                          .locations(
+                                                              new StorageLocationConfig(new File("/loc1"), 1L, null),
+                                                              new StorageLocationConfig(new File("/loc2"), 1L, null)
+                                                          )
+                                                          .build();
+
+    Assertions.assertEquals(new File("/loc1", "info_dir"), config.getEffectiveInfoDir());
+  }
+
+  @Test
+  void testEffectiveInfoDirThrowsWithoutInfoDirOrLocations()
+  {
+    Assertions.assertThrows(DruidException.class, () -> SegmentLoaderConfig.builder().build().getEffectiveInfoDir());
   }
 }

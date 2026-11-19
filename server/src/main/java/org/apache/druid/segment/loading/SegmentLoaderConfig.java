@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.utils.RuntimeInfo;
 
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
  */
 public class SegmentLoaderConfig
 {
+  private static final String INFO_DIR_NAME = "info_dir";
   private static final boolean DEFAULT_LAZY_LOAD_ON_START = false;
   private static final boolean DEFAULT_DELETE_ON_REMOVE = true;
   private static final int DEFAULT_DROP_SEGMENT_DELAY_MILLIS = (int) TimeUnit.SECONDS.toMillis(30);
@@ -273,6 +275,26 @@ public class SegmentLoaderConfig
   public File getInfoDir()
   {
     return infoDir;
+  }
+
+  /**
+   * Returns the directory that holds the segment info files: {@link #getInfoDir()} if set, otherwise {@code info_dir}
+   * under the first entry of {@link #getLocations()}.
+   *
+   * @throws DruidException if neither is set, so the info directory cannot be determined.
+   */
+  public File getEffectiveInfoDir()
+  {
+    if (infoDir != null) {
+      return infoDir;
+    } else if (!locations.isEmpty()) {
+      return new File(locations.get(0).getPath(), INFO_DIR_NAME);
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("Could not determine infoDir. Make sure 'druid.segmentCache.infoDir' "
+                                 + "or 'druid.segmentCache.locations' is set correctly.");
+    }
   }
 
   public int getStatusQueueMaxSize()

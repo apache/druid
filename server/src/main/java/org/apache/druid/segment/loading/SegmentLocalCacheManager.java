@@ -370,7 +370,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private File[] retrieveSegmentMetadataFiles() throws IOException
   {
-    final File infoDir = getEffectiveInfoDir();
+    final File infoDir = config.getEffectiveInfoDir();
     FileUtils.mkdirp(infoDir);
     File[] files = infoDir.listFiles();
     return files == null ? new File[0] : files;
@@ -378,7 +378,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private File getSegmentInfoFile(final DataSegment segment)
   {
-    return FileUtils.resolveFileWithinDirectory(getEffectiveInfoDir(), segment.getId().toString());
+    return FileUtils.resolveFileWithinDirectory(config.getEffectiveInfoDir(), segment.getId().toString());
   }
 
   @Override
@@ -398,7 +398,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     if (!overwrite && segmentInfoCacheFile.exists()) {
       return false;
     }
-    FileUtils.mkdirp(getEffectiveInfoDir());
+    FileUtils.mkdirp(config.getEffectiveInfoDir());
     FileUtils.writeAtomically(
         segmentInfoCacheFile,
         out -> {
@@ -1918,36 +1918,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
     return null;
-  }
-
-  /**
-   * Returns the effective segment info directory based on the configuration settings.
-   * The directory is selected based on the following configurations injected into this class:
-   * <ul>
-   *   <li>{@link SegmentLoaderConfig#getInfoDir()} - If {@code infoDir} is set, it is used as the info directory.</li>
-   *   <li>{@link SegmentLoaderConfig#getLocations()} - If the info directory is not set, the first location from this list is used.</li>
-   *   <li>List of {@link StorageLocation}s injected - If both the info directory and locations list are not set, the
-   *   first storage location is used.</li>
-   * </ul>
-   *
-   * @throws DruidException if none of the configurations are set, and the info directory cannot be determined.
-   */
-  private File getEffectiveInfoDir()
-  {
-    final File infoDir;
-    if (config.getInfoDir() != null) {
-      infoDir = config.getInfoDir();
-    } else if (!config.getLocations().isEmpty()) {
-      infoDir = new File(config.getLocations().get(0).getPath(), "info_dir");
-    } else if (!locations.isEmpty()) {
-      infoDir = new File(locations.get(0).getPath(), "info_dir");
-    } else {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build("Could not determine infoDir. Make sure 'druid.segmentCache.infoDir' "
-                                 + "or 'druid.segmentCache.locations' is set correctly.");
-    }
-    return infoDir;
   }
 
   /**
