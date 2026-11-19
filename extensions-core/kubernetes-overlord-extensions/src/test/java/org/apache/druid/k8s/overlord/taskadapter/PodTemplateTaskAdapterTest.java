@@ -22,7 +22,10 @@ package org.apache.druid.k8s.overlord.taskadapter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.PodTemplate;
+import io.fabric8.kubernetes.api.model.PodTemplateBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -51,6 +54,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -427,6 +431,7 @@ public class PodTemplateTaskAdapterTest
     EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();
     EasyMock.expect(task.getDataSource()).andReturn("datasource").anyTimes();
     EasyMock.expect(task.getBroadcastDatasourceLoadingSpec()).andReturn(BroadcastDatasourceLoadingSpec.ALL).anyTimes();
+    EasyMock.expect(task.getContextValue(DruidK8sConstants.TASK_CONTEXT_POD_IMAGE_TAG)).andReturn(null).anyTimes();
 
     EasyMock.replay(task);
     Job actual = adapter.fromTask(task);
@@ -460,6 +465,7 @@ public class PodTemplateTaskAdapterTest
     EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();
     EasyMock.expect(task.getDataSource()).andReturn("datasource").anyTimes();
     EasyMock.expect(task.getBroadcastDatasourceLoadingSpec()).andReturn(BroadcastDatasourceLoadingSpec.ALL).anyTimes();
+    EasyMock.expect(task.getContextValue(DruidK8sConstants.TASK_CONTEXT_POD_IMAGE_TAG)).andReturn(null).anyTimes();
 
     EasyMock.replay(task);
     Job actual = adapter.fromTask(task);
@@ -470,6 +476,71 @@ public class PodTemplateTaskAdapterTest
                                           .get(0).getEnv().stream()
                                           .filter(env -> env.getName().equals(DruidK8sConstants.LOAD_BROADCAST_DATASOURCE_MODE_ENV))
                                           .collect(Collectors.toList()).get(0).getValue());
+  }
+
+  @Test
+  public void test_fromTask_podImageTag() throws IOException
+  {
+    final List<ImageTagCase> cases = List.of(
+        new ImageTagCase("no key", "apache/druid:1.0", null, "apache/druid:1.0"),
+        new ImageTagCase("new tag", "apache/druid:1.0", "2.0", "apache/druid:2.0"),
+        new ImageTagCase("registry with port", "host:5000/a/b:1.0", "2.0", "host:5000/a/b:2.0"),
+        new ImageTagCase("digest", "apache/druid@sha256:abc", "2.0", "apache/druid@sha256:abc"),
+        new ImageTagCase("tag and digest", "apache/druid:1.0@sha256:abc", "2.0", "apache/druid:1.0@sha256:abc"),
+        new ImageTagCase("no tag", "apache/druid", "2.0", "apache/druid"),
+        new ImageTagCase("registry with port and no tag", "host:5000/a/b", "2.0", "host:5000/a/b"),
+        new ImageTagCase("value is not a string", "apache/druid:1.0", 2, "apache/druid:1.0"),
+        new ImageTagCase("empty string", "apache/druid:1.0", "", "apache/druid:1.0"),
+        new ImageTagCase("value is not a valid tag", "apache/druid:1.0", "other/image:2.0", "apache/druid:1.0")
+    );
+
+    for (final ImageTagCase testCase : cases) {
+      final PodTemplate selected = new PodTemplateBuilder(podTemplateSpec)
+          .editTemplate()
+          .editSpec()
+          .editFirstContainer()
+          .withImage(testCase.templateImage)
+          .endContainer()
+          .addToContainers(new ContainerBuilder().withName("sidecar").withImage("sidecar:1.0").build())
+          .endSpec()
+          .endTemplate()
+          .build();
+      final PodTemplate selectedCopy = new PodTemplateBuilder(selected).build();
+
+      final PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+          taskRunnerConfig,
+          taskConfig,
+          node,
+          mapper,
+          taskLogs,
+          new TestPodTemplateSelector(selected)
+      );
+
+      final Map<String, Object> context = testCase.contextValue == null
+                                          ? Collections.emptyMap()
+                                          : Map.of(DruidK8sConstants.TASK_CONTEXT_POD_IMAGE_TAG, testCase.contextValue);
+      final Job job = adapter.fromTask(new NoopTask("id", "id", "datasource", 0, 0, context));
+
+      final List<Container> containers = job.getSpec().getTemplate().getSpec().getContainers();
+      Assertions.assertEquals(testCase.expectedImage, containers.get(0).getImage(), testCase.name);
+      Assertions.assertEquals("sidecar:1.0", containers.get(1).getImage(), testCase.name);
+      Assertions.assertEquals(
+          "base",
+          job.getSpec().getTemplate().getMetadata().getAnnotations().get(DruidK8sConstants.TASK_JOB_TEMPLATE),
+          testCase.name
+      );
+      // The adapter must not change the template object that the selector returned.
+      Assertions.assertEquals(selectedCopy, selected, testCase.name);
+    }
+  }
+
+  private record ImageTagCase(
+      String name,
+      String templateImage,
+      Object contextValue,
+      String expectedImage
+  )
+  {
   }
 
   private void assertJobSpecsEqual(Job actual, Job expected) throws IOException

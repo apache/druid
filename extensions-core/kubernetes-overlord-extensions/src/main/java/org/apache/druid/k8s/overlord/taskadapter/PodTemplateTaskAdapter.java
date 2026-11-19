@@ -24,11 +24,14 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.EnvVarSourceBuilder;
 import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodTemplate;
+import io.fabric8.kubernetes.api.model.PodTemplateBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.io.IOUtils;
@@ -46,6 +49,7 @@ import org.apache.druid.k8s.overlord.common.KubernetesOverlordUtils;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -53,6 +57,7 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * A PodTemplate {@link TaskAdapter} to transform tasks to kubernetes jobs and kubernetes pods to tasks
@@ -72,6 +77,11 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 {
   public static final String TYPE = "customTemplateAdapter";
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
+
+  /**
+   * Valid image tag, as defined by the OCI distribution spec.
+   */
+  private static final Pattern IMAGE_TAG_PATTERN = Pattern.compile("[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}");
 
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
   private final TaskConfig taskConfig;
@@ -111,7 +121,8 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   /**
    * Create a {@link Job} from a {@link Task}
    *
-   * 1. Select pod template based on task type
+   * 1. Select pod template based on task type, then apply the image tag from the task context
+   *    (see {@link #applyImageTagOverride})
    * 2. Add labels and annotations to the pod template including the task as a compressed and base64 encoded string
    * 3. Add labels and annotations to the job
    * 4. Add user specified active deadline seconds and job ttl
@@ -132,7 +143,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
           task.getId()
       );
     }
-    PodTemplateWithName podTemplateWithName = selectedPodTemplate.get();
+    final PodTemplateWithName podTemplateWithName = applyImageTagOverride(task, selectedPodTemplate.get());
 
     return new JobBuilder()
         .withNewMetadata()
@@ -162,6 +173,70 @@ public class PodTemplateTaskAdapter implements TaskAdapter
                                                            .getStandardSeconds())
         .endSpec()
         .build();
+  }
+
+  /**
+   * Replaces the image tag of the first container with the value of the
+   * {@link DruidK8sConstants#TASK_CONTEXT_POD_IMAGE_TAG} task context key, if exists.
+   * <p>
+   * Returns {@code selected} if the key is absent or not applicable, new {@code PodTemplateWithName} otherwise.
+   */
+  protected PodTemplateWithName applyImageTagOverride(final Task task, final PodTemplateWithName selected)
+  {
+    final Object requestedTag = task.getContextValue(DruidK8sConstants.TASK_CONTEXT_POD_IMAGE_TAG);
+    if (requestedTag == null || !(requestedTag instanceof String)) {
+      return selected;
+    }
+
+    final List<Container> containers = selected.getPodTemplate().getTemplate().getSpec().getContainers();
+    final String oldImage = containers.isEmpty() ? null : containers.get(0).getImage();
+    final String repository = getImageRepository(oldImage);
+    if (repository == null) {
+      log.warn(
+          "Task[%s] sets context key[%s], but image[%s] from pod template[%s] has a digest or no tag. Ignoring the key.",
+          task.getId(),
+          DruidK8sConstants.TASK_CONTEXT_POD_IMAGE_TAG,
+          oldImage,
+          selected.getName()
+      );
+      return selected;
+    }
+
+    final String newImage = repository + ":" + requestedTag;
+    final PodTemplate podTemplate = new PodTemplateBuilder(selected.getPodTemplate())
+        .editTemplate()
+        .editSpec()
+        .editFirstContainer()
+        .withImage(newImage)
+        .endContainer()
+        .endSpec()
+        .endTemplate()
+        .build();
+
+    log.info(
+        "Task[%s] uses image[%s] instead of image[%s] from pod template[%s].",
+        task.getId(),
+        newImage,
+        oldImage,
+        selected.getName()
+    );
+    return new PodTemplateWithName(selected.getName(), podTemplate);
+  }
+
+  /**
+   * Returns the image without its tag, or null if the image is null, has a digest or has no tag.
+   */
+  @Nullable
+  private static String getImageRepository(@Nullable String image)
+  {
+    if (image == null || image.indexOf('@') >= 0) {
+      return null;
+    }
+    final int tagSeparator = image.lastIndexOf(':');
+    if (tagSeparator <= image.lastIndexOf('/')) {
+      return null;
+    }
+    return image.substring(0, tagSeparator);
   }
 
   /**

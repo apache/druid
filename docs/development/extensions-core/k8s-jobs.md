@@ -844,6 +844,23 @@ Set the `podTemplateSelectionKey` key in a task's context to pick a configured p
 
 This is gated by the runtime property `druid.indexer.runner.allowTaskPodTemplateSelection`, which defaults to `false`. If the key doesn't match any configured template, the task fails to launch.
 
+##### Override the image tag via context
+
+Set the `podImageTag` key in the task context to replace the image tag of the first container in the pod template. Use this to run some tasks on a different Druid build than the Overlord. The Overlord does not need a restart.
+
+```json
+"context": { "podImageTag": "34.0.0" }
+```
+
+This feature applies only to the Custom Template Pod Adapter (`customTemplateAdapter`).
+
+Druid changes only the tag. The registry, the repository and the other containers do not change. For example, the tag `34.0.0` changes the image `registry:5000/apache/druid:33.0.0` to `registry:5000/apache/druid:34.0.0`.
+
+Druid ignores the key and logs a warning in these conditions:
+
+- The value is not a valid image tag. For example, the value is empty or is not a string.
+- The image of the first container has a digest (`@sha256:...`) or has no tag.
+
 ##### Pod template metrics dimension
 
 Every metric emitted by a task pod carries a `podTemplate` dimension naming the pod template the pod runs under, alongside the existing `taskType`, `dataSource`, `taskId`, and `groupId` dimensions. Use it to group metrics by task type and pod template, for example to see which task types run on which templates.
