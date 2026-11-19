@@ -5206,17 +5206,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
   private static DataSegment shareInboxSegment(String version)
   {
-    return new DataSegment(
-        "datasource",
-        Intervals.of("2026-01-01/2026-01-02"),
-        version,
-        Map.of(),
-        List.of("dim"),
-        List.of("metric"),
-        new LinearShardSpec(0),
-        9,
-        100
-    );
+    return DataSegment.builder(SegmentId.of("datasource", Intervals.of("2026-01-01/2026-01-02"), version, 0))
+                      .loadSpec(Map.of())
+                      .dimensions(List.of("dim"))
+                      .metrics(List.of("metric"))
+                      .shardSpec(new LinearShardSpec(0))
+                      .binaryVersion(9)
+                      .size(100)
+                      .build();
   }
 
   private String shareInboxState(String manifestId)
