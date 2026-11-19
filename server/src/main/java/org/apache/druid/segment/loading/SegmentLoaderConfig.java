@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.utils.RuntimeInfo;
 
@@ -278,22 +277,18 @@ public class SegmentLoaderConfig
   }
 
   /**
-   * Returns the directory that holds the segment info files: {@link #getInfoDir()} if set, otherwise {@code info_dir}
-   * under the first entry of {@link #getLocations()}.
-   *
-   * @throws DruidException if neither is set, so the info directory cannot be determined.
+   * Returns the info directory determined by this config alone: {@link #getInfoDir()} if set, otherwise
+   * {@code info_dir} under the first entry of {@link #getLocations()}. Returns null if neither is set.
    */
+  @Nullable
   public File getEffectiveInfoDir()
   {
     if (infoDir != null) {
       return infoDir;
     } else if (!locations.isEmpty()) {
-      return new File(locations.get(0).getPath(), INFO_DIR_NAME);
+      return new File(locations.getFirst().getPath(), INFO_DIR_NAME);
     } else {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build("Could not determine infoDir. Make sure 'druid.segmentCache.infoDir' "
-                                 + "or 'druid.segmentCache.locations' is set correctly.");
+      return null;
     }
   }
 

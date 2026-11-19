@@ -370,7 +370,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private File[] retrieveSegmentMetadataFiles() throws IOException
   {
-    final File infoDir = config.getEffectiveInfoDir();
+    final File infoDir = getEffectiveInfoDir();
     FileUtils.mkdirp(infoDir);
     File[] files = infoDir.listFiles();
     return files == null ? new File[0] : files;
@@ -378,7 +378,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private File getSegmentInfoFile(final DataSegment segment)
   {
-    return FileUtils.resolveFileWithinDirectory(config.getEffectiveInfoDir(), segment.getId().toString());
+    return FileUtils.resolveFileWithinDirectory(getEffectiveInfoDir(), segment.getId().toString());
   }
 
   @Override
@@ -398,7 +398,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     if (!overwrite && segmentInfoCacheFile.exists()) {
       return false;
     }
-    FileUtils.mkdirp(config.getEffectiveInfoDir());
+    FileUtils.mkdirp(getEffectiveInfoDir());
     FileUtils.writeAtomically(
         segmentInfoCacheFile,
         out -> {
@@ -1918,6 +1918,28 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
     return null;
+  }
+
+  /**
+   * Returns the segment info directory: {@link SegmentLoaderConfig#getEffectiveInfoDir()} if the config determines
+   * one, otherwise {@code info_dir} under the first injected {@link StorageLocation}. The fallback covers processes
+   * whose storage locations are not in the config, such as peons, which use task-local broadcast storage.
+   *
+   * @throws DruidException if neither the config nor the injected storage locations determine the info directory.
+   */
+  private File getEffectiveInfoDir()
+  {
+    final File configInfoDir = config.getEffectiveInfoDir();
+    if (configInfoDir != null) {
+      return configInfoDir;
+    } else if (!locations.isEmpty()) {
+      return new File(locations.get(0).getPath(), "info_dir");
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("Could not determine infoDir. Make sure 'druid.segmentCache.infoDir' "
+                                 + "or 'druid.segmentCache.locations' is set correctly.");
+    }
   }
 
   /**

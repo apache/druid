@@ -21,7 +21,6 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.utils.RuntimeInfo;
 import org.junit.jupiter.api.Assertions;
@@ -166,8 +165,8 @@ class SegmentLoaderConfigTest
   }
 
   @Test
-  void testEffectiveInfoDirThrowsWithoutInfoDirOrLocations()
+  void testEffectiveInfoDirIsNullWithoutInfoDirOrLocations()
   {
-    Assertions.assertThrows(DruidException.class, () -> SegmentLoaderConfig.builder().build().getEffectiveInfoDir());
+    Assertions.assertNull(SegmentLoaderConfig.builder().build().getEffectiveInfoDir());
   }
 }
