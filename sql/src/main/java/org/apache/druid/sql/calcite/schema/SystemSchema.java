@@ -492,9 +492,10 @@ public class SystemSchema extends AbstractTableSchema
 
             long isRealtime = val.isRealtime() ? 1 : 0;
 
-            // set of segments returned from Coordinator include published and realtime segments
-            // so realtime segments are not published and vice versa
-            boolean isPublished = !val.isRealtime();
+            // The Coordinator returns the published segments and, if centralized datasource schema is enabled, the
+            // segments that are served but not published. Those are realtime segments, and segments that are no
+            // longer used but that a Historical has not dropped yet.
+            boolean isPublished = val.isPublished();
 
             // is_active is true for published segments that are not overshadowed or else they should be realtime
             boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();

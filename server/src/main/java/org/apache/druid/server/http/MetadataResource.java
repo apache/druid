@@ -247,14 +247,15 @@ public class MetadataResource
               isOvershadowed,
               replicationFactor,
               numRows,
-              // published segment can't be realtime
-              false
+              // the realtime flag is set only on segments that are not published
+              false,
+              true
           );
         });
 
     Stream<SegmentStatusInCluster> finalSegments = segmentStatus;
 
-    // conditionally add realtime segments information
+    // conditionally add the segments that are served but not published, such as realtime segments
     if (includeRealtimeSegments != null && coordinatorSegmentMetadataCache != null) {
       final Stream<SegmentStatusInCluster> realtimeSegmentStatus = coordinatorSegmentMetadataCache
           .getSegmentMetadataSnapshot()
@@ -269,7 +270,10 @@ public class MetadataResource
                        // replication factor is null for unpublished segments
                        null,
                        availableSegmentMetadata.getNumRows(),
-                       availableSegmentMetadata.isRealtime() != 0
+                       availableSegmentMetadata.isRealtime() != 0,
+                       // Not among the used segments, so not published. This covers realtime segments and also
+                       // segments that are no longer used but that a Historical has not dropped yet.
+                       false
                    ));
 
       finalSegments = Stream.concat(segmentStatus, realtimeSegmentStatus);

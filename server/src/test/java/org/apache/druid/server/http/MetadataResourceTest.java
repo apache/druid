@@ -230,6 +230,19 @@ public class MetadataResourceTest
         ).build()
     );
 
+    // Not among the used segments, but still served by a Historical.
+    final DataSegment unusedSegment = realTimeSegments[2];
+    availableSegments.put(
+        unusedSegment.getId(),
+        AvailableSegmentMetadata.builder(
+            unusedSegment,
+            0L,
+            Collections.emptySet(),
+            null,
+            50L
+        ).build()
+    );
+
     Mockito.doReturn(availableSegments).when(coordinatorSegmentMetadataCache).getSegmentMetadataSnapshot();
 
     Mockito.doReturn(availableSegments.get(segments[0].getId()))
@@ -251,7 +264,7 @@ public class MetadataResourceTest
     Response response = metadataResource.getAllUsedSegments(request, null, "includeOvershadowedStatus", "includeRealtimeSegments");
 
     final List<SegmentStatusInCluster> resultList = extractResponseList(response);
-    Assertions.assertEquals(resultList.size(), 6);
+    Assertions.assertEquals(7, resultList.size());
     Map<SegmentId, SegmentStatusInCluster> resultMap = resultList.stream().collect(Collectors.toMap(segmentStatus -> segmentStatus.getDataSegment().getId(), Function.identity()));
     Assertions.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false), resultMap.get(segments[0].getId()));
     Assertions.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false), resultMap.get(segments[1].getId()));
@@ -260,6 +273,15 @@ public class MetadataResourceTest
     Assertions.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultMap.get(segments[3].getId()));
     Assertions.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true), resultMap.get(realTimeSegments[0].getId()));
     Assertions.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true), resultMap.get(realTimeSegments[1].getId()));
+    // Neither realtime nor published
+    Assertions.assertEquals(
+        new SegmentStatusInCluster(unusedSegment, false, null, 50L, false, false),
+        resultMap.get(unusedSegment.getId())
+    );
+    for (SegmentStatusInCluster segmentStatus : resultList) {
+      final boolean isUsed = DATASOURCE1.equals(segmentStatus.getDataSegment().getDataSource());
+      Assertions.assertEquals(isUsed, segmentStatus.isPublished());
+    }
   }
 
 
