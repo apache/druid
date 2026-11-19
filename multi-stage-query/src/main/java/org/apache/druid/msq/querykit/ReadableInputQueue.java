@@ -413,7 +413,7 @@ public class ReadableInputQueue implements Closeable
   @Nullable
   private ListenableFuture<NumberedReadableInput> nextSegmentInput()
   {
-    if (deferredSegmentPrecedesPending()) {
+    if (deferredSegmentIsNextUp()) {
       // A deferred segment comes before everything pending, so give it another try before handing anything out. When
       // load-ahead is not backing off, this keeps time order whenever the retry is ready right away (a cache hit), and
       // otherwise gets the retry under way as early as possible.
@@ -578,11 +578,10 @@ public class ReadableInputQueue implements Closeable
   }
 
   /**
-   * Whether the front of {@link #loadableSegments} comes before every pending input in the order. Only a deferred
-   * segment can (see {@link #deferLoadahead}): pending inputs were taken from the front, so whatever else is behind
-   * them is level with them or later.
+   * @return true if the front of {@link #loadableSegments} comes before every pending input in hand-out order per
+   * {@link #intervalOrder}, false otherwise. This only occurs for a segment put back by {@link #requeue}.
    */
-  private synchronized boolean deferredSegmentPrecedesPending()
+  private synchronized boolean deferredSegmentIsNextUp()
   {
     if (pendingNextInputs.isEmpty() || loadableSegments.isEmpty()) {
       return false;
@@ -601,18 +600,12 @@ public class ReadableInputQueue implements Closeable
   @GuardedBy("this")
   private void acquireCachedInNextGroup()
   {
-    Interval nextInterval = null;
-    if (!pendingNextInputs.isEmpty()) {
+    final Interval nextInterval;
+    if (!pendingNextInputs.isEmpty() && !deferredSegmentIsNextUp()) {
       nextInterval = pendingNextInputs.firstEntry().getValue().interval();
-    }
-    // check if deferred segment at the front of loadableSegments comes before a pending input
-    if (!loadableSegments.isEmpty()) {
-      final Interval frontInterval = loadableSegments.peek().segment().descriptor().getInterval();
-      if (nextInterval == null || intervalOrder.compare(frontInterval, nextInterval) < 0) {
-        nextInterval = frontInterval;
-      }
-    }
-    if (nextInterval == null) {
+    } else if (!loadableSegments.isEmpty()) {
+      nextInterval = loadableSegments.peek().segment().descriptor().getInterval();
+    } else {
       return;
     }
 
