@@ -77,12 +77,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 {
   public static final String TYPE = "customTemplateAdapter";
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
-
-  /**
-   * Valid image tag, as defined by the OCI distribution spec.
-   */
-  private static final Pattern IMAGE_TAG_PATTERN = Pattern.compile("[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}");
-
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
   private final TaskConfig taskConfig;
   private final DruidNode node;
