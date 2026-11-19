@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.QueryContextParameters;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.server.RequestLogLine;
 import org.slf4j.MDC;
 
@@ -39,6 +41,7 @@ public class LoggingRequestLogger implements RequestLogger
   private final ObjectMapper mapper;
   private final boolean setMDC;
   private final boolean setContextMDC;
+  private final RequestHeaderContextConfig requestHeaderConfig;
 
   public LoggingRequestLogger(
       ObjectMapper mapper,
@@ -46,9 +49,20 @@ public class LoggingRequestLogger implements RequestLogger
       boolean setContextMDC
   )
   {
+    this(mapper, setMDC, setContextMDC, new RequestHeaderContextConfig());
+  }
+
+  public LoggingRequestLogger(
+      ObjectMapper mapper,
+      boolean setMDC,
+      boolean setContextMDC,
+      RequestHeaderContextConfig requestHeaderConfig
+  )
+  {
     this.mapper = mapper;
     this.setMDC = setMDC;
     this.setContextMDC = setContextMDC;
+    this.requestHeaderConfig = requestHeaderConfig;
   }
 
   @Override
@@ -56,7 +70,10 @@ public class LoggingRequestLogger implements RequestLogger
   {
     final Map mdc = MDC.getCopyOfContextMap();
     // MDC must be set during the `LOG.info` call at the end of the try block.
-    try {
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(
+        requestHeaderConfig,
+        requestLogLine.getQuery() == null ? null : requestLogLine.getQuery().getContext()
+    )) {
       if (setMDC) {
         try {
           final Query query = requestLogLine.getQuery();
@@ -100,8 +117,10 @@ public class LoggingRequestLogger implements RequestLogger
   @Override
   public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
   {
-    final String line = requestLogLine.getSqlQueryLine(mapper);
-    LOG.info("%s", line);
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(requestHeaderConfig, requestLogLine.getSqlQueryContext())) {
+      final String line = requestLogLine.getSqlQueryLine(mapper);
+      LOG.info("%s", line);
+    }
   }
 
   public boolean isSetMDC()

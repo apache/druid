@@ -377,7 +377,9 @@ Native query fan-out and cancellation requests forward the configured headers fr
 headers available during request handling, native query execution (including lazy results), and task execution.
 Druid executor utilities and asynchronous query processing retain the originating operation's headers and restore the
 previous thread state when work finishes. This includes broker parallel merges, asynchronous frame processing,
-and query-driven storage downloads. Druid HTTP clients, HTTP ingestion requests, and S3 clients forward the headers
+and query-driven storage downloads. Within these scopes, configured metadata is also available as logging context fields.
+The SLF4J request logger includes these fields for native and SQL queries, including Router request logs.
+Druid HTTP clients, HTTP ingestion requests, and S3 clients forward the headers
 without replacing explicitly supplied request headers. Audit entries include captured values in `request.requestMetadata`,
 omitted when empty. Use non-sensitive metadata suitable for task payloads, logs, audits, and downstream services.
 

@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.slf4j.MDC;
 
 import java.util.List;
 import java.util.Map;
@@ -50,6 +51,34 @@ import java.util.concurrent.TimeUnit;
 public class RequestHeadersTest
 {
   private final RequestHeaderContextConfig config = new RequestHeaderContextConfig(Map.of("X-Trace", "traceId"));
+
+  @Test
+  public void testLoggingContextIsRestoredAcrossNestedScopes()
+  {
+    MDC.put("traceId", "previous");
+    MDC.put("unrelated", "preserved");
+    try {
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(config, Map.of("traceId", "outer"))) {
+        Assertions.assertEquals("outer", MDC.get("traceId"));
+        try (RequestHeaders.Scope inner = RequestHeaders.open(
+            new RequestHeaderContextConfig(Map.of("X-Request", "requestId")),
+            Map.of("requestId", "inner")
+        )) {
+          Assertions.assertNull(MDC.get("traceId"));
+          Assertions.assertEquals("inner", MDC.get("requestId"));
+          Assertions.assertEquals("preserved", MDC.get("unrelated"));
+        }
+        Assertions.assertEquals("outer", MDC.get("traceId"));
+        Assertions.assertNull(MDC.get("requestId"));
+      }
+      Assertions.assertEquals("previous", MDC.get("traceId"));
+      Assertions.assertEquals("preserved", MDC.get("unrelated"));
+    }
+    finally {
+      MDC.remove("traceId");
+      MDC.remove("unrelated");
+    }
+  }
 
   @Test
   public void testDisabledPropagationBypassesCaptureAndWrapping() throws Exception
@@ -121,6 +150,7 @@ public class RequestHeadersTest
         first = executor.submit(RequestHeaders::current);
         failing = executor.submit(() -> {
           Assertions.assertEquals("first", RequestHeaders.current().get("X-Trace"));
+          Assertions.assertEquals("first", MDC.get("traceId"));
           throw new IllegalStateException("expected");
         });
       }
@@ -134,6 +164,8 @@ public class RequestHeadersTest
       Assertions.assertEquals(Map.of("X-Trace", "second"), second.get(10, TimeUnit.SECONDS));
       Assertions.assertTrue(empty.get(10, TimeUnit.SECONDS).isEmpty());
       Assertions.assertTrue(RequestHeaders.current().isEmpty());
+      Assertions.assertNull(executor.submit(() -> MDC.get("traceId")).get(10, TimeUnit.SECONDS));
+      Assertions.assertNull(MDC.get("traceId"));
     }
     finally {
       release.countDown();

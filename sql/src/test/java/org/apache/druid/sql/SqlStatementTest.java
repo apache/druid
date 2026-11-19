@@ -40,6 +40,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -70,6 +71,8 @@ import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
+import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.sql.http.SqlResource;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -194,6 +197,29 @@ public class SqlStatementTest
   private SqlQueryPlus queryPlus(final String sql, final AuthenticationResult authResult)
   {
     return SqlQueryPlus.builder(sql).auth(authResult).build();
+  }
+
+  @Test
+  public void testCapturedHeadersWithStrictContextValidation()
+  {
+    final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(CalciteTests.REGULAR_USER_AUTH_RESULT);
+    Mockito.when(request.getAttribute(RequestHeaderContextFilterHolder.class.getName()))
+           .thenReturn(Map.of("traceId", "caller", "correlationId", "custom"));
+    final SqlQueryPlus supplied = SqlResource.makeSqlQueryPlus(
+        new SqlQuery("SELECT COUNT(*) FROM druid.foo", null, false, false, false, Map.of(), null),
+        request,
+        QueryContext.empty(),
+        new QueryContextConfig(true)
+    );
+
+    try (HttpStatement statement = sqlStatementFactory.httpStatement(supplied, request)) {
+      assertEquals("caller", statement.context().get("traceId"));
+      assertEquals("custom", statement.context().get("correlationId"));
+      assertTrue(statement.queryPlus.authContextKeys().contains("traceId"));
+      assertEquals(6L, statement.plan().run().getResults().toList().get(0)[0]);
+    }
   }
 
   @Test

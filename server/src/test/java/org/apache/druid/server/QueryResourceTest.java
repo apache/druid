@@ -398,6 +398,23 @@ public class QueryResourceTest
   }
 
   @Test
+  public void testCapturedHeadersWithStrictContextValidation() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+    testServletRequest.setAttribute(RequestHeaderContextFilterHolder.class.getName(), Map.of("traceId", "caller"));
+
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        timeseriesQueryWithContext(Map.of("priority", -1)),
+        createBrokerQueryResource(new QueryContextConfig(true))
+    );
+
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals("caller", testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get("traceId"));
+    Assertions.assertEquals(-1, testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get("priority"));
+  }
+
+  @Test
   public void testCapturedHeadersOverrideNativeBodyContext() throws IOException
   {
     expectPermissiveHappyPathAuth();

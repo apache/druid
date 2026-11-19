@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+import org.slf4j.MDC;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -98,8 +99,22 @@ public final class RequestHeaders
     if (previous == snapshot) {
       return NOOP;
     }
+    final Map<String, String> previousLogContext = MDC.getCopyOfContextMap();
+    if (previous != null) {
+      previous.context.keySet().forEach(MDC::remove);
+    }
+    if (snapshot != null) {
+      snapshot.context.forEach((key, value) -> MDC.put(key, value.toString()));
+    }
     set(snapshot);
-    return () -> set(previous);
+    return () -> {
+      set(previous);
+      if (previousLogContext == null) {
+        MDC.clear();
+      } else {
+        MDC.setContextMap(previousLogContext);
+      }
+    };
   }
 
   private static void set(@Nullable final Snapshot snapshot)

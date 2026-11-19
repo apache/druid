@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
 
 @JsonTypeName("slf4j")
 public class LoggingRequestLoggerProvider implements RequestLoggerProvider
@@ -41,10 +42,13 @@ public class LoggingRequestLoggerProvider implements RequestLoggerProvider
   @JsonProperty
   public boolean setContextMDC = false;
 
+  @JacksonInject
+  public RequestHeaderContextConfig requestHeaderConfig = new RequestHeaderContextConfig();
+
   @Override
   public RequestLogger get()
   {
-    LoggingRequestLogger logger = new LoggingRequestLogger(mapper, setMDC, setContextMDC);
+    LoggingRequestLogger logger = new LoggingRequestLogger(mapper, setMDC, setContextMDC, requestHeaderConfig);
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }

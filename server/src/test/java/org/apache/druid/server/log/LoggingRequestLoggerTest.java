@@ -35,6 +35,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -54,6 +55,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.slf4j.MDC;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -207,6 +211,41 @@ public class LoggingRequestLoggerTest
   {
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), false, false);
     requestLogger.logNativeQuery(logLine);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void testConfiguredMetadataIsLoggedAndRestored(final boolean sql) throws Exception
+  {
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(
+        MAPPER,
+        false,
+        false,
+        new RequestHeaderContextConfig(Map.of("X-Trace", "traceId", "X-Request", "requestId"))
+    );
+    final Map<String, Object> context = Map.of("traceId", "trace", "requestId", "request", "foo", "bar");
+    MDC.put("traceId", "previous");
+    try {
+      if (sql) {
+        requestLogger.logSqlQuery(RequestLogLine.forSql("SELECT 1", context, timestamp, remoteAddr, queryStats));
+      } else {
+        requestLogger.logNativeQuery(RequestLogLine.forNative(
+            new FakeQuery(query.getDataSource(), ((BaseQuery<?>) query).getQuerySegmentSpec(), context),
+            timestamp,
+            remoteAddr,
+            queryStats
+        ));
+      }
+      final Map<String, Object> logged = readContextMap(BAOS.toByteArray());
+      Assertions.assertEquals("trace", logged.get("traceId"));
+      Assertions.assertEquals("request", logged.get("requestId"));
+      Assertions.assertNull(logged.get("foo"));
+      Assertions.assertEquals("previous", MDC.get("traceId"));
+      Assertions.assertNull(MDC.get("requestId"));
+    }
+    finally {
+      MDC.remove("traceId");
+    }
   }
 
   @Test
