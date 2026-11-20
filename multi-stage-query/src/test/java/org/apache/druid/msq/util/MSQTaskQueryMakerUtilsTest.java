@@ -178,4 +178,65 @@ public class MSQTaskQueryMakerUtilsTest
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql5)
     );
   }
+
+  @Test
+  public void maskS3CredentialsAsPasswordProviders()
+  {
+    final String sql = """
+        SELECT * FROM TABLE(EXTERN(
+          '{"type":"s3","uris":["s3://bucket/data.json"],
+            "properties":{"accessKeyId":{"type":"default","password":"AKIAEXAMPLE"},
+                          "secretAccessKey":{"type":"default","password":"secretExample"}}}',
+          '{"type":"json"}'
+        )) EXTEND (x VARCHAR)
+        """;
+    final String masked = MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql);
+    Assertions.assertFalse(masked.contains("AKIAEXAMPLE"), masked);
+    Assertions.assertFalse(masked.contains("secretExample"), masked);
+  }
+
+  @Test
+  public void maskS3CredentialsAsPlainStrings()
+  {
+    final String sql = """
+        SELECT * FROM TABLE(EXTERN(
+          '{"type":"s3","uris":["s3://bucket/data.json"],
+            "properties":{"accessKeyId":"AKIAEXAMPLE","secretAccessKey":"secretExample"}}',
+          '{"type":"json"}'
+        )) EXTEND (x VARCHAR)
+        """;
+    final String masked = MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql);
+    Assertions.assertFalse(masked.contains("AKIAEXAMPLE"), masked);
+    Assertions.assertFalse(masked.contains("secretExample"), masked);
+  }
+
+  @Test
+  public void maskHttpAuthenticationPasswordAsPasswordProvider()
+  {
+    final String sql = """
+        SELECT * FROM TABLE(EXTERN(
+          '{"type":"http","uris":["http://example.com/data.csv"],"httpAuthenticationUsername":"bob",
+            "httpAuthenticationPassword":{"type":"default","password":"secretExample"}}',
+          '{"type":"csv","findColumnsFromHeader":true}'
+        )) EXTEND (x VARCHAR)
+        """;
+    final String masked = MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql);
+    Assertions.assertFalse(masked.contains("secretExample"), masked);
+    Assertions.assertTrue(masked.contains("bob"), masked);
+  }
+
+  @Test
+  public void maskHttpAuthenticationPasswordAsPlainString()
+  {
+    final String sql = """
+        SELECT * FROM TABLE(EXTERN(
+          '{"type":"http","uris":["http://example.com/data.csv"],"httpAuthenticationUsername":"bob",
+            "httpAuthenticationPassword":"secretExample"}',
+          '{"type":"csv","findColumnsFromHeader":true}'
+        )) EXTEND (x VARCHAR)
+        """;
+    final String masked = MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql);
+    Assertions.assertFalse(masked.contains("secretExample"), masked);
+    Assertions.assertTrue(masked.contains("bob"), masked);
+  }
 }
