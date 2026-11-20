@@ -459,7 +459,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     private SqlQueryPlus sqlQuery()
     {
       return SqlQueryPlus.builder(sql)
-          .queryContext(queryContext)
+          .queryContext(QueryContext.of(queryContext))
           .auth(authenticationResult)
           .build();
     }

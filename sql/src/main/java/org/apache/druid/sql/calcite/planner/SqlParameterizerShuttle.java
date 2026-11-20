@@ -69,6 +69,16 @@ public class SqlParameterizerShuttle extends SqlShuttle
   @Override
   public SqlNode visit(SqlDynamicParam param)
   {
+    final SqlNode node = replace(param);
+    if (node != param) {
+      // Lets table functions tell a bound value apart from a literal written in the SQL text.
+      plannerContext.addBoundParameterPosition(param.getParserPosition());
+    }
+    return node;
+  }
+
+  private SqlNode replace(SqlDynamicParam param)
+  {
     if (plannerContext.getParameters().size() <= param.getIndex()) {
       throw unbound(param);
     }
@@ -92,7 +102,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
     }
 
     if (typeName == SqlTypeName.ARRAY) {
-      return createArrayLiteral(paramBinding.value, param.getIndex());
+      return createArrayLiteral(paramBinding.value, param.getIndex(), param.getParserPosition());
     }
     try {
       // This throws ClassCastException for a DATE parameter given as
@@ -118,7 +128,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
    * structure. Supports a limited set of member types. Does not attempt
    * to enforce that all elements have the same type.
    */
-  private SqlNode createArrayLiteral(Object value, int posn)
+  private SqlNode createArrayLiteral(Object value, int posn, SqlParserPos pos)
   {
     List<?> list;
     if (value instanceof List) {
@@ -153,7 +163,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
       args.add(node);
     }
     return SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR.createCall(
-        SqlParserPos.ZERO,
+        pos,
         args
     );
   }
