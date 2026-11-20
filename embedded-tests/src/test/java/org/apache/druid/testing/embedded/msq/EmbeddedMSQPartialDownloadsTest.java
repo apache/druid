@@ -24,7 +24,6 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
@@ -56,7 +55,7 @@ import java.util.Objects;
  * End-to-end wiring test for on-demand partial segment downloads on MSQ worker tasks. Partial downloads default to
  * enabled for tasks (the {@code druid.indexer.task.virtualStoragePartialDownloadsEnabled} {@code TaskConfig} default is
  * true), so run 1 sets no property or context and verifies the default engages the partial path. Run 2 verifies the
- * per-query {@link MultiStageQueryContext#CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS} override can turn it back off.
+ * per-query {@link QueryContextParameters#VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED} override can turn it back off.
  * <p>
  * The observable signal is the indexer's {@link StorageMonitor#VSF_READ_COUNT} metric: the partial path performs
  * on-demand deep-storage range reads (so the count is positive), while the full-download path does not (the count
@@ -149,7 +148,7 @@ class EmbeddedMSQPartialDownloadsTest extends EmbeddedClusterTestBase
     // worker task context and must be parsed, not unboxed, when building the toolbox and worker context.
     emitter.awaitMetricQuiescent(StorageMonitor.VSF_READ_COUNT, MONITOR_QUIESCE_TIMEOUT_MILLIS);
     emitter.flush();
-    runMsqSelect(Map.of(MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS, "false"));
+    runMsqSelect(Map.of(QueryContextParameters.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED.getName(), "false"));
     emitter.awaitMetricQuiescent(StorageMonitor.VSF_READ_COUNT, MONITOR_QUIESCE_TIMEOUT_MILLIS);
     Assertions.assertEquals(
         0L,

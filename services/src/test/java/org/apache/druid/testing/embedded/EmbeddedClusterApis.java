@@ -399,6 +399,54 @@ public class EmbeddedClusterApis implements EmbeddedResource
         result -> parseCountOrZero(result) >= numSegments
     ).withTimeoutMillis(timeoutMillis).go();
 
+    waitForDataSourceInSqlSchema(escapedDataSource, timeoutMillis);
+  }
+
+  /**
+   * Waits for all non-tombstone used segments of the given datasource to be
+   * served by a Historical, as seen by the Broker, and for the datasource to be
+   * present in the Broker SQL schema, by polling the Broker.
+   * <p>
+   * Unlike {@link #waitForAllSegmentsToBeQueryable}, a segment that is served
+   * only by a realtime task does not count. Use this when the tasks that
+   * published the segments may stop serving them, for example when a task is
+   * killed before it finishes handoff. Until a Historical loads such a segment,
+   * its rows are missing from query results.
+   * <p>
+   * This counts the segments that {@code sys.segments} reports as available
+   * and not realtime.
+   *
+   * @param timeoutMillis maximum time to wait
+   */
+  public void waitForAllSegmentsToBeHandedOff(
+      String dataSource,
+      EmbeddedCoordinator coordinator,
+      long timeoutMillis
+  )
+  {
+    final int numSegments = (int) coordinator
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
+        .stream()
+        .filter(segment -> !segment.isTombstone())
+        .count();
+
+    final String escapedDataSource = StringUtils.escapeSql(dataSource);
+
+    waitForResult(
+        () -> runSql(
+            "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s' AND is_available = 1 AND is_realtime = 0",
+            escapedDataSource
+        ),
+        result -> parseCountOrZero(result) >= numSegments
+    ).withTimeoutMillis(timeoutMillis).go();
+
+    waitForDataSourceInSqlSchema(escapedDataSource, timeoutMillis);
+  }
+
+  private void waitForDataSourceInSqlSchema(String escapedDataSource, long timeoutMillis)
+  {
     waitForResult(
         () -> runSql(
             "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = '%s'",

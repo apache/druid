@@ -209,10 +209,13 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
 
   /**
    * Verifies that the row count in {@link #dataSource} matches the {@code expectedRowCount}.
+   * <p>
+   * Waits for handoff first, so that every published row is served by a Historical. A published segment whose task
+   * has already stopped, for example after a completion timeout, is not queryable until a Historical loads it.
    */
   protected void verifyRowCount(int expectedRowCount)
   {
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    cluster.callApi().waitForAllSegmentsToBeHandedOff(dataSource, coordinator, 60_000L);
     cluster.callApi().verifySqlQuery(
         "SELECT COUNT(*) FROM %s",
         dataSource,

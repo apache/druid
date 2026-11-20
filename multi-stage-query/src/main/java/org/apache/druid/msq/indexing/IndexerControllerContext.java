@@ -31,7 +31,6 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -100,8 +99,8 @@ public class IndexerControllerContext implements ControllerContext
       QueryContextParameters.SELECT_DESTINATION.getName(),
       QueryContextParameters.LIVE_REPORT_COUNTERS.getName(),
       QueryContextParameters.MAX_THREADS.getName(),
-      MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS,
-      Tasks.STORE_EMPTY_COLUMNS_KEY,
+      QueryContextParameters.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED.getName(),
+      QueryContextParameters.STORE_EMPTY_COLUMNS.getName(),
       QueryContextParameters.QUERY_ID.getName(),
       QueryContextParameters.SQL_QUERY_ID.getName(),
       QueryContextParameters.DEBUG.getName()

@@ -44,7 +44,6 @@ import org.joda.time.DateTimeZone;
 
 import java.io.Closeable;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -131,7 +130,7 @@ public class DruidPlanner implements Closeable
     Preconditions.checkState(state == State.START);
 
     // Validate query context.
-    engine.validateContext(plannerContext.queryContextMap());
+    engine.validateContext(plannerContext.queryContext());
     planner.skipParse();
     final SqlNode root = rewriteParameters(plannerContext.getSqlNode());
     hook.captureSqlNode(root);
@@ -332,12 +331,6 @@ public class DruidPlanner implements Closeable
     public QueryContext queryContext()
     {
       return plannerContext.queryContext();
-    }
-
-    @Override
-    public Map<String, Object> queryContextMap()
-    {
-      return plannerContext.queryContextMap();
     }
 
     @Override

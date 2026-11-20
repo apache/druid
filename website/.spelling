@@ -737,6 +737,7 @@ TINYINT
 VARCHAR
 avg_num_rows
 avg_size
+binary_version
 created_time
 current_size
 default_description
@@ -1294,6 +1295,8 @@ protoMessageType
 timeAndDims
 tmp
 SigV4
+SigV4A
+STS
 jvm.config
 kms
 s3
@@ -2652,6 +2655,11 @@ SRE
 reachability
 ownership_mismatch
 giveup
+Lezer
+MD5
+Hjson
+spec
+dialog
 retryable
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
@@ -2713,6 +2721,10 @@ savepoints
 Scrollable
 updatable
 
+
+- ../docs/release-info/release-notes.md
+dialogs
+
 - ../docs/development/extensions-contrib/tsfile.md
 TsFile
 IoTDB
@@ -2722,3 +2734,4 @@ INT64
 - ../docs/configuration/extensions.md
 druid-tsfile-extensions
 TsFile
+

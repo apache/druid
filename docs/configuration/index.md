@@ -248,7 +248,7 @@ All services can log debugging information on startup.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.startup.logging.logProperties`|Log all properties on startup (from common.runtime.properties, runtime.properties, and the JVM command line).|false|
-|`druid.startup.logging.maskProperties`|Masks sensitive properties (passwords, for example) containing theses words.|["password"]|
+|`druid.startup.logging.maskProperties`|**Deprecated**, use `druid.server.hiddenProperties` instead. Words in this list are still added to `druid.server.hiddenProperties`.|null|
 
 Note that some sensitive information may be logged if these settings are enabled.
 
@@ -719,7 +719,7 @@ This section contains the configuration options for endpoints that are supported
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.hiddenProperties`| If property names or substring of property names (case insensitive) is in this list, responses of the `/status/properties` endpoint do not show these properties | `["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password", "password", "key", "token", "pwd"]` |
+|`druid.server.hiddenProperties`|Properties whose names contain any of these words (case insensitive) are treated as sensitive: their values are masked in the startup property log (`druid.startup.logging.logProperties`) and in logged task commands, and the properties are omitted from the `/status/properties` endpoint. Setting this property replaces the default list, so keep the default words when adding new ones.|`["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password", "password", "key", "token", "pwd", "secret", "passphrase", "basicAuthentication", "druid.emitter.kafka.producer.hiddenProperties"]`|
 
 ## Master server
 
@@ -1041,7 +1041,7 @@ If autoscaling is enabled, you can set these additional configs:
 |`druid.indexer.autoscale.maxScalingDuration`|How long the Overlord will wait around for a Middle Manager to show up before giving up.|`PT15M`|
 |`druid.indexer.autoscale.numEventsToTrack`|The number of autoscaling related events (node creation and termination) to track.|10|
 |`druid.indexer.autoscale.pendingTaskTimeout`|How long a task can be in "pending" state before the Overlord tries to scale up.|`PT30S`|
-|`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling. Overrides dynamic configuration. |null|
+|`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling, and running workers with an older version count as invalid, so they can be terminated. If not set, `druid.indexer.runner.minWorkerVersion` decides which workers are valid. |null|
 |`druid.indexer.autoscale.workerPort`|The port that Middle Managers will run on.|8080|
 |`druid.indexer.autoscale.workerCapacityHint`| An estimation of the number of task slots available for each worker launched by the auto scaler when there are no workers running. The auto scaler uses the worker capacity hint to launch workers with an adequate capacity to handle pending tasks. When unset or set to a value less than or equal to 0, the auto scaler scales workers equal to the value for `minNumWorkers` in autoScaler config instead. The auto scaler assumes that each worker, either a Middle Manager or indexer, has the same amount of task slots. Therefore, when all your workers have the same capacity (homogeneous capacity), set the value for `autoscale.workerCapacityHint` equal to `druid.worker.capacity`. If your workers have different capacities (heterogeneous capacity), set the value to the average of `druid.worker.capacity` across the workers. For example, if two workers have `druid.worker.capacity=10`, and one has `druid.worker.capacity=4`, set `autoscale.workerCapacityHint=8`. Only applies to `pendingTaskBased` provisioning strategy.|-1|
 
@@ -2287,6 +2287,21 @@ If runtime property only contains `druid.query.default.context.maxQueuedBytes=y`
 `druid.broker.http.maxQueuedBytes=x` and `druid.query.default.context.maxQueuedBytes=y`, then the value of
 `druid.query.default.context.maxQueuedBytes`, `y`, is use (given that query does not have `maxQueuedBytes` in the
 context). If query does have `maxQueuedBytes` in the context, then that value is use instead.
+
+### Query context validation
+
+The Broker checks the parameters that a query sets in its context. This applies to the top-level context of native queries, and to the context and `SET` statements of SQL queries, including the connection properties of JDBC connections.
+
+The Broker always rejects a recognized parameter with an invalid value. If you set `druid.query.context.rejectUnknownParameters` to `true`, it also rejects a parameter that Druid doesn't recognize, such as a misspelled parameter name, instead of ignoring it. The error names an invalid parameter and, for an unrecognized parameter, suggests the parameters with similar names, if any. For example: `Unknown query context parameter [useCahce]. Did you mean [useCache]?`
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.context.rejectUnknownParameters`|Whether the Broker rejects queries with unrecognized query context parameters. If `false`, the Broker ignores unrecognized parameters.|`false`|
+
+Druid also checks the default context that operators configure, in the same way: it always rejects invalid values, and rejects unrecognized parameters if `druid.query.context.rejectUnknownParameters` is `true`.
+
+* The Broker fails to start if `druid.query.default.context.*` or `druid.msq.dart.query.context.*` sets an invalid parameter.
+* The Coordinator rejects an update of the [Broker dynamic configuration](../api-reference/dynamic-configuration-api.md) whose `queryContext` sets an invalid parameter. To reject unrecognized parameters there, set `druid.query.context.rejectUnknownParameters` on the Coordinator as well as on the Broker, for example in `common.runtime.properties`.
 
 ### Search query config
 

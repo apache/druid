@@ -77,6 +77,9 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
   {
     return super
         .createCluster()
+        // Emit monitor metrics frequently so that the Kafka consumer reports the
+        // poll-idle-ratio within the short lifetime of the tasks in these tests
+        .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
         .useDefaultTimeoutForLatchableEmitter(600);
   }
 

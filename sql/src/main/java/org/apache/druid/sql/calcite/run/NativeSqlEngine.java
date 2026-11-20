@@ -39,7 +39,6 @@ import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.destination.IngestDestination;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -95,7 +94,7 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(Map<String, Object> queryContext)
+  public void validateContext(QueryContext queryContext)
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, SYSTEM_CONTEXT_PARAMETERS);
     validateJoinAlgorithm(queryContext);
@@ -105,7 +104,7 @@ public class NativeSqlEngine implements SqlEngine
   public RelDataType resultTypeForSelect(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   )
   {
     return validatedRowType;
@@ -115,7 +114,7 @@ public class NativeSqlEngine implements SqlEngine
   public RelDataType resultTypeForInsert(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   )
   {
     throw new UnsupportedOperationException();
@@ -175,10 +174,9 @@ public class NativeSqlEngine implements SqlEngine
    * Validates that {@link QueryContextParameters#SQL_JOIN_ALGORITHM} is {@link JoinAlgorithm#BROADCAST}. This is the
    * only join algorithm supported by native queries.
    */
-  private static void validateJoinAlgorithm(final Map<String, Object> queryContext)
+  private static void validateJoinAlgorithm(final QueryContext queryContext)
   {
-    final JoinAlgorithm joinAlgorithm =
-        QueryContext.of(queryContext).getOrDefault(QueryContextParameters.SQL_JOIN_ALGORITHM);
+    final JoinAlgorithm joinAlgorithm = queryContext.getOrDefault(QueryContextParameters.SQL_JOIN_ALGORITHM);
 
     if (joinAlgorithm != JoinAlgorithm.BROADCAST) {
       throw InvalidSqlInput.exception("Join algorithm [%s] is not supported by engine [%s]", joinAlgorithm, NAME);

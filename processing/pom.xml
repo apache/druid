@@ -29,13 +29,13 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>40.0.0-SNAPSHOT</version>
+    <version>${revision}</version>
   </parent>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <query.context.docs.mode>verify</query.context.docs.mode>
-    <oshi.version>7.7.2</oshi.version>
+    <oshi.version>7.7.3</oshi.version>
     <mariadb.legacy.version>2.7.3</mariadb.legacy.version>
   </properties>
 
@@ -449,10 +449,6 @@
   <build>
     <plugins>
 
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
