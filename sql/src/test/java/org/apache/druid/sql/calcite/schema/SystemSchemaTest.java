@@ -723,11 +723,11 @@ public class SystemSchemaTest extends CalciteTestBase
     final SegmentsTable segmentsTable =
         new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false),
-        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false),
-        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false),
-        new SegmentStatusInCluster(segment1, true, 2, null, false),
-        new SegmentStatusInCluster(segment2, false, 0, null, false)
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false, true),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false, true),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false, true),
+        new SegmentStatusInCluster(segment1, true, 2, null, false, true),
+        new SegmentStatusInCluster(segment2, false, 0, null, false, true)
     ));
 
     EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
@@ -848,17 +848,17 @@ public class SystemSchemaTest extends CalciteTestBase
     // The Coordinator reports every published segment as not realtime.
     final List<SegmentStatusInCluster> publishedSegments = List.of(
         // Served by a Historical only.
-        new SegmentStatusInCluster(segment1, false, 2, null, false),
+        new SegmentStatusInCluster(segment1, false, 2, null, false, true),
         // Served by a Historical and a realtime server.
-        new SegmentStatusInCluster(segment2, false, 2, null, false),
+        new SegmentStatusInCluster(segment2, false, 2, null, false, true),
         // Served by a realtime server only: published, but not handed off yet.
-        new SegmentStatusInCluster(segment4, false, 2, null, false),
+        new SegmentStatusInCluster(segment4, false, 2, null, false, true),
         // Served by a realtime server only, and overshadowed.
-        new SegmentStatusInCluster(segment5, true, 0, null, false),
+        new SegmentStatusInCluster(segment5, true, 0, null, false, true),
         // Served by no one.
-        new SegmentStatusInCluster(publishedCompactedSegment1, false, 2, null, false),
+        new SegmentStatusInCluster(publishedCompactedSegment1, false, 2, null, false, true),
         // Served by no one, and overshadowed.
-        new SegmentStatusInCluster(publishedCompactedSegment2, true, 0, null, false)
+        new SegmentStatusInCluster(publishedCompactedSegment2, true, 0, null, false, true)
     );
 
     EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
@@ -895,16 +895,59 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
+  public void testSegmentsTableWithUnpublishedSegmentsFromCoordinator()
+  {
+    final SegmentsTable segmentsTable =
+        new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
+    // With centralized datasource schema, the Coordinator also returns the segments that are served but not published.
+    final List<SegmentStatusInCluster> segmentsFromCoordinator = List.of(
+        // Published, served by a Historical.
+        new SegmentStatusInCluster(segment1, false, 2, null, false, true),
+        // Not published, served by a Historical: no longer used, and not dropped yet.
+        new SegmentStatusInCluster(segment3, false, null, 2L, false, false),
+        // Not published, served by a realtime server.
+        new SegmentStatusInCluster(segment4, false, null, null, true, false)
+    );
+
+    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
+            .andReturn(CloseableIterators.withEmptyBaggage(segmentsFromCoordinator.iterator()))
+            .once();
+
+    EasyMock.replay(request, responseHolder, responseHandler, metadataView);
+    final List<Object[]> rows = segmentsTable.scan(
+        createDataContext(),
+        Collections.emptyList(),
+        new int[]{
+            SystemSchema.SEGMENTS_SIGNATURE.indexOf("datasource"),
+            SystemSchema.SEGMENTS_SIGNATURE.indexOf("is_published"),
+            SystemSchema.SEGMENTS_SIGNATURE.indexOf("is_available"),
+            SystemSchema.SEGMENTS_SIGNATURE.indexOf("is_realtime"),
+            SystemSchema.SEGMENTS_SIGNATURE.indexOf("is_active")
+        }
+    ).toList();
+
+    final Map<Object, Object[]> rowByDataSource = new HashMap<>();
+    for (Object[] row : rows) {
+      rowByDataSource.put(row[0], row);
+    }
+
+    // datasource, is_published, is_available, is_realtime, is_active
+    Assertions.assertArrayEquals(new Object[]{"test1", 1L, 1L, 0L, 1L}, rowByDataSource.get("test1"));
+    Assertions.assertArrayEquals(new Object[]{"test3", 0L, 1L, 0L, 0L}, rowByDataSource.get("test3"));
+    Assertions.assertArrayEquals(new Object[]{"test4", 0L, 1L, 1L, 1L}, rowByDataSource.get("test4"));
+  }
+
+  @Test
   public void testSegmentsTableWithProjection() throws JsonProcessingException
   {
     final SegmentsTable segmentsTable =
         new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false),
-        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false),
-        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false),
-        new SegmentStatusInCluster(segment1, true, 2, null, false),
-        new SegmentStatusInCluster(segment2, false, 0, null, false)
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false, true),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false, true),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false, true),
+        new SegmentStatusInCluster(segment1, true, 2, null, false, true),
+        new SegmentStatusInCluster(segment2, false, 0, null, false, true)
     ));
 
     EasyMock.expect(metadataView.getSegments(EasyMock.anyObject()))
@@ -977,8 +1020,8 @@ public class SystemSchemaTest extends CalciteTestBase
     final SegmentsTable segmentsTable =
         new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
     final List<SegmentStatusInCluster> publishedSegments = List.of(
-        new SegmentStatusInCluster(segment1, true, 2, null, false),
-        new SegmentStatusInCluster(segment2, false, 0, null, false)
+        new SegmentStatusInCluster(segment1, true, 2, null, false, true),
+        new SegmentStatusInCluster(segment2, false, 0, null, false, true)
     );
     final AtomicBoolean closed = new AtomicBoolean(false);
 

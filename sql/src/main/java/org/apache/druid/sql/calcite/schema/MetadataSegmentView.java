@@ -176,7 +176,8 @@ public class MetadataSegmentView
             segment.isOvershadowed(),
             replicationFactor,
             segment.getNumRows(),
-            segment.isRealtime()
+            segment.isRealtime(),
+            segment.isPublished()
         );
         builder.add(segmentStatusInCluster);
       }
