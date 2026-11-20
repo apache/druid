@@ -17,6 +17,9 @@ name: "Docker Tests using Distribution Image"
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   run-docker-tests:
     name: Run Docker tests
