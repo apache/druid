@@ -20,18 +20,23 @@
 package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.util.Map;
@@ -120,6 +125,26 @@ public class ShareGroupIndexTaskTest
     Assertions.assertEquals(task.getType(), deserialized.getType());
     Assertions.assertEquals(task.getIOConfig().getTopic(), deserialized.getIOConfig().getTopic());
     Assertions.assertEquals(task.getIOConfig().getGroupId(), deserialized.getIOConfig().getGroupId());
+    Assertions.assertEquals(
+        PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT,
+        deserialized.getTuningConfig().getMaxRowsPerSegment()
+    );
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"maxRowsPerSegment", "maxTotalRows"})
+  public void testRejectsRowLimitOverrides(String field)
+  {
+    final ObjectNode spec = mapper.valueToTree(createTask("task_row_limit"));
+    ((ObjectNode) spec.get("tuningConfig")).put(field, 10);
+
+    final ValueInstantiationException exception = Assertions.assertThrows(
+        ValueInstantiationException.class,
+        () -> mapper.treeToValue(spec, ShareGroupIndexTask.class)
+    );
+    final DruidException error = Assertions.assertInstanceOf(DruidException.class, exception.getCause());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, error.getCategory());
+    Assertions.assertTrue(error.getMessage().contains(field));
   }
 
   @Test

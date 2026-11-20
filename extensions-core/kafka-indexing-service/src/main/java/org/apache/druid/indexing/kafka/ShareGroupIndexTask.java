@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -87,6 +88,15 @@ public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentA
     if (TaskLocks.determineLockTypeForAppend(getContext()) != TaskLockType.APPEND
         || !Boolean.TRUE.equals(getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK))) {
       throw InvalidInput.exception("Kafka share-group tasks require time-chunk APPEND locks");
+    }
+    if (tuningConfig.getMaxRowsPerSegment() != PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT) {
+      throw InvalidInput.exception(
+          "Kafka share-group tasks require the default maxRowsPerSegment [%d]",
+          PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT
+      );
+    }
+    if (!PartitionsSpec.isEffectivelyNull(tuningConfig.getMaxTotalRows())) {
+      throw InvalidInput.exception("Remove maxTotalRows from tuningConfig for Kafka share-group tasks");
     }
     this.dataSchema = dataSchema;
     this.tuningConfig = tuningConfig;

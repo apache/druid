@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.kafka;
 
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
@@ -35,6 +37,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
+import org.apache.druid.testing.junit.LoggerCaptureExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.kafka.clients.consumer.AcknowledgeType;
@@ -48,6 +51,7 @@ import org.apache.kafka.common.Uuid;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 
@@ -57,7 +61,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ShareGroupIndexTaskRunnerTest
 {
@@ -74,6 +81,9 @@ public class ShareGroupIndexTaskRunnerTest
       .loadSpec(Map.of("path", "segment.zip"))
       .size(1)
       .build();
+
+  @RegisterExtension
+  public final LoggerCaptureExtension logCapture = new LoggerCaptureExtension(ShareGroupIndexTaskRunner.class);
 
   private final TaskToolbox toolbox = Mockito.mock(TaskToolbox.class);
   private final ShareGroupIndexTask task = Mockito.mock(ShareGroupIndexTask.class);
@@ -108,10 +118,7 @@ public class ShareGroupIndexTaskRunnerTest
     Mockito.when(driver.add(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.eq(true), Mockito.eq(true)))
            .thenReturn(AppenderatorDriverAddResult.ok(SegmentIdWithShardSpec.fromDataSegment(SEGMENT), 1, 1, true));
     Mockito.when(driver.registerHandoff(Mockito.any())).thenReturn(Futures.immediateFuture(null));
-    Mockito.when(consumer.commitSync(Mockito.any())).thenAnswer(invocation -> {
-      stopped.set(true);
-      return Map.of(TOPIC_ID_PARTITION, Optional.empty());
-    });
+    stopAfterAcknowledgedBatches(1);
   }
 
   @Test
@@ -173,6 +180,63 @@ public class ShareGroupIndexTaskRunnerTest
     Mockito.verify(driver, Mockito.never()).publish(Mockito.any(), Mockito.any(), Mockito.any());
     Mockito.verify(consumer).acknowledge(RECORD, AcknowledgeType.ACCEPT);
     Mockito.verify(consumer).commitSync(Mockito.any());
+  }
+
+  @Test
+  public void testWaitsForHandoffCapacityAndResumesWhenLaterHandoffCompletes() throws Exception
+  {
+    preparePublishResult(SegmentPublishResult.ok(Set.of(SEGMENT)));
+    stopAfterAcknowledgedBatches(9);
+    Mockito.when(task.getTuningConfig().getHandoffConditionTimeout()).thenReturn(1L);
+    final ListenableFuture<SegmentsAndCommitMetadata> firstHandoff = Mockito.mock();
+    final SettableFuture<SegmentsAndCommitMetadata> laterHandoff = SettableFuture.create();
+    final SettableFuture<SegmentsAndCommitMetadata> pending = SettableFuture.create();
+    Mockito.when(driver.registerHandoff(Mockito.any())).thenReturn(firstHandoff)
+           .thenReturn(laterHandoff).thenReturn(pending);
+    Mockito.when(firstHandoff.get(Mockito.anyLong(), Mockito.eq(TimeUnit.MILLISECONDS)))
+           .thenAnswer(invocation -> pending.get(invocation.getArgument(0), TimeUnit.MILLISECONDS))
+           .thenAnswer(invocation -> {
+             Mockito.verify(consumer, Mockito.times(8)).poll(Mockito.any());
+             Mockito.verify(consumer, Mockito.times(8)).commitSync(Mockito.any());
+             laterHandoff.set(null);
+             throw new TimeoutException();
+           });
+
+    runner.runLoop(consumer, reader, driver, 300_000);
+
+    Assertions.assertTrue(laterHandoff.isDone());
+    Mockito.verify(consumer, Mockito.times(9)).poll(Mockito.any());
+    Mockito.verify(consumer, Mockito.times(9)).commitSync(Mockito.any());
+    Assertions.assertEquals(1, logCapture.getLogEvents().stream()
+                                        .filter(e -> e.getMessage().getFormattedMessage().contains("pending batch limit"))
+                                        .count());
+  }
+
+  @Test
+  public void testStopsWhileWaitingForHandoffCapacity() throws Exception
+  {
+    preparePublishResult(SegmentPublishResult.ok(Set.of(SEGMENT)));
+    stopAfterAcknowledgedBatches(9);
+    final ListenableFuture<SegmentsAndCommitMetadata> firstHandoff = Mockito.mock();
+    Mockito.when(driver.registerHandoff(Mockito.any())).thenReturn(firstHandoff).thenReturn(SettableFuture.create());
+    Mockito.when(firstHandoff.get(Mockito.anyLong(), Mockito.eq(TimeUnit.MILLISECONDS))).thenAnswer(invocation -> {
+      stopped.set(true);
+      throw new TimeoutException();
+    });
+
+    runner.runLoop(consumer, reader, driver, 300_000);
+
+    Mockito.verify(consumer, Mockito.times(8)).poll(Mockito.any());
+    Mockito.verify(consumer, Mockito.times(8)).commitSync(Mockito.any());
+  }
+
+  private void stopAfterAcknowledgedBatches(int batches)
+  {
+    final AtomicInteger count = new AtomicInteger();
+    Mockito.doAnswer(invocation -> {
+      stopped.set(count.incrementAndGet() >= batches);
+      return Map.of(TOPIC_ID_PARTITION, Optional.empty());
+    }).when(consumer).commitSync(Mockito.any());
   }
 
   private void preparePublishResult(SegmentPublishResult result) throws IOException

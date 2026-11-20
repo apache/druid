@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka.simulate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -37,6 +38,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -45,6 +47,7 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
@@ -207,6 +210,57 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     waitForRowsProcessed(numRecords);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     assertRowCountEventually(numRecords);
+    cancelAndAwaitTermination(taskId);
+  }
+
+  @Test
+  public void test_shareGroupIngestion_resumesAfterHandoffStall() throws InterruptedException
+  {
+    final String topic = dataSource + "_topic";
+    final String groupId = dataSource + "_group";
+    kafkaServer.createTopicWithPartitions(topic, 1);
+    cluster.callApi().onLeaderCoordinator(c -> c.updateRulesForDatasource(
+        dataSource,
+        List.of(new ForeverLoadRule(Map.of("unavailable-tier", 1), null))
+    ));
+
+    final Map<String, Object> consumerProperties = new HashMap<>(kafkaServer.consumerProperties());
+    consumerProperties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
+    consumerProperties.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 5_000);
+    final String taskId = submitShareGroupTask(topic, groupId, consumerProperties, DEFAULT_CSV_FORMAT, defaultTuningConfig());
+
+    kafkaServer.publishRecordsToTopic(
+        topic,
+        generateRecords(topic, 9, DateTimes.of("2025-09-02")).stream().map(ProducerRecord::value).toList()
+    );
+    final String ackMetric = "ingest/kafka/shareGroup/acknowledged";
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName(ackMetric).hasDimension(DruidMetrics.TASK_ID, taskId),
+        aggregate -> aggregate.hasSumAtLeast(8)
+    );
+    try (final Admin admin = kafkaServer.newAdminClient()) {
+      cluster.callApi().waitForResult(
+          () -> admin.describeShareGroups(List.of(groupId)).describedGroups().get(groupId)
+                     .get(5, TimeUnit.SECONDS).members().size(),
+          count -> count == 0
+      ).withTimeoutMillis(30_000).go();
+    }
+    Assertions.assertEquals(
+        8L,
+        indexer.latchableEmitter().getMetricValues(ackMetric, Map.of(DruidMetrics.TASK_ID, taskId))
+               .stream().mapToLong(Number::longValue).sum()
+    );
+
+    cluster.callApi().onLeaderCoordinator(c -> c.updateRulesForDatasource(
+        dataSource,
+        List.of(new ForeverLoadRule(Map.of(DruidServer.DEFAULT_TIER, 1), null))
+    ));
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName(ackMetric).hasDimension(DruidMetrics.TASK_ID, taskId),
+        aggregate -> aggregate.hasSumAtLeast(9)
+    );
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    assertRowCountEventually(9);
     cancelAndAwaitTermination(taskId);
   }
 

@@ -78,6 +78,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -88,6 +89,7 @@ final class ShareGroupIndexTaskRunner
   private static final int DEFAULT_MAX_POLL_INTERVAL_MS = 300_000;
   private static final int DEFAULT_ACQUISITION_LOCK_MS = 30_000;
   private static final int MAX_PENDING_HANDOFFS = 8;
+  private static final long HANDOFF_CHECK_INTERVAL_MS = 100L;
 
   private final ShareGroupIndexTask task;
   private final TaskToolbox toolbox;
@@ -204,11 +206,7 @@ final class ShareGroupIndexTaskRunner
     final ShareGroupIndexTaskIOConfig ioConfig = task.getIOConfig();
     final Duration pollTimeout = Duration.ofMillis(ioConfig.getPollTimeout());
     final Deque<ListenableFuture<SegmentsAndCommitMetadata>> handoffs = new ArrayDeque<>();
-    final long configuredHandoffTimeout = task.getTuningConfig().getHandoffConditionTimeout();
-    final long handoffTimeoutMs = Math.max(
-        1L,
-        Math.min(maxPollIntervalMs / 2L, configuredHandoffTimeout > 0 ? configuredHandoffTimeout : Long.MAX_VALUE)
-    );
+    final long handoffWarningMs = task.getTuningConfig().getHandoffConditionTimeout();
     final TransactionalSegmentPublisher publisher = new TransactionalSegmentPublisher()
     {
       @Override
@@ -225,21 +223,7 @@ final class ShareGroupIndexTaskRunner
 
     consumer.subscribe(Set.of(ioConfig.getTopic()));
     final Stopwatch batchTime = Stopwatch.createUnstarted();
-    while (!task.isStopRequested()) {
-      for (final Iterator<ListenableFuture<SegmentsAndCommitMetadata>> it = handoffs.iterator(); it.hasNext(); ) {
-        final ListenableFuture<SegmentsAndCommitMetadata> handoff = it.next();
-        if (handoff.isDone()) {
-          handoff.get();
-          it.remove();
-        }
-      }
-      if (handoffs.size() >= MAX_PENDING_HANDOFFS) {
-        handoffs.removeFirst().get(handoffTimeoutMs, TimeUnit.MILLISECONDS);
-      }
-      if (task.isStopRequested()) {
-        break;
-      }
-
+    while (awaitHandoffCapacity(handoffs, handoffWarningMs)) {
       batchTime.restart();
       final ConsumerRecords<byte[], byte[]> records = consumer.poll(pollTimeout);
       if (records.isEmpty()) {
@@ -302,6 +286,43 @@ final class ShareGroupIndexTaskRunner
       task.emitMetric(toolbox.getEmitter(), "ingest/kafka/shareGroup/acknowledged", records.count());
       task.emitMetric(toolbox.getEmitter(), "ingest/kafka/shareGroup/pollToAck/time", batchTime.millisElapsed());
     }
+  }
+
+  private boolean awaitHandoffCapacity(
+      Deque<ListenableFuture<SegmentsAndCommitMetadata>> handoffs,
+      long handoffWarningMs
+  ) throws ExecutionException, InterruptedException
+  {
+    final Stopwatch waitTime = Stopwatch.createStarted();
+    while (!task.isStopRequested()) {
+      for (final Iterator<ListenableFuture<SegmentsAndCommitMetadata>> it = handoffs.iterator(); it.hasNext(); ) {
+        final ListenableFuture<SegmentsAndCommitMetadata> handoff = it.next();
+        if (handoff.isDone()) {
+          handoff.get();
+          it.remove();
+        }
+      }
+      if (handoffs.size() < MAX_PENDING_HANDOFFS) {
+        return !task.isStopRequested();
+      }
+
+      try {
+        handoffs.getFirst().get(HANDOFF_CHECK_INTERVAL_MS, TimeUnit.MILLISECONDS);
+      }
+      catch (TimeoutException e) {
+        final long waitedMs = waitTime.millisElapsed();
+        if (handoffWarningMs > 0 && waitTime.isRunning() && waitedMs >= handoffWarningMs) {
+          log.warn(
+              "Task [%s] has waited [%d] ms for segment handoff at the pending batch limit [%d].",
+              task.getId(),
+              waitedMs,
+              MAX_PENDING_HANDOFFS
+          );
+          waitTime.stop();
+        }
+      }
+    }
+    return false;
   }
 
   private SegmentPublishResult appendSegments(Set<DataSegment> segments, SegmentSchemaMapping segmentSchemaMapping)

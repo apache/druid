@@ -89,4 +89,8 @@ Kafka can redeliver unacknowledged records after a task fails. If a task publish
 
 Tune `max.poll.records` so parsing, segment publication, and acknowledgement complete within both the broker's `group.share.record.lock.duration.ms` (30 seconds by default) and the consumer's `max.poll.interval.ms`. The `ingest/kafka/shareGroup/pollToAck/time` metric reports this elapsed time in milliseconds for successful batches. Smaller polls can produce more, smaller segments.
 
+`max.poll.records` counts Kafka records. Each record can produce multiple Druid rows. Omit `maxRowsPerSegment` and `maxTotalRows` from the task's tuning config. Share group tasks publish based on poll boundaries and reject custom row limits.
+
+When eight published batches are waiting for Historical servers to load their segments, the task pauses before polling again. It resumes when there is room for another batch. A positive `handoffConditionTimeout` logs a warning after that many milliseconds at the limit. Set it to `0` to wait without a timeout warning. A stop request ends the wait.
+
 Once Kafka exhausts the delivery attempts for a record, the share group stops retrying it. Kafka 4.4 and later can send exhausted records to a [share group dead-letter queue](https://kafka.apache.org/44/operations/basic-kafka-operations/#configuring-dead-letter-queues-dlq-on-share-groups) for replay. Enable copying the original record when you need its payload for replay.
