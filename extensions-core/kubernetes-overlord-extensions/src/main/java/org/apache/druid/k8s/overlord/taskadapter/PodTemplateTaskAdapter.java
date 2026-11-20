@@ -37,6 +37,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
@@ -46,6 +47,8 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesOverlordUtils;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
 
@@ -57,6 +60,7 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * A PodTemplate {@link TaskAdapter} to transform tasks to kubernetes jobs and kubernetes pods to tasks
@@ -76,6 +80,11 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 {
   public static final String TYPE = "customTemplateAdapter";
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
+
+  /**
+   * Valid image tag, as defined by the OCI distribution spec.
+   */
+  private static final Pattern IMAGE_TAG_PATTERN = Pattern.compile("[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}");
 
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
   private final TaskConfig taskConfig;
@@ -171,32 +180,69 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
   /**
    * Replaces the image tag of the first container with the value of the
-   * {@link DruidK8sConstants#TASK_CONTEXT_POD_IMAGE_TAG} task context key, if exists.
+   * {@link DruidK8sConstants#TASK_CONTEXT_MIN_POD_IMAGE_TAG} task context key, if the value is newer than the tag in
+   * the pod template. {@link StringComparators#VERSION} compares the tags.
    * <p>
    * Returns {@code selected} if the key is absent or not applicable, new {@code PodTemplateWithName} otherwise.
+   *
+   * @throws DruidException if the value is not a valid image tag
+   * @throws org.apache.druid.query.BadQueryContextException if the value is not a string
    */
   protected PodTemplateWithName applyImageTagOverride(final Task task, final PodTemplateWithName selected)
   {
-    final Object requestedTag = task.getContextValue(DruidK8sConstants.TASK_CONTEXT_POD_IMAGE_TAG);
-    if (requestedTag == null || !(requestedTag instanceof String)) {
+    final Object contextValue = task.getContextValue(DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG);
+    if (contextValue == null) {
       return selected;
+    }
+    if (!taskRunnerConfig.isAllowTaskImageTagOverride()) {
+      log.warn(
+          "Task[%s] sets context key[%s], but the image tag override is disabled. Ignoring the key.",
+          task.getId(),
+          DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG
+      );
+      return selected;
+    }
+    final String requestedTag = QueryContexts.getAsString(DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG, contextValue, null);
+    if (!IMAGE_TAG_PATTERN.matcher(requestedTag).matches()) {
+      throw InvalidInput.exception(
+          "Task[%s] sets context key[%s] to value[%s], which is not a valid image tag. A valid tag matches[%s].",
+          task.getId(),
+          DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG,
+          requestedTag,
+          IMAGE_TAG_PATTERN.pattern()
+      );
     }
 
     final List<Container> containers = selected.getPodTemplate().getTemplate().getSpec().getContainers();
     final String oldImage = containers.isEmpty() ? null : containers.get(0).getImage();
-    final String repository = getImageRepository(oldImage);
-    if (repository == null) {
+    final int tagSeparator = getTagSeparatorIndex(oldImage);
+    if (tagSeparator < 0) {
       log.warn(
           "Task[%s] sets context key[%s], but image[%s] from pod template[%s] has a digest or no tag. Ignoring the key.",
           task.getId(),
-          DruidK8sConstants.TASK_CONTEXT_POD_IMAGE_TAG,
+          DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG,
           oldImage,
           selected.getName()
       );
       return selected;
     }
 
-    final String newImage = repository + ":" + requestedTag;
+    final String oldTag = oldImage.substring(tagSeparator + 1);
+    if (StringComparators.VERSION.compare(requestedTag, oldTag) <= 0) {
+      log.info(
+          "Task[%s] sets context key[%s] to tag[%s], which is not newer than tag[%s] of image[%s] from pod template[%s]."
+          + " Using the image from the pod template.",
+          task.getId(),
+          DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG,
+          requestedTag,
+          oldTag,
+          oldImage,
+          selected.getName()
+      );
+      return selected;
+    }
+
+    final String newImage = oldImage.substring(0, tagSeparator + 1) + requestedTag;
     final PodTemplate podTemplate = new PodTemplateBuilder(selected.getPodTemplate())
         .editTemplate()
         .editSpec()
@@ -218,19 +264,23 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   }
 
   /**
-   * Returns the image without its tag, or null if the image is null, has a digest or has no tag.
+   * Returns the index of the {@code :} that comes before the image tag, or -1 if the image is null, has a digest or
+   * has no tag.
+   * <p>
+   * An image with a digest ({@code repository@sha256:...} or {@code repository:tag@sha256:...}) returns -1, because
+   * the container runtime pulls the image by the digest and ignores the tag. Thus, a new tag has no effect. To use a
+   * new tag, Druid must remove the digest, but the operator can set the digest to pin the image intentionally.
    */
-  @Nullable
-  private static String getImageRepository(@Nullable String image)
+  private static int getTagSeparatorIndex(@Nullable String image)
   {
     if (image == null || image.indexOf('@') >= 0) {
-      return null;
+      return -1;
     }
     final int tagSeparator = image.lastIndexOf(':');
     if (tagSeparator <= image.lastIndexOf('/')) {
-      return null;
+      return -1;
     }
-    return image.substring(0, tagSeparator);
+    return tagSeparator;
   }
 
   /**

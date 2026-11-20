@@ -41,6 +41,7 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -431,7 +432,7 @@ public class PodTemplateTaskAdapterTest
     EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();
     EasyMock.expect(task.getDataSource()).andReturn("datasource").anyTimes();
     EasyMock.expect(task.getBroadcastDatasourceLoadingSpec()).andReturn(BroadcastDatasourceLoadingSpec.ALL).anyTimes();
-    EasyMock.expect(task.getContextValue(DruidK8sConstants.TASK_CONTEXT_POD_IMAGE_TAG)).andReturn(null).anyTimes();
+    EasyMock.expect(task.getContextValue(DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG)).andReturn(null).anyTimes();
 
     EasyMock.replay(task);
     Job actual = adapter.fromTask(task);
@@ -465,7 +466,7 @@ public class PodTemplateTaskAdapterTest
     EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();
     EasyMock.expect(task.getDataSource()).andReturn("datasource").anyTimes();
     EasyMock.expect(task.getBroadcastDatasourceLoadingSpec()).andReturn(BroadcastDatasourceLoadingSpec.ALL).anyTimes();
-    EasyMock.expect(task.getContextValue(DruidK8sConstants.TASK_CONTEXT_POD_IMAGE_TAG)).andReturn(null).anyTimes();
+    EasyMock.expect(task.getContextValue(DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG)).andReturn(null).anyTimes();
 
     EasyMock.replay(task);
     Job actual = adapter.fromTask(task);
@@ -479,17 +480,26 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
-  public void test_fromTask_podImageTag() throws IOException
+  public void test_fromTask_minPodImageTag() throws IOException
   {
     final List<ImageTagCase> cases = List.of(
-        new ImageTagCase("no key", "apache/druid:1.0", null, "apache/druid:1.0"),
-        new ImageTagCase("new tag", "apache/druid:1.0", "2.0", "apache/druid:2.0"),
-        new ImageTagCase("registry with port", "host:5000/a/b:1.0", "2.0", "host:5000/a/b:2.0"),
-        new ImageTagCase("digest", "apache/druid@sha256:abc", "2.0", "apache/druid@sha256:abc"),
-        new ImageTagCase("tag and digest", "apache/druid:1.0@sha256:abc", "2.0", "apache/druid:1.0@sha256:abc"),
-        new ImageTagCase("no tag", "apache/druid", "2.0", "apache/druid"),
-        new ImageTagCase("registry with port and no tag", "host:5000/a/b", "2.0", "host:5000/a/b"),
-        new ImageTagCase("value is not a string", "apache/druid:1.0", 2, "apache/druid:1.0")
+        new ImageTagCase("no key", true, "apache/druid:1.0", null, "apache/druid:1.0"),
+        new ImageTagCase("gate is off", false, "apache/druid:1.0", "2.0", "apache/druid:1.0"),
+        new ImageTagCase("gate is off and value is not a valid tag", false, "apache/druid:1.0", "", "apache/druid:1.0"),
+        new ImageTagCase("gate is off and value is not a string", false, "apache/druid:1.0", 2, "apache/druid:1.0"),
+        new ImageTagCase("newer tag", true, "apache/druid:1.0", "2.0", "apache/druid:2.0"),
+        new ImageTagCase("same tag", true, "apache/druid:1.0", "1.0", "apache/druid:1.0"),
+        new ImageTagCase("older tag", true, "apache/druid:2.0", "1.0", "apache/druid:2.0"),
+        new ImageTagCase("newer tag with more digits", true, "apache/druid:9.0.0", "10.0.0", "apache/druid:10.0.0"),
+        new ImageTagCase("release candidate of same version", true, "apache/druid:34.0.0", "34.0.0-rc1", "apache/druid:34.0.0"),
+        new ImageTagCase("hotfix of same version", true, "apache/druid:34.0.0", "34.0.0-hotfix1", "apache/druid:34.0.0-hotfix1"),
+        new ImageTagCase("registry with port", true, "host:5000/a/b:1.0", "2.0", "host:5000/a/b:2.0"),
+        new ImageTagCase("digest", true, "apache/druid@sha256:abc", "2.0", "apache/druid@sha256:abc"),
+        new ImageTagCase("tag and digest", true, "apache/druid:1.0@sha256:abc", "2.0", "apache/druid:1.0@sha256:abc"),
+        new ImageTagCase("no tag", true, "apache/druid", "2.0", "apache/druid"),
+        new ImageTagCase("registry with port and no tag", true, "host:5000/a/b", "2.0", "host:5000/a/b"),
+        new ImageTagCase("tag with all permitted symbols", true, "apache/druid:0", "_2.0-rc.1_A", "apache/druid:_2.0-rc.1_A"),
+        new ImageTagCase("tag with maximum length", true, "apache/druid:1.0", "9".repeat(128), "apache/druid:" + "9".repeat(128))
     );
 
     for (final ImageTagCase testCase : cases) {
@@ -506,7 +516,10 @@ public class PodTemplateTaskAdapterTest
       final PodTemplate selectedCopy = new PodTemplateBuilder(selected).build();
 
       final PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
-          taskRunnerConfig,
+          KubernetesTaskRunnerConfig.builder()
+                                    .withNamespace("namespace")
+                                    .withAllowTaskImageTagOverride(testCase.allowOverride)
+                                    .build(),
           taskConfig,
           node,
           mapper,
@@ -516,7 +529,7 @@ public class PodTemplateTaskAdapterTest
 
       final Map<String, Object> context = testCase.contextValue == null
                                           ? Collections.emptyMap()
-                                          : Map.of(DruidK8sConstants.TASK_CONTEXT_POD_IMAGE_TAG, testCase.contextValue);
+                                          : Map.of(DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG, testCase.contextValue);
       final Job job = adapter.fromTask(new NoopTask("id", "id", "datasource", 0, 0, context));
 
       final List<Container> containers = job.getSpec().getTemplate().getSpec().getContainers();
@@ -532,8 +545,52 @@ public class PodTemplateTaskAdapterTest
     }
   }
 
+  @Test
+  public void test_fromTask_minPodImageTag_invalidValue_throwsException()
+  {
+    final PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        KubernetesTaskRunnerConfig.builder().withNamespace("namespace").withAllowTaskImageTagOverride(true).build(),
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        new TestPodTemplateSelector(podTemplateSpec)
+    );
+
+    for (final String invalidTag : List.of("", "other/image:2.0", "2.0@sha256:abc", "-2.0", ".2.0", "a".repeat(129))) {
+      final Task task = new NoopTask(
+          "id",
+          "id",
+          "datasource",
+          0,
+          0,
+          Map.of(DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG, invalidTag)
+      );
+      final DruidException e = Assertions.assertThrows(DruidException.class, () -> adapter.fromTask(task), invalidTag);
+      Assertions.assertTrue(e.getMessage().contains("not a valid image tag"), invalidTag);
+    }
+
+    for (final Object nonStringTag : List.of(2, true, Map.of("tag", "2.0"))) {
+      final Task task = new NoopTask(
+          "id",
+          "id",
+          "datasource",
+          0,
+          0,
+          Map.of(DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG, nonStringTag)
+      );
+      final BadQueryContextException e = Assertions.assertThrows(
+          BadQueryContextException.class,
+          () -> adapter.fromTask(task),
+          String.valueOf(nonStringTag)
+      );
+      Assertions.assertTrue(e.getMessage().contains("to be a String"), String.valueOf(nonStringTag));
+    }
+  }
+
   private record ImageTagCase(
       String name,
+      boolean allowOverride,
       String templateImage,
       Object contextValue,
       String expectedImage

@@ -463,6 +463,7 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
         this.runnerConfig.isUseK8sSharedInformers(),
         this.runnerConfig.getK8sSharedInformerResyncPeriod(),
         this.runnerConfig.isAllowTaskPodTemplateSelection(),
+        this.runnerConfig.isAllowTaskImageTagOverride(),
         this.runnerConfig.getAdvertisedPlaintextPort()
     );
   }
