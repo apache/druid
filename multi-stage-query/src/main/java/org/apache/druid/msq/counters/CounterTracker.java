@@ -137,6 +137,20 @@ public class CounterTracker
     return cpuTimeNs;
   }
 
+  /**
+   * Returns stats for segments loaded on demand, across all channel counters.
+   */
+  public SegmentLoadStats loadStats()
+  {
+    SegmentLoadStats stats = SegmentLoadStats.EMPTY;
+    for (final QueryCounter counter : countersMap.values()) {
+      if (counter instanceof ChannelCounters) {
+        stats = stats.plus(((ChannelCounters) counter).getLoadStats());
+      }
+    }
+    return stats;
+  }
+
   public CounterSnapshots snapshot()
   {
     final Map<String, QueryCounterSnapshot> m = new HashMap<>();

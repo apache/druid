@@ -708,8 +708,8 @@ public final class QueryContextParameters
               """
               SQL query ID.
               For HTTP client, Druid returns it in the `X-Druid-SQL-Query-Id` header.<br/><br/>To specify a SQL query ID, use `sqlQueryId` instead of [`queryId`](../querying/query-context-reference.md).
-              Setting `queryId` for a SQL request has no effect.
-              All native queries underlying SQL use an auto-generated `queryId`.
+              If `queryId` is also set, all native queries underlying SQL use it as their `queryId`.
+              Otherwise, each native query uses an auto-generated `queryId`.
               """
           )
           .defaultDescription("auto-generated")

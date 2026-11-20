@@ -30,12 +30,14 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.controller.messages.PostCounters;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartWorkerConfig;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
-import org.apache.druid.msq.exec.MSQMetricEventBuilder;
+import org.apache.druid.msq.exec.MSQMetrics;
+import org.apache.druid.msq.exec.MSQMetricsQuery;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -49,6 +51,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentWrangler;
@@ -57,10 +60,14 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Dart implementation of {@link WorkerContext}.
@@ -216,11 +223,24 @@ public class DartWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(MSQMetricEventBuilder metricBuilder)
+  public QueryMetrics<?> makeQueryMetrics(final Set<String> tableNames, final Collection<Interval> intervals)
   {
-    metricBuilder.setDartDimensions(queryContext);
-    metricBuilder.setDimension(QueryContextParameters.DART_QUERY_ID.getName(), queryId());
-    emitter.emit(metricBuilder);
+    return MSQMetrics.makeQueryMetrics(
+        injector,
+        MSQMetricsQuery.create(tableNames, intervals, queryContext),
+        DartSqlEngine.NAME
+    );
+  }
+
+  @Override
+  public void emitQueryMetrics(final QueryMetrics<?> queryMetrics)
+  {
+    MSQMetrics.emitQueryMetrics(
+        queryMetrics,
+        emitter,
+        DartSqlEngine.NAME,
+        Map.of(QueryContextParameters.DART_QUERY_ID.getName(), queryId())
+    );
   }
 
   @Override

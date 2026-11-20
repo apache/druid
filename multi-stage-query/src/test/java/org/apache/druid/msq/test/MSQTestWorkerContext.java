@@ -34,7 +34,8 @@ import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
-import org.apache.druid.msq.exec.MSQMetricEventBuilder;
+import org.apache.druid.msq.exec.MSQMetrics;
+import org.apache.druid.msq.exec.MSQMetricsQuery;
 import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -43,7 +44,12 @@ import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.MapQueryToolChestWarehouse;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
@@ -58,12 +64,15 @@ import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 
 public class MSQTestWorkerContext implements WorkerContext
 {
@@ -137,13 +146,24 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(MSQMetricEventBuilder metricBuilder)
+  public QueryMetrics<?> makeQueryMetrics(final Set<String> tableNames, final Collection<Interval> intervals)
   {
-    serviceEmitter.emit(
-        metricBuilder.setDimension(
-            MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION,
-            MSQTestOverlordServiceClient.METRIC_WORKER_TASK_TYPE
-        )
+    return MSQMetrics.makeQueryMetrics(
+        new MapQueryToolChestWarehouse(Map.of()),
+        DefaultGenericQueryMetricsFactory.instance(),
+        MSQMetricsQuery.create(tableNames, intervals, QueryContext.empty()),
+        MSQTaskSqlEngine.NAME
+    );
+  }
+
+  @Override
+  public void emitQueryMetrics(final QueryMetrics<?> queryMetrics)
+  {
+    MSQMetrics.emitQueryMetrics(
+        queryMetrics,
+        serviceEmitter,
+        MSQTaskSqlEngine.NAME,
+        Map.of(MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION, MSQTestOverlordServiceClient.METRIC_WORKER_TASK_TYPE)
     );
   }
 

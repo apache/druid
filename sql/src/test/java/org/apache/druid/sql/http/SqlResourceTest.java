@@ -500,6 +500,60 @@ public class SqlResourceTest extends CalciteTestBase
     stubServiceEmitter.verifyValue("sqlQuery/bytes", 27L);
     stubServiceEmitter.verifyEmitted("sqlQuery/planningTimeMs", 1);
     Assertions.assertEquals(200, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+
+    // queryId is the auto-generated ID of the single native query.
+    final Map<String, Object> event = stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap();
+    Assertions.assertEquals("id", event.get(DruidMetrics.ID));
+    Assertions.assertNotNull(event.get(DruidMetrics.QUERY_ID));
+    Assertions.assertEquals("[" + event.get(DruidMetrics.QUERY_ID) + "]", event.get("nativeQueryIds"));
+  }
+
+  @Test
+  public void testSqlLifecycleMetricsWithMultipleNativeQueries() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        createSimpleQueryWithId("id", "SELECT COUNT(*) AS cnt FROM foo UNION ALL SELECT SUM(cnt) FROM foo")
+    ).rhs;
+
+    Assertions.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 6),
+            ImmutableMap.of("cnt", 6)
+        ),
+        rows
+    );
+
+    // queryId is omitted, since each native query has its own auto-generated ID.
+    final Map<String, Object> event = stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap();
+    Assertions.assertEquals("id", event.get(DruidMetrics.ID));
+    Assertions.assertEquals(2, ((String) event.get("nativeQueryIds")).split(",").length);
+    Assertions.assertFalse(event.containsKey(DruidMetrics.QUERY_ID));
+  }
+
+  @Test
+  public void testSqlLifecycleMetricsWithQueryId() throws Exception
+  {
+    final SqlQuery query = new SqlQuery(
+        "SELECT COUNT(*) AS cnt FROM druid.foo",
+        null,
+        false,
+        false,
+        false,
+        ImmutableMap.of(
+            QueryContextParameters.SQL_QUERY_ID.getName(), "sqlId",
+            QueryContextParameters.QUERY_ID.getName(), "nativeId"
+        ),
+        null
+    );
+
+    // Call doPost directly, since postForAsyncResponse expects the X-Druid-Query-Id header to carry the context
+    // queryId, but SQL sets it to the sqlQueryId.
+    MockHttpServletResponse.forRequest(req);
+    Assertions.assertNull(resource.doPost(query, req));
+
+    final Map<String, Object> event = stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap();
+    Assertions.assertEquals("sqlId", event.get(DruidMetrics.ID));
+    Assertions.assertEquals("nativeId", event.get(DruidMetrics.QUERY_ID));
   }
 
 

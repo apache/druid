@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.counters.SegmentLoadStats;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CancellationReason;
@@ -74,12 +75,11 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.MSQMetricUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
@@ -151,6 +151,12 @@ public class WorkerImpl implements Worker
    */
   private final Map<String, Object> queryMetricDimensions = new HashMap<>();
 
+  /**
+   * Number of segments read by each stage, for {@code query/segments/count}. Keyed by stage, so a work order that
+   * starts again is not counted twice.
+   */
+  private final Map<StageId, Long> stageSegmentCounts = new HashMap<>();
+
   public WorkerImpl(@Nullable final MSQWorkerTask task, final WorkerContext context)
   {
     this.task = task;
@@ -191,7 +197,7 @@ public class WorkerImpl implements Worker
       }
 
       // Report query metrics
-      reportQueryMetrics(maybeErrorReport.isEmpty(), stopwatch.millisElapsed());
+      reportQueryMetrics(maybeErrorReport.isEmpty(), stopwatch.nanosElapsed());
 
       if (maybeErrorReport.isPresent()) {
         final MSQErrorReport errorReport = maybeErrorReport.get();
@@ -223,32 +229,26 @@ public class WorkerImpl implements Worker
   }
 
   @SuppressWarnings("unchecked")
-  private void reportQueryMetrics(boolean success, long time)
+  private void reportQueryMetrics(final boolean success, final long timeNs)
   {
     long cpuTimeNs = 0L;
+    SegmentLoadStats loadStats = SegmentLoadStats.EMPTY;
     for (final CounterTracker tracker : stageCounters.values()) {
       cpuTimeNs += tracker.totalCpu();
+      loadStats = loadStats.plus(tracker.loadStats());
     }
 
-    final MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
-
-    final Set<String> datasources = (Set<String>) queryMetricDimensions.get(DruidMetrics.DATASOURCE);
-    if (datasources != null) {
-      metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources));
-    }
-
-    final Set<Interval> intervals = (Set<Interval>) queryMetricDimensions.get(DruidMetrics.INTERVAL);
-    if (intervals != null) {
-      metricBuilder.setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals));
-      metricBuilder.setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals));
-    }
-
-    metricBuilder.setDimension(DruidMetrics.SUCCESS, success);
-    metricBuilder.setMetric("query/time", time);
-    context.emitMetric(metricBuilder);
-
-    metricBuilder.setMetric("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(cpuTimeNs));
-    context.emitMetric(metricBuilder);
+    final Set<String> datasources =
+        (Set<String>) queryMetricDimensions.getOrDefault(DruidMetrics.DATASOURCE, Set.of());
+    final Set<Interval> intervals =
+        (Set<Interval>) queryMetricDimensions.getOrDefault(DruidMetrics.INTERVAL, Set.of());
+    final QueryMetrics<?> queryMetrics = context.makeQueryMetrics(datasources, intervals);
+    queryMetrics.success(success);
+    queryMetrics.reportQueryTime(timeNs);
+    queryMetrics.reportCpuTime(cpuTimeNs);
+    queryMetrics.reportQueriedSegmentCount(stageSegmentCounts.values().stream().mapToLong(Long::longValue).sum());
+    loadStats.report(queryMetrics);
+    context.emitQueryMetrics(queryMetrics);
   }
 
   /**
@@ -394,6 +394,7 @@ public class WorkerImpl implements Worker
     final WorkOrder workOrder = kernel.getWorkOrder();
     final StageDefinition stageDefinition = workOrder.getStageDefinition();
     updateMetricDimensions(workOrder.getQueryDefinition());
+    stageSegmentCounts.put(stageDefinition.getId(), MSQMetricUtils.countSegments(workOrder.getInputs()));
     final String cancellationId = cancellationIdFor(stageDefinition.getId(), workOrder.getWorkerNumber());
 
     log.info(
