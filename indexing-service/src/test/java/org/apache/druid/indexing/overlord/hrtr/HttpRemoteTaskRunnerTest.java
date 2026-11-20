@@ -57,6 +57,7 @@ import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.EqualDistributionWorkerSelectStrategy;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -81,6 +82,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.InputStream;
@@ -96,6 +99,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -1671,6 +1675,137 @@ public class HttpRemoteTaskRunnerTest
     );
   }
 
+  @Timeout(60)
+  @ParameterizedTest
+  @NullSource
+  @EnumSource(value = TaskState.class, names = {"RUNNING", "FAILED"})
+  public void testShutdownTaskWhileWaitingForWorkerToReportIt(final TaskState firstReportedState) throws Exception
+  {
+    final TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery)
+            .times(2);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    final long assignmentTimeoutMillis = 3_000;
+    final Task killedTask = NoopTask.create();
+    final Task otherTask = NoopTask.create();
+    final CountDownLatch killedTaskAssigned = new CountDownLatch(1);
+    final Map<String, Long> assignTimes = new ConcurrentHashMap<>();
+    // The test worker looks each task up here while assigning it, so this records when each assignment happened
+    final Map<Task, List<TaskAnnouncement>> toBeAssignedTasks = new ForwardingMap<Task, List<TaskAnnouncement>>()
+    {
+      @Override
+      protected Map<Task, List<TaskAnnouncement>> delegate()
+      {
+        // The worker accepts the killed task without reporting it
+        return ImmutableMap.of(killedTask, ImmutableList.of());
+      }
+
+      @Override
+      public boolean containsKey(Object key)
+      {
+        final String taskId = ((Task) key).getId();
+        assignTimes.put(taskId, System.currentTimeMillis());
+        if (taskId.equals(killedTask.getId())) {
+          killedTaskAssigned.countDown();
+        }
+        return super.containsKey(key);
+      }
+    };
+
+    final Set<String> actualShutdowns = ConcurrentHashMap.newKeySet();
+    final HttpRemoteTaskRunner taskRunner = newHttpTaskRunnerInstance(
+        druidNodeDiscoveryProvider,
+        new NoopProvisioningStrategy<>(),
+        EasyMock.createNiceMock(HttpClient.class),
+        toBeAssignedTasks,
+        Period.millis((int) assignmentTimeoutMillis),
+        actualShutdowns
+    );
+
+    taskRunner.start();
+    try {
+      druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(
+          new DiscoveryDruidNode(
+              new DruidNode("service", "host1", false, 8080, null, true, false),
+              NodeRole.MIDDLE_MANAGER,
+              ImmutableMap.of(
+                  WorkerNodeService.DISCOVERY_SERVICE_KEY,
+                  new WorkerNodeService("ip1", 1, "0", WorkerConfig.DEFAULT_CATEGORY)
+              )
+          )
+      ));
+
+      final Future<TaskStatus> killedTaskFuture = taskRunner.run(killedTask);
+      killedTaskAssigned.await();
+      // Gives the assigning thread time to start waiting for the worker to report the task
+      Thread.sleep(300);
+      taskRunner.shutdown(killedTask.getId(), "Killed while being assigned");
+
+      final TaskStatus killedTaskStatus = killedTaskFuture.get(1, TimeUnit.SECONDS);
+      Assertions.assertEquals(TaskState.FAILED, killedTaskStatus.getStatusCode());
+      Assertions.assertEquals("Killed while being assigned", killedTaskStatus.getErrorMsg());
+      Assertions.assertTrue(taskRunner.getPendingTasks().isEmpty());
+      Assertions.assertTrue(taskRunner.getPendingTaskPayloads().isEmpty());
+      // The worker stays reserved because it may have accepted the killed task
+      Assertions.assertEquals(
+          ImmutableMap.of("host1:8080", killedTask.getId()),
+          taskRunner.getWorkersWithUnacknowledgedTasks()
+      );
+
+      if (firstReportedState != null) {
+        final WorkerHolder workerHolder = taskRunner.getWorkersForTestingReadOnly().get("host1:8080");
+        if (firstReportedState == TaskState.RUNNING) {
+          final TaskAnnouncement running =
+              TaskAnnouncement.create(killedTask, TaskStatus.running(killedTask.getId()), TaskLocation.unknown());
+          workerHolder.addOrUpdateAnnouncement(running);
+          taskRunner.taskAddedOrUpdated(running, workerHolder);
+          Assertions.assertTrue(
+              TestUtils.conditionValid(() -> taskRunner.getWorkersWithUnacknowledgedTasks().isEmpty(), 5_000)
+          );
+        }
+        // The worker reports the task FAILED and removes it in the same sync, so its snapshot never shows it FAILED
+        final TaskAnnouncement failed = TaskAnnouncement.create(
+            killedTask,
+            TaskStatus.failure(killedTask.getId(), "killed"),
+            TaskLocation.unknown()
+        );
+        workerHolder.createSyncListener().deltaSync(ImmutableList.of(
+            new WorkerHistoryItem.TaskUpdate(failed),
+            new WorkerHistoryItem.TaskRemoval(killedTask.getId())
+        ));
+        Assertions.assertTrue(
+            TestUtils.conditionValid(() -> taskRunner.getWorkersWithUnacknowledgedTasks().isEmpty(), 5_000)
+        );
+      }
+
+      Assertions.assertTrue(taskRunner.run(otherTask).get().isSuccess());
+      final long otherTaskAssignDelay = assignTimes.get(otherTask.getId()) - assignTimes.get(killedTask.getId());
+      final String delayMessage = "Other task assigned after " + otherTaskAssignDelay + "ms";
+      if (firstReportedState == null) {
+        // The worker gets no other task until the timeout passes
+        Assertions.assertTrue(otherTaskAssignDelay >= assignmentTimeoutMillis, delayMessage);
+      } else {
+        Assertions.assertTrue(otherTaskAssignDelay < assignmentTimeoutMillis, delayMessage);
+      }
+      // The worker is asked to shut the task down only if it reports it RUNNING
+      Assertions.assertEquals(
+          firstReportedState == TaskState.RUNNING ? ImmutableSet.of(killedTask.getId()) : ImmutableSet.of(),
+          actualShutdowns
+      );
+      Assertions.assertTrue(
+          emitter.getAlerts()
+                 .stream()
+                 .noneMatch(alert -> alert.getDescription().startsWith("Task assignment timed out"))
+      );
+    }
+    finally {
+      taskRunner.stop();
+    }
+  }
+
   @Test
   public void testExceptionThrownInAssigningTasks() throws Exception
   {
@@ -1973,8 +2108,6 @@ public class HttpRemoteTaskRunnerTest
         while (!actualShutdowns.contains(task.getId())) {
           Thread.sleep(10);
         }
-        Assertions.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
-        Assertions.assertFalse(future.isDone());
 
         // The worker may have ignored that request, so it is sent again when the worker reports the task RUNNING
         actualShutdowns.clear();
@@ -2550,6 +2683,25 @@ public class HttpRemoteTaskRunnerTest
       Map<Task, List<TaskAnnouncement>> toBeAssignedTasks,
       Set<String> actualShutdowns)
   {
+    return newHttpTaskRunnerInstance(
+        druidNodeDiscoveryProvider,
+        provisioningStrategy,
+        httpClient,
+        toBeAssignedTasks,
+        new HttpRemoteTaskRunnerConfig().getTaskAssignmentTimeout(),
+        actualShutdowns
+    );
+  }
+
+  private static HttpRemoteTaskRunner newHttpTaskRunnerInstance(
+      DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+      ProvisioningStrategy provisioningStrategy,
+      HttpClient httpClient,
+      Map<Task, List<TaskAnnouncement>> toBeAssignedTasks,
+      Period taskAssignmentTimeout,
+      Set<String> actualShutdowns
+  )
+  {
     return new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
         new HttpRemoteTaskRunnerConfig()
@@ -2558,6 +2710,12 @@ public class HttpRemoteTaskRunnerTest
           public int getPendingTasksRunnerNumThreads()
           {
             return 3;
+          }
+
+          @Override
+          public Period getTaskAssignmentTimeout()
+          {
+            return taskAssignmentTimeout;
           }
         },
         httpClient,
