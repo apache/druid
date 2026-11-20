@@ -24,6 +24,8 @@ import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -34,6 +36,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
@@ -79,6 +82,49 @@ public class ParallelMergeCombiningSequenceTest
     pool.shutdown();
   }
 
+
+  @Test
+  public void testMergeWorkersRetainHeadersAcrossYields() throws Exception
+  {
+    for (final int parallelism : List.of(1, TEST_POOL_SIZE)) {
+      final AtomicInteger reads = new AtomicInteger();
+      final List<Sequence<IntPair>> inputs = new ArrayList<>();
+      for (int i = 0; i < 8; i++) {
+        inputs.add(nonBlockingSequence(100).map(value -> {
+          Assertions.assertEquals("merge-trace", RequestHeaders.current().get("X-Druid-Trace-Id"));
+          reads.incrementAndGet();
+          return value;
+        }));
+      }
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(
+          new RequestHeaderContextConfig(),
+          Map.of("traceId", "merge-trace")
+      )) {
+        final Sequence<IntPair> merge = new ParallelMergeCombiningSequence<>(
+            pool,
+            inputs,
+            INT_PAIR_ORDERING,
+            (left, right) -> {
+              Assertions.assertEquals("merge-trace", RequestHeaders.current().get("X-Druid-Trace-Id"));
+              return INT_PAIR_MERGE_FN.apply(left, right);
+            },
+            true,
+            10000,
+            0,
+            parallelism,
+            5,
+            10,
+            ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS,
+            null
+        );
+        Assertions.assertFalse(merge.toList().isEmpty());
+      }
+      Assertions.assertEquals(800, reads.get());
+      Assertions.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
+      Assertions.assertTrue(pool.submit(RequestHeaders::current).get(10, TimeUnit.SECONDS).isEmpty());
+      Assertions.assertTrue(RequestHeaders.current().isEmpty());
+    }
+  }
 
   @Test
   public void testOrderedResultBatchFromSequence() throws IOException

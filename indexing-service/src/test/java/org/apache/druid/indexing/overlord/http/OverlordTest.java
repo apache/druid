@@ -78,6 +78,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -167,6 +168,7 @@ public class OverlordTest
     EasyMock.expect(req.getMethod()).andReturn("GET").anyTimes();
     EasyMock.expect(req.getRequestURI()).andReturn("/request/uri").anyTimes();
     EasyMock.expect(req.getQueryString()).andReturn("query=string").anyTimes();
+    EasyMock.expect(req.getAttribute(RequestHeaderContextFilterHolder.class.getName())).andReturn(null).anyTimes();
 
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();

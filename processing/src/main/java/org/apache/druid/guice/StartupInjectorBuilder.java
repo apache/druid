@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionProcessingConfig;
 import org.apache.druid.math.expr.ExpressionProcessingModule;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.Arrays;
@@ -66,6 +67,7 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
         new ConfigModule(),
         new ExpressionProcessingModule(),
         new RegexEngineModule(),
+        binder -> binder.requestStaticInjection(RequestHeaders.class),
         binder -> binder.bind(DruidSecondaryModule.class),
         binder -> binder.bind(PropertiesValidator.class) // this gets properties injected, later call to validate checks
     );

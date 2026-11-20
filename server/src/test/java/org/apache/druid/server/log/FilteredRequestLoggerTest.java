@@ -29,6 +29,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
@@ -66,6 +67,7 @@ public class FilteredRequestLoggerTest
 
     final InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(ObjectMapper.class, mapper);
+    injectableValues.addValue(RequestHeaderContextConfig.class, new RequestHeaderContextConfig());
     mapper.setInjectableValues(injectableValues);
   }
 

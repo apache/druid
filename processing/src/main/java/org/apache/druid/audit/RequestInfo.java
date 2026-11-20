@@ -20,8 +20,12 @@
 package org.apache.druid.audit;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
+import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -33,8 +37,8 @@ public class RequestInfo
   private final String method;
   private final String uri;
   private final String queryParams;
+  private final ImmutableMap<String, String> requestMetadata;
 
-  @JsonCreator
   public RequestInfo(
       @JsonProperty("service") String service,
       @JsonProperty("method") String method,
@@ -42,6 +46,19 @@ public class RequestInfo
       @JsonProperty("queryParams") String queryParams
   )
   {
+    this(service, method, uri, queryParams, Map.of());
+  }
+
+  @JsonCreator
+  public RequestInfo(
+      @JsonProperty("service") final String service,
+      @JsonProperty("method") final String method,
+      @JsonProperty("uri") final String uri,
+      @JsonProperty("queryParams") final String queryParams,
+      @JsonProperty("requestMetadata") @Nullable final Map<String, String> requestMetadata
+  )
+  {
+    this.requestMetadata = requestMetadata == null ? ImmutableMap.of() : ImmutableMap.copyOf(requestMetadata);
     this.service = service;
     this.method = method;
     this.uri = uri;
@@ -72,6 +89,13 @@ public class RequestInfo
     return queryParams;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  public Map<String, String> getRequestMetadata()
+  {
+    return requestMetadata;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -85,13 +109,14 @@ public class RequestInfo
     return Objects.equals(this.service, that.service)
            && Objects.equals(this.method, that.method)
            && Objects.equals(this.uri, that.uri)
-           && Objects.equals(this.queryParams, that.queryParams);
+           && Objects.equals(this.queryParams, that.queryParams)
+           && Objects.equals(this.requestMetadata, that.requestMetadata);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(service, method, uri, queryParams);
+    return Objects.hash(service, method, uri, queryParams, requestMetadata);
   }
 
   @Override
@@ -102,6 +127,7 @@ public class RequestInfo
            ", method='" + method + '\'' +
            ", path='" + uri + '\'' +
            ", queryParams='" + queryParams + '\'' +
+           (requestMetadata.isEmpty() ? "" : ", requestMetadata=" + requestMetadata) +
            '}';
   }
 }

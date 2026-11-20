@@ -29,6 +29,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
 import org.apache.druid.utils.JvmUtils;
 
 import java.util.concurrent.ScheduledExecutorService;
@@ -44,9 +45,9 @@ public class DirectDruidClientFactory implements QueryableDruidServer.Maker
   private final QueryWatcher queryWatcher;
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
+  private final RequestHeaderContextConfig requestHeaderConfig;
   private final ScheduledExecutorService queryCancellationExecutor;
 
-  @Inject
   public DirectDruidClientFactory(
       final ServiceEmitter emitter,
       final QueryRunnerFactoryConglomerate conglomerate,
@@ -55,6 +56,27 @@ public class DirectDruidClientFactory implements QueryableDruidServer.Maker
       final @EscalatedClient HttpClient httpClient
   )
   {
+    this(
+        emitter,
+        conglomerate,
+        queryWatcher,
+        smileMapper,
+        httpClient,
+        new RequestHeaderContextConfig()
+    );
+  }
+
+  @Inject
+  public DirectDruidClientFactory(
+      final ServiceEmitter emitter,
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final QueryWatcher queryWatcher,
+      final @Smile ObjectMapper smileMapper,
+      final @EscalatedClient HttpClient httpClient,
+      final RequestHeaderContextConfig requestHeaderConfig
+  )
+  {
+    this.requestHeaderConfig = requestHeaderConfig;
     this.emitter = emitter;
     this.conglomerate = conglomerate;
     this.queryWatcher = queryWatcher;
@@ -75,7 +97,8 @@ public class DirectDruidClientFactory implements QueryableDruidServer.Maker
         server.getScheme(),
         server.getHost(),
         emitter,
-        queryCancellationExecutor
+        queryCancellationExecutor,
+        requestHeaderConfig
     );
   }
 

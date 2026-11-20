@@ -24,6 +24,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
@@ -168,7 +169,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
       return;
     }
     isStarted = true;
-    executorService.submit(() -> {
+    executorService.submit(RequestHeaders.wrap(() -> {
       int nTry = 1;
       while (true) {
         if (!keepReading) {
@@ -243,7 +244,7 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
           }
         }
       }
-    });
+    }));
   }
 
   /**

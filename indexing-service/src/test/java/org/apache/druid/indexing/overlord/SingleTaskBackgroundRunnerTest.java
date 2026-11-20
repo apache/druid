@@ -44,6 +44,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -75,6 +76,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -175,7 +177,15 @@ public class SingleTaskBackgroundRunnerTest
   @Test
   public void testRun() throws ExecutionException, InterruptedException
   {
-    NoopTask task = new NoopTask(null, null, null, 500L, 0, null);
+    NoopTask task = new NoopTask(null, null, null, 1L, 0, Map.of("traceId", "task-trace"))
+    {
+      @Override
+      public TaskStatus runTask(TaskToolbox toolbox)
+      {
+        Assertions.assertEquals("task-trace", RequestHeaders.current().get("X-Druid-Trace-Id"));
+        return TaskStatus.success(getId());
+      }
+    };
     Assertions.assertEquals(
         TaskState.SUCCESS,
         runner.run(task).get().getStatusCode()
@@ -202,11 +212,12 @@ public class SingleTaskBackgroundRunnerTest
   {
     AtomicReference<Boolean> methodCallHolder = new AtomicReference<>();
     final ListenableFuture<TaskStatus> future = runner.run(
-        new NoopTask(null, null, null, Long.MAX_VALUE, 0, null) // infinite task
+        new NoopTask(null, null, null, Long.MAX_VALUE, 0, Map.of("traceId", "stopping-task")) // infinite task
         {
           @Override
           public boolean waitForCleanupToFinish()
           {
+            Assertions.assertEquals("stopping-task", RequestHeaders.current().get("X-Druid-Trace-Id"));
             methodCallHolder.set(true);
             return true;
           }

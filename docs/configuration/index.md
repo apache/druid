@@ -355,6 +355,42 @@ The `switching` request logger routes native query request logs to one request l
 |`druid.request.logging.nativeQueryLogger`|Request logger for emitting native query request logs.|none|
 |`druid.request.logging.sqlQueryLogger`|Request logger for emitting SQL query request logs.|none|
 
+### Request header propagation
+
+Druid copies configured HTTP headers into native query, SQL query, and HTTP-submitted task context after authentication.
+Configure the same mapping in `common.runtime.properties` for participating services, including task processes:
+
+```properties
+druid.request.headers.headerToContextKey={"X-Correlation-Id":"correlationId"}
+```
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.request.headers.headerToContextKey`|JSON object mapping HTTP header names to query and task context keys. Header names are case-insensitive. Custom mappings replace the default; `{}` disables configured header capture and propagation.|`{"X-Druid-Trace-Id":"traceId"}`|
+
+Restart services and task processes after changing the mapping.
+
+A captured header replaces the matching context value. Missing, blank, or invalid header values leave existing context
+values unchanged. Query-context authorization applies to captured query keys.
+
+Native query fan-out and cancellation requests forward the configured headers from query context. Druid also makes these
+headers available during request handling, native query execution (including lazy results), and task execution.
+Druid executor utilities and asynchronous query processing retain the originating operation's headers and restore the
+previous thread state when work finishes. This includes broker parallel merges, asynchronous frame processing,
+and query-driven storage downloads. Within these scopes, configured metadata is also available as logging context fields.
+The SLF4J request logger includes these fields for native and SQL queries, including Router request logs.
+Druid HTTP clients, HTTP ingestion requests, and S3 clients forward the headers
+without replacing explicitly supplied request headers. Audit entries include captured values in `request.requestMetadata`,
+omitted when empty. Use non-sensitive metadata suitable for task payloads, logs, audits, and downstream services.
+
+Druid does not generate IDs. An authentication extension can use the existing `Authenticator.getFilter()` API to generate
+an ID when the header is missing and expose it as a request header before capture. There is no separate ID-generator hook.
+
+Captured values remain in serialized task context. Extensions using other clients can read `RequestHeaders.current()`
+to attach the current operation's headers, or use `RequestHeaderContextConfig.fromContext(...)` with query or task
+context. Custom executors and callbacks require explicit context propagation using `RequestHeaders.wrap(...)` or
+`RequestHeaders.bind(...)`. Druid does not automatically instrument third-party clients or executors.
+
 ### Audit logging
 
 Coordinator and Overlord log changes to lookups, segment load/drop rules, and dynamic configuration changes for auditing.

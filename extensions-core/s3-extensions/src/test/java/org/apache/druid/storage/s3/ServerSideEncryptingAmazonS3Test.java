@@ -19,9 +19,13 @@
 
 package org.apache.druid.storage.s3;
 
+import com.sun.net.httpserver.HttpServer;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.data.input.s3.S3InputSourceConfig;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
@@ -29,6 +33,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.retries.api.RetryStrategy;
@@ -36,6 +42,7 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.sts.StsClient;
@@ -53,11 +60,18 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class ServerSideEncryptingAmazonS3Test
@@ -97,6 +111,88 @@ public class ServerSideEncryptingAmazonS3Test
     mockS3Client = EasyMock.createMock(S3Client.class);
     mockServerSideEncryption = EasyMock.createMock(ServerSideEncryption.class);
     mockTransferConfig = EasyMock.createMock(S3TransferConfig.class);
+  }
+
+  @Test
+  public void testSignedSyncAndAsyncRequestsRetainTraceAcrossRetries() throws Exception
+  {
+    for (final boolean propagationEnabled : new boolean[]{true, false}) {
+      checkSignedRequests(propagationEnabled);
+    }
+  }
+
+  private void checkSignedRequests(final boolean propagationEnabled) throws Exception
+  {
+    final boolean previous = RequestHeaders.isEnabled();
+    final Properties properties = new Properties();
+    if (!propagationEnabled) {
+      properties.setProperty("druid.request.headers.headerToContextKey", "{}");
+    }
+    final List<String> received = Collections.synchronizedList(new ArrayList<>());
+    final List<String> signatures = Collections.synchronizedList(new ArrayList<>());
+    final AtomicInteger attempts = new AtomicInteger();
+    final HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext("/", exchange -> {
+      received.add(exchange.getRequestHeaders().getFirst("X-Druid-Trace-Id"));
+      signatures.add(exchange.getRequestHeaders().getFirst("Authorization"));
+      exchange.sendResponseHeaders(attempts.getAndIncrement() == 0 ? 503 : 200, -1);
+      exchange.close();
+    });
+    server.start();
+    final URI endpoint = URI.create("http://127.0.0.1:" + server.getAddress().getPort());
+    final StaticCredentialsProvider credentials = StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test"));
+    final RequestHeaderContextConfig headers = new RequestHeaderContextConfig(Map.of("X-Druid-Trace-Id", "traceId"));
+    try (S3Client sync = S3Client.builder()
+                                 .credentialsProvider(credentials)
+                                 .region(Region.US_EAST_1)
+                                 .endpointOverride(endpoint)
+                                 .forcePathStyle(true)
+                                 .overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()))
+                                 .build();
+         S3AsyncClient async = S3AsyncClient.builder()
+                                            .credentialsProvider(credentials)
+                                            .region(Region.US_EAST_1)
+                                            .endpointOverride(endpoint)
+                                            .forcePathStyle(true)
+                                            .overrideConfiguration(config -> config.addExecutionInterceptor(new S3RequestHeaderInterceptor()))
+                                            .build()) {
+      new StartupInjectorBuilder().withProperties(properties).forTests().build();
+      Assertions.assertEquals(propagationEnabled, RequestHeaders.isEnabled());
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(headers, Map.of("traceId", "sync-trace"))) {
+        sync.headObject(request -> request.bucket("bucket").key("key"));
+      }
+      final CompletableFuture<HeadObjectResponse> response;
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(headers, Map.of("traceId", "async-trace"))) {
+        response = async.headObject(request -> request.bucket("bucket").key("key"));
+      }
+      response.get(10, TimeUnit.SECONDS);
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(headers, Map.of("traceId", "scope-trace"))) {
+        sync.headObject(request -> request.bucket("bucket").key("key")
+                                          .overrideConfiguration(config -> config.putHeader("x-druid-trace-id", "explicit")));
+      }
+      sync.headObject(request -> request.bucket("bucket").key("key"));
+      Assertions.assertEquals(5, received.size());
+      if (RequestHeaders.isEnabled()) {
+        Assertions.assertEquals(List.of("sync-trace", "sync-trace", "async-trace"), received.subList(0, 3));
+      } else {
+        Assertions.assertEquals(Collections.nCopies(3, null), received.subList(0, 3));
+      }
+      Assertions.assertEquals("explicit", received.get(3));
+      Assertions.assertNull(received.get(4));
+      for (int i = 0; i < 4; i++) {
+        Assertions.assertEquals(RequestHeaders.isEnabled() || i == 3, signatures.get(i).contains("x-druid-trace-id"));
+      }
+      Assertions.assertTrue(RequestHeaders.current().isEmpty());
+    }
+    finally {
+      server.stop(0);
+      if (previous) {
+        properties.remove("druid.request.headers.headerToContextKey");
+      } else {
+        properties.setProperty("druid.request.headers.headerToContextKey", "{}");
+      }
+      new StartupInjectorBuilder().withProperties(properties).forTests().build();
+    }
   }
 
   @Test
@@ -528,7 +624,12 @@ public class ServerSideEncryptingAmazonS3Test
     transferManagerField.set(s3, mockTransferManager);
 
     // Call upload
-    s3.upload("test-bucket", "test-key", testFile, null);
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(
+        new RequestHeaderContextConfig(Map.of("X-Druid-Trace-Id", "traceId")),
+        Map.of("traceId", "transfer-trace")
+    )) {
+      s3.upload("test-bucket", "test-key", testFile, null);
+    }
 
     // Verify the transfer manager was used
     EasyMock.verify(mockTransferManager, mockFileUpload);
@@ -538,6 +639,12 @@ public class ServerSideEncryptingAmazonS3Test
     Assertions.assertEquals("test-bucket", capturedRequest.putObjectRequest().bucket());
     Assertions.assertEquals("test-key", capturedRequest.putObjectRequest().key());
     Assertions.assertEquals(testFile.toPath(), capturedRequest.source());
+    Assertions.assertEquals(
+        Map.of("X-Druid-Trace-Id", "transfer-trace"),
+        capturedRequest.putObjectRequest().overrideConfiguration().orElseThrow()
+                       .executionAttributes().getAttribute(S3RequestHeaderInterceptor.HEADERS)
+    );
+    Assertions.assertTrue(RequestHeaders.current().isEmpty());
   }
 
   @Test

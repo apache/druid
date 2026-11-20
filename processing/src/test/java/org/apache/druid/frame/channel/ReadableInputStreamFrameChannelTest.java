@@ -28,6 +28,8 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -42,11 +44,16 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ReadableInputStreamFrameChannelTest extends InitializedNullHandlingTest
 {
@@ -83,6 +90,43 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
 
   }
 
+
+  @Test
+  public void testReadsCarryHeadersOnUnwrappedExecutor() throws Exception
+  {
+    final AtomicReference<Map<String, String>> observed = new AtomicReference<>();
+    try (ExecutorService executor = Executors.newSingleThreadExecutor();
+         InputStream input = new FilterInputStream(getInputStream())
+         {
+           @Override
+           public int read(final byte[] bytes, final int offset, final int length) throws IOException
+           {
+             observed.set(RequestHeaders.current());
+             return super.read(bytes, offset, length);
+           }
+         }) {
+      final ReadableInputStreamFrameChannel channel = ReadableInputStreamFrameChannel.open(
+          input,
+          "trace-read",
+          executor,
+          false,
+          null
+      );
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(
+          new RequestHeaderContextConfig(),
+          Map.of("traceId", "read-trace")
+      )) {
+        FrameTestUtil.assertRowsEqual(
+            FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+            FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(cursorFactory.getRowSignature()))
+        );
+      }
+      channel.close();
+      Assertions.assertEquals(Map.of("X-Druid-Trace-Id", "read-trace"), observed.get());
+      Assertions.assertTrue(executor.submit(RequestHeaders::current).get(10, TimeUnit.SECONDS).isEmpty());
+      Assertions.assertTrue(RequestHeaders.current().isEmpty());
+    }
+  }
 
   @Test
   public void testEmptyFrameFile() throws IOException

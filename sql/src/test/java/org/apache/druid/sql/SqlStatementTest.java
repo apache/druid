@@ -40,6 +40,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -49,6 +50,7 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
@@ -69,6 +71,8 @@ import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
+import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.sql.http.SqlResource;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -78,6 +82,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -163,6 +168,7 @@ public class SqlStatementTest
   HttpServletRequest request(boolean ok)
   {
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(req.getAttribute(RequestHeaderContextFilterHolder.class.getName())).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
             .anyTimes();
@@ -191,6 +197,58 @@ public class SqlStatementTest
   private SqlQueryPlus queryPlus(final String sql, final AuthenticationResult authResult)
   {
     return SqlQueryPlus.builder(sql).auth(authResult).build();
+  }
+
+  @Test
+  public void testCapturedHeadersWithStrictContextValidation()
+  {
+    final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(CalciteTests.REGULAR_USER_AUTH_RESULT);
+    Mockito.when(request.getAttribute(RequestHeaderContextFilterHolder.class.getName()))
+           .thenReturn(Map.of("traceId", "caller", "correlationId", "custom"));
+    final SqlQueryPlus supplied = SqlResource.makeSqlQueryPlus(
+        new SqlQuery("SELECT COUNT(*) FROM druid.foo", null, false, false, false, Map.of(), null),
+        request,
+        QueryContext.empty(),
+        new QueryContextConfig(true)
+    );
+
+    try (HttpStatement statement = sqlStatementFactory.httpStatement(supplied, request)) {
+      assertEquals("caller", statement.context().get("traceId"));
+      assertEquals("custom", statement.context().get("correlationId"));
+      assertTrue(statement.queryPlus.authContextKeys().contains("traceId"));
+      assertEquals(6L, statement.plan().run().getResults().toList().get(0)[0]);
+    }
+  }
+
+  @Test
+  public void testCapturedHeadersInHttpContext()
+  {
+    final SqlQueryPlus supplied = SqlQueryPlus.builder("SELECT 1")
+                                            .systemDefaultContext(QueryContext.of(Map.of("defaultOnly", "default")))
+                                            .queryContext(QueryContext.of(Map.of("traceId", "body", "unrelated", "preserved")))
+                                            .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                            .build();
+    final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(request.getAttribute(RequestHeaderContextFilterHolder.class.getName()))
+           .thenReturn(Map.of("traceId", "caller", "correlationId", "new"));
+    try (HttpStatement statement = sqlStatementFactory.httpStatement(supplied, request)) {
+      assertEquals("caller", statement.context().get("traceId"));
+      assertEquals("preserved", statement.context().get("unrelated"));
+      assertEquals("default", statement.context().get("defaultOnly"));
+      assertTrue(statement.authContextKeys.contains("traceId"));
+      assertTrue(statement.queryPlus.authContextKeys().contains("correlationId"));
+      assertFalse(statement.authContextKeys.contains("defaultOnly"));
+      assertTrue(statement.queryPlus.authContextKeys().contains("traceId"));
+    }
+    Mockito.when(request.getAttribute(RequestHeaderContextFilterHolder.class.getName())).thenReturn(null);
+    try (HttpStatement statement = sqlStatementFactory.httpStatement(supplied.freshCopy(), request)) {
+      assertEquals("body", statement.context().get("traceId"));
+    }
+    try (DirectStatement statement = sqlStatementFactory.directStatement(supplied.freshCopy())) {
+      assertEquals("body", statement.context().get("traceId"));
+    }
   }
 
   @Test

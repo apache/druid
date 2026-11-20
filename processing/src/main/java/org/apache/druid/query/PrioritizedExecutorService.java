@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.query.context.RequestHeaders;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -117,7 +118,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
         "task does not implement PrioritizedRunnable"
     );
     return PrioritizedListenableFutureTask.create(
-        ListenableFutureTask.create(runnable, value),
+        ListenableFutureTask.create(RequestHeaders.wrap(runnable), value),
         runnable instanceof PrioritizedRunnable
         ? ((PrioritizedRunnable) runnable).getPriority()
         : defaultPriority,
@@ -133,7 +134,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
         "task does not implement PrioritizedCallable"
     );
     return PrioritizedListenableFutureTask.create(
-        ListenableFutureTask.create(callable),
+        ListenableFutureTask.create(RequestHeaders.wrap(callable)),
         callable instanceof PrioritizedCallable
         ? ((PrioritizedCallable) callable).getPriority()
         : defaultPriority,

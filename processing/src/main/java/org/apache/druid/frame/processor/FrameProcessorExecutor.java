@@ -39,6 +39,7 @@ import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.context.RequestHeaders;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -112,6 +113,8 @@ public class FrameProcessorExecutor
    */
   public <T> ListenableFuture<T> runFully(final FrameProcessor<T> processor, @Nullable final String cancellationId)
   {
+    final Executor requestExec = RequestHeaders.bind(exec);
+    final Executor callbackExec = RequestHeaders.bind(MoreExecutors.directExecutor());
     final List<ReadableFrameChannel> inputChannels = processor.inputChannels();
     final List<WritableFrameChannel> outputChannels = processor.outputChannels();
     final SettableFuture<T> finished = registerCancelableFuture(SettableFuture.create(), true, cancellationId);
@@ -166,7 +169,7 @@ public class FrameProcessorExecutor
               final IntSet await = result.awaitableChannels();
 
               if (await.isEmpty()) {
-                nextRun = () -> exec.execute(ExecutorRunnable.this);
+                nextRun = () -> requestExec.execute(ExecutorRunnable.this);
               } else if (result.isAwaitAllChannels() || await.size() == 1) {
                 final List<ListenableFuture<?>> readabilityFutures = new ArrayList<>();
 
@@ -180,7 +183,7 @@ public class FrameProcessorExecutor
                 logProcessorStatusString(processor, finished.isDone(), result, readabilityFutures, null);
 
                 if (readabilityFutures.isEmpty()) {
-                  nextRun = () -> exec.execute(ExecutorRunnable.this);
+                  nextRun = () -> requestExec.execute(ExecutorRunnable.this);
                 } else {
                   final ListenableFuture<List<Object>> combinedFuture = Futures.allAsList(readabilityFutures);
                   nextRun = () -> runProcessorAfterFutureResolves(combinedFuture, false);
@@ -289,7 +292,7 @@ public class FrameProcessorExecutor
               public void onSuccess(final V ignored)
               {
                 try {
-                  exec.execute(ExecutorRunnable.this);
+                  requestExec.execute(ExecutorRunnable.this);
                 }
                 catch (Throwable e) {
                   fail(e);
@@ -304,7 +307,7 @@ public class FrameProcessorExecutor
                 }
               }
             },
-            MoreExecutors.directExecutor()
+            callbackExec
         );
       }
 
@@ -452,7 +455,7 @@ public class FrameProcessorExecutor
             }
           }
         },
-        Execs.directExecutor()
+        callbackExec
     );
 
     logProcessorStatusString(processor, finished.isDone(), null, null, null);
@@ -467,7 +470,7 @@ public class FrameProcessorExecutor
     }
 
     try {
-      exec.execute(runnable);
+      requestExec.execute(runnable);
     }
     catch (Throwable e) {
       // registered, but never going to run; clean up only if we took the processor out of cancelableProcessors

@@ -36,6 +36,7 @@ import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -430,6 +431,7 @@ public class OverlordDataSourcesResourceTest
     EasyMock.expect(request.getMethod()).andReturn("POST").anyTimes();
     EasyMock.expect(request.getRequestURI()).andReturn("/request/uri").anyTimes();
     EasyMock.expect(request.getQueryString()).andReturn("query=string").anyTimes();
+    EasyMock.expect(request.getAttribute(RequestHeaderContextFilterHolder.class.getName())).andReturn(null).anyTimes();
 
     EasyMock.replay(request);
 

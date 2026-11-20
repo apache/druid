@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
@@ -34,6 +35,7 @@ import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameFileChannel;
 import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.frame.file.FrameFileWriter;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.processor.test.ChompingFrameProcessor;
 import org.apache.druid.frame.processor.test.FailingFrameProcessor;
 import org.apache.druid.frame.processor.test.FutureWaitingProcessor;
@@ -46,6 +48,9 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
@@ -81,6 +86,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -88,6 +94,82 @@ import java.util.stream.Collectors;
 
 public class FrameProcessorExecutorTest
 {
+  @Test
+  public void testRunAllCarriesHeadersOnUnwrappedExecutor() throws Exception
+  {
+    final CountDownLatch release = new CountDownLatch(1);
+    try (ExecutorService worker = Executors.newSingleThreadExecutor()) {
+      worker.submit(() -> {
+        Assertions.assertTrue(release.await(10, TimeUnit.SECONDS));
+        return null;
+      });
+      final FrameProcessorExecutor executor = new FrameProcessorExecutor(worker);
+      final SettableFuture<String> ready = SettableFuture.create();
+      ready.set("done");
+      final ListenableFuture<Long> result;
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(
+          new RequestHeaderContextConfig(),
+          Map.of("traceId", "processors-trace")
+      )) {
+        result = executor.runAllFully(
+            ProcessorManagers.of(Sequences.simple(List.of(1, 2)).map(value -> {
+              Assertions.assertEquals("processors-trace", RequestHeaders.current().get("X-Druid-Trace-Id"));
+              return new FutureWaitingProcessor(ready, ready);
+            })),
+            2,
+            new Bouncer(2),
+            null
+        );
+      }
+      release.countDown();
+      Assertions.assertEquals(2L, result.get(10, TimeUnit.SECONDS));
+      Assertions.assertTrue(worker.submit(RequestHeaders::current).get(10, TimeUnit.SECONDS).isEmpty());
+    }
+    finally {
+      release.countDown();
+    }
+  }
+
+  @Test
+  public void testRequestHeadersSurviveProcessorSuspension() throws Exception
+  {
+    final RequestHeaderContextConfig config = new RequestHeaderContextConfig(Map.of("X-Trace", "traceId"));
+    final SettableFuture<String> ready = SettableFuture.create();
+    final CountDownLatch started = new CountDownLatch(1);
+    try (ExecutorService worker = Executors.newSingleThreadExecutor(Execs.makeThreadFactory("trace-frame-%d"))) {
+      final FrameProcessorExecutor executor = new FrameProcessorExecutor(worker);
+      final FutureWaitingProcessor processor = new FutureWaitingProcessor(ready, ready)
+      {
+        @Override
+        public ReturnOrAwait<List<String>> runIncrementally(final IntSet readableInputs)
+        {
+          Assertions.assertEquals("processor", RequestHeaders.current().get("X-Trace"));
+          started.countDown();
+          return super.runIncrementally(readableInputs);
+        }
+
+        @Override
+        public void cleanup()
+        {
+          Assertions.assertEquals("processor", RequestHeaders.current().get("X-Trace"));
+          super.cleanup();
+        }
+      };
+      final ListenableFuture<List<String>> result;
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(config, Map.of("traceId", "processor"))) {
+        result = executor.runFully(processor, null);
+      }
+      Assertions.assertTrue(started.await(10, TimeUnit.SECONDS));
+      worker.submit(() -> {}).get(10, TimeUnit.SECONDS);
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(config, Map.of("traceId", "unrelated"))) {
+        ready.set("done");
+        Assertions.assertEquals(List.of("done", "done"), result.get(10, TimeUnit.SECONDS));
+        Assertions.assertEquals("unrelated", RequestHeaders.current().get("X-Trace"));
+      }
+      Assertions.assertTrue(processor.isCleanedUp());
+    }
+  }
+
   @ParameterizedClass
   @MethodSource("constructorFeeder")
   public static class SuperBlasterTests extends BaseFrameProcessorExecutorTestSuite

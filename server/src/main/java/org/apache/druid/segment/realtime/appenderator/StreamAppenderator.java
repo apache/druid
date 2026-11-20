@@ -105,7 +105,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -254,9 +253,9 @@ public class StreamAppenderator implements Appenderator
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.sinkSchemaAnnouncer = new SinkSchemaAnnouncer();
 
-    this.exec = Executors.newScheduledThreadPool(
+    this.exec = ScheduledExecutors.fixed(
         1,
-        Execs.makeThreadFactory("StreamAppenderSegmentRemoval-%s")
+        "StreamAppenderSegmentRemoval-%s"
     );
     this.fingerprintGenerator = new FingerprintGenerator(objectMapper);
     this.taskIntervalUnlocker = taskIntervalUnlocker;

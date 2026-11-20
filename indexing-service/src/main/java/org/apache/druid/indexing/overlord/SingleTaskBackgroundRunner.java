@@ -51,6 +51,8 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
@@ -72,6 +74,9 @@ import java.util.concurrent.TimeUnit;
 public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(SingleTaskBackgroundRunner.class);
+
+  @Inject
+  private RequestHeaderContextConfig requestHeaderConfig = new RequestHeaderContextConfig();
 
   private final TaskToolboxFactory toolboxFactory;
   private final TaskConfig taskConfig;
@@ -185,8 +190,10 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
 
       // stopGracefully for resource cleaning
       log.info("Starting graceful shutdown of task[%s].", task.getId());
-      task.stopGracefully(taskConfig);
-      task.waitForCleanupToFinish();
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(requestHeaderConfig, task.getContext())) {
+        task.stopGracefully(taskConfig);
+        task.waitForCleanupToFinish();
+      }
 
       if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
         try {
@@ -264,6 +271,14 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
 
   @Override
   public ListenableFuture<TaskStatus> run(final Task task)
+  {
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(requestHeaderConfig, task.getContext())) {
+      RequestHeaders.currentContext().forEach(task::addToContext);
+      return runWithHeaders(task);
+    }
+  }
+
+  private ListenableFuture<TaskStatus> runWithHeaders(final Task task)
   {
     if (runningItem == null) {
       final TaskToolbox toolbox = toolboxFactory.build(task);
@@ -463,6 +478,14 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
 
     @Override
     public TaskStatus call()
+    {
+      try (RequestHeaders.Scope ignored = RequestHeaders.open(requestHeaderConfig, task.getContext())) {
+        RequestHeaders.currentContext().forEach(task::addToContext);
+        return runWithHeaders();
+      }
+    }
+
+    private TaskStatus runWithHeaders()
     {
       final long startTime = System.currentTimeMillis();
 

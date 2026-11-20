@@ -35,6 +35,8 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.ObjectOrErrorResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
@@ -42,6 +44,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -57,6 +61,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.STRICT_STUBS)
@@ -95,6 +100,39 @@ public class ServiceClientImplTest
     if (!exec.awaitTermination(30, TimeUnit.SECONDS)) {
       throw new ISE("Unable to shutdown executor in time");
     }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void testHeadersSurviveDelayedDiscoveryAndRetries(final boolean traced) throws Exception
+  {
+    final RequestBuilder builder = new RequestBuilder(HttpMethod.GET, "/trace");
+    final SettableFuture<ServiceLocations> discovery = SettableFuture.create();
+    stubLocatorCall(discovery);
+    final AtomicInteger attempts = new AtomicInteger();
+    Mockito.when(httpClient.go(
+        ArgumentMatchers.any(Request.class),
+        ArgumentMatchers.any(ObjectOrErrorResponseHandler.class),
+        ArgumentMatchers.eq(RequestBuilder.DEFAULT_TIMEOUT)
+    )).thenAnswer(invocation -> {
+      Assertions.assertEquals(traced ? Map.of("X-Trace", "origin") : Map.of(), RequestHeaders.current());
+      return attempts.getAndIncrement() == 0
+             ? errorResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, null, "retry")
+             : valueResponse(Map.of("result", "ok"));
+    });
+    serviceClient = makeServiceClient(StandardRetryPolicy.builder().maxAttempts(2).build());
+    final RequestHeaderContextConfig config = new RequestHeaderContextConfig(Map.of("X-Trace", "traceId"));
+    final ListenableFuture<Map<String, String>> response;
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(config, traced ? Map.of("traceId", "origin") : Map.of())) {
+      response = doAsyncRequest(serviceClient, builder);
+    }
+    try (RequestHeaders.Scope ignored = RequestHeaders.open(config, Map.of("traceId", "unrelated"))) {
+      discovery.set(locations(SERVER1));
+      Assertions.assertEquals(Map.of("result", "ok"), response.get(10, TimeUnit.SECONDS));
+      Assertions.assertEquals("unrelated", RequestHeaders.current().get("X-Trace"));
+    }
+    Assertions.assertEquals(2, attempts.get());
+    Assertions.assertTrue(builder.build(SERVER1).getHeaders().isEmpty());
   }
 
   @Test

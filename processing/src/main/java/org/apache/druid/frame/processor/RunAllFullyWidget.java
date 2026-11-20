@@ -30,8 +30,8 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.java.util.common.Either;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
@@ -42,6 +42,7 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -60,6 +61,7 @@ public class RunAllFullyWidget<T, ResultType>
 
   private final ProcessorManager<T, ? extends ResultType> processorManager;
   private final FrameProcessorExecutor exec;
+  private final Executor callbackExec;
   private final int maxOutstandingProcessors;
   private final Bouncer bouncer;
   @Nullable
@@ -75,6 +77,7 @@ public class RunAllFullyWidget<T, ResultType>
   {
     this.processorManager = processorManager;
     this.exec = exec;
+    this.callbackExec = RequestHeaders.bind(MoreExecutors.directExecutor());
     this.maxOutstandingProcessors = maxOutstandingProcessors;
     this.bouncer = bouncer;
     this.cancellationId = cancellationId;
@@ -106,7 +109,7 @@ public class RunAllFullyWidget<T, ResultType>
     final RunAllFullyRunnable runnable = new RunAllFullyRunnable(nextProcessorFuture);
 
     for (int i = 0; i < maxOutstandingProcessors; i++) {
-      exec.getExecutorService().submit(runnable);
+      exec.getExecutorService().submit(RequestHeaders.wrap(runnable));
     }
 
     return runnable.finishedFuture;
@@ -171,7 +174,7 @@ public class RunAllFullyWidget<T, ResultType>
               }
             }
           },
-          Execs.directExecutor()
+          callbackExec
       );
     }
 
@@ -196,10 +199,10 @@ public class RunAllFullyWidget<T, ResultType>
               futureRef.addListener(
                   () -> {
                     if (!futureRef.isCancelled()) {
-                      exec.getExecutorService().submit(RunAllFullyRunnable.this);
+                      exec.getExecutorService().submit(RequestHeaders.wrap(RunAllFullyRunnable.this));
                     }
                   },
-                  Execs.directExecutor()
+                  callbackExec
               );
               return;
             }
@@ -244,10 +247,10 @@ public class RunAllFullyWidget<T, ResultType>
                             bouncerTicketQueue.add(ticket);
                           }
                         }
-                        exec.getExecutorService().submit(RunAllFullyRunnable.this);
+                        exec.getExecutorService().submit(RequestHeaders.wrap(RunAllFullyRunnable.this));
                       }
                     },
-                    Execs.directExecutor()
+                    callbackExec
                 );
 
                 return;
@@ -320,7 +323,7 @@ public class RunAllFullyWidget<T, ResultType>
                   }
                 } else {
                   // Not finished; run again.
-                  exec.getExecutorService().submit(RunAllFullyRunnable.this);
+                  exec.getExecutorService().submit(RequestHeaders.wrap(RunAllFullyRunnable.this));
                 }
               }
 
@@ -336,7 +339,7 @@ public class RunAllFullyWidget<T, ResultType>
                 }
               }
             },
-            MoreExecutors.directExecutor()
+            callbackExec
         );
       }
     }

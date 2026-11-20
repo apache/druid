@@ -24,12 +24,14 @@ import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import jakarta.validation.constraints.NotNull;
+import org.apache.druid.query.context.RequestHeaders;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ScheduledExecutorService;
@@ -58,7 +60,7 @@ public class Execs
 
   public static ExecutorService singleThreaded(@NotNull String nameFormat, @Nullable Integer priority)
   {
-    return Executors.newSingleThreadExecutor(makeThreadFactory(nameFormat, priority));
+    return RequestHeaders.wrap(Executors.newSingleThreadExecutor(makeThreadFactory(nameFormat, priority)));
   }
 
   public static ExecutorService multiThreaded(int threads, @NotNull String nameFormat)
@@ -68,7 +70,24 @@ public class Execs
 
   public static ExecutorService multiThreaded(int threads, @NotNull String nameFormat, @Nullable Integer priority)
   {
-    return Executors.newFixedThreadPool(threads, makeThreadFactory(nameFormat, priority));
+    if (!RequestHeaders.isEnabled()) {
+      return Executors.newFixedThreadPool(threads, makeThreadFactory(nameFormat, priority));
+    }
+    return new ThreadPoolExecutor(
+        threads,
+        threads,
+        0L,
+        TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue<>(),
+        makeThreadFactory(nameFormat, priority)
+    )
+    {
+      @Override
+      public void execute(final Runnable command)
+      {
+        super.execute(RequestHeaders.wrap(command));
+      }
+    };
   }
 
   public static ScheduledExecutorService scheduledSingleThreaded(@NotNull String nameFormat)
@@ -78,7 +97,10 @@ public class Execs
 
   public static ScheduledExecutorService scheduledSingleThreaded(@NotNull String nameFormat, @Nullable Integer priority)
   {
-    return Executors.newSingleThreadScheduledExecutor(makeThreadFactory(nameFormat, priority));
+    if (!RequestHeaders.isEnabled()) {
+      return Executors.newSingleThreadScheduledExecutor(makeThreadFactory(nameFormat, priority));
+    }
+    return RequestHeaders.scheduled(1, makeThreadFactory(nameFormat, priority));
   }
 
   public static ThreadFactory makeThreadFactory(@NotNull String nameFormat)
@@ -147,6 +169,33 @@ public class Execs
     } else {
       queue = new SynchronousQueue<>();
     }
+    final RejectedExecutionHandler handler = new RejectedExecutionHandler()
+    {
+      @Override
+      public void rejectedExecution(Runnable r, ThreadPoolExecutor executor)
+      {
+        if (executor.isShutdown()) {
+          throw new RejectedExecutionException("Executor is shutdown, rejecting task");
+        }
+        try {
+          executor.getQueue().put(r);
+        }
+        catch (InterruptedException e) {
+          throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
+        }
+      }
+    };
+    if (!RequestHeaders.isEnabled()) {
+      return new ThreadPoolExecutor(
+          nThreads,
+          nThreads,
+          0L,
+          TimeUnit.MILLISECONDS,
+          queue,
+          makeThreadFactory(nameFormat, priority),
+          handler
+      );
+    }
     return new ThreadPoolExecutor(
         nThreads,
         nThreads,
@@ -154,23 +203,15 @@ public class Execs
         TimeUnit.MILLISECONDS,
         queue,
         makeThreadFactory(nameFormat, priority),
-        new RejectedExecutionHandler()
-        {
-          @Override
-          public void rejectedExecution(Runnable r, ThreadPoolExecutor executor)
-          {
-            if (executor.isShutdown()) {
-              throw new RejectedExecutionException("Executor is shutdown, rejecting task");
-            }
-            try {
-              executor.getQueue().put(r);
-            }
-            catch (InterruptedException e) {
-              throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
-            }
-          }
-        }
-    );
+        handler
+    )
+    {
+      @Override
+      public void execute(final Runnable command)
+      {
+        super.execute(RequestHeaders.wrap(command));
+      }
+    };
   }
 
   public static ListeningExecutorService directExecutor()

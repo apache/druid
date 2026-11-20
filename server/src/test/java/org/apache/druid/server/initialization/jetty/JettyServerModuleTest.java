@@ -25,9 +25,13 @@ import com.google.inject.Provider;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.query.context.RequestHeaderContextConfig;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
+import org.apache.druid.server.mocks.MockHttpServletRequest;
+import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -36,12 +40,54 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 public class JettyServerModuleTest
 {
+  @Test
+  public void testRequestHeaderCapture() throws Exception
+  {
+    final RequestHeaderContextFilterHolder holder = new RequestHeaderContextFilterHolder(new RequestHeaderContextConfig());
+    final Filter filter = holder.getFilter();
+    final FilterChain chain = Mockito.mock(FilterChain.class);
+    final MockHttpServletRequest request = new MockHttpServletRequest();
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    request.headers.put("X-Druid-Trace-Id", "caller");
+    request.headers.put("X-Unconfigured", "ignored");
+
+    Mockito.doAnswer(invocation -> {
+      Assertions.assertEquals(Map.of("X-Druid-Trace-Id", "caller"), RequestHeaders.current());
+      return null;
+    }).when(chain).doFilter(request, response);
+    filter.doFilter(request, response, chain);
+
+    Assertions.assertTrue(RequestHeaders.current().isEmpty());
+    Mockito.verify(chain).doFilter(request, response);
+    Assertions.assertEquals(Map.of("traceId", "caller"), RequestHeaderContextFilterHolder.contextFor(request));
+    Assertions.assertEquals(EnumSet.of(DispatcherType.REQUEST), holder.getDispatcherType());
+    final MockHttpServletRequest nextRequest = new MockHttpServletRequest();
+    Mockito.doAnswer(invocation -> {
+      Assertions.assertTrue(RequestHeaders.current().isEmpty());
+      return null;
+    }).when(chain).doFilter(nextRequest, response);
+    filter.doFilter(nextRequest, response, chain);
+    Assertions.assertTrue(RequestHeaderContextFilterHolder.contextFor(nextRequest).isEmpty());
+    Assertions.assertEquals(Map.of("traceId", "caller"), RequestHeaderContextFilterHolder.contextFor(request));
+    Assertions.assertThrows(ServletException.class, () -> filter.doFilter(request, response, (req, res) -> {
+      Assertions.assertEquals(Map.of("X-Druid-Trace-Id", "caller"), RequestHeaders.current());
+      throw new ServletException("expected");
+    }));
+    Assertions.assertTrue(RequestHeaders.current().isEmpty());
+  }
+
   @Test
   public void testJettyServerModule()
   {

@@ -49,6 +49,7 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.HttpException;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.initialization.jetty.ResponseIdentityHeaderHandler;
 import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.log.RequestLogger;
@@ -79,6 +80,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -823,8 +825,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       super(request, response);
 
       this.req = request;
-      this.query = query;
-      this.sqlQuery = sqlQuery;
+      // Add captured headers only to log copies, preserving the client-supplied context for broker validation.
+      final Map<String, String> headers = RequestHeaderContextFilterHolder.contextFor(request);
+      this.query = query == null || headers.isEmpty() ? query : query.withOverriddenContext(new HashMap<>(headers));
+      this.sqlQuery = sqlQuery == null || headers.isEmpty()
+                      ? sqlQuery
+                      : sqlQuery.withOverridenContext(sqlQuery.queryContext().override(new HashMap<>(headers)).asMap());
       this.isJDBC = isJDBC;
       this.startNs = startNs;
     }

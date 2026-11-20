@@ -75,6 +75,7 @@ import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.initialization.jetty.RequestHeaderContextFilterHolder;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -120,6 +121,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -228,9 +230,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   {
     final URL url = URI.create("http://localhost:" + port + "/proxy/response-context").toURL();
     final HttpURLConnection get = (HttpURLConnection) url.openConnection();
+    get.setRequestProperty("X-Druid-Trace-Id", "caller");
 
     Assertions.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(get.getInputStream(), StandardCharsets.UTF_8));
     Assertions.assertEquals(RESPONSE_CONTEXT, get.getHeaderField(QueryResource.HEADER_RESPONSE_CONTEXT));
+    Assertions.assertEquals("caller", get.getHeaderField("X-Druid-Trace-Id"));
   }
 
   @Test
@@ -862,6 +866,9 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
     final HttpServletRequest requestMock = EasyMock.createMock(HttpServletRequest.class);
+    EasyMock.expect(requestMock.getAttribute(RequestHeaderContextFilterHolder.class.getName()))
+            .andReturn(Map.of("traceId", "router-trace"))
+            .anyTimes();
     EasyMock.expect(requestMock.getContentType()).andReturn("application/json").anyTimes();
     requestMock.setAttribute("org.apache.druid.proxy.objectMapper", jsonMapper);
     EasyMock.expectLastCall();
@@ -1013,7 +1020,15 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       );
     }
     if (!isJDBCSql) {
-      assertStatusCodeMatchesMetric(requestLogger, isNativeSql, getEmittedStatusCode(stubServiceEmitter));
+      final RequestLogLine logged = assertStatusCodeMatchesMetric(
+          requestLogger,
+          isNativeSql,
+          getEmittedStatusCode(stubServiceEmitter)
+      );
+      Assertions.assertEquals(
+          "router-trace",
+          (isNativeSql ? logged.getSqlQueryContext() : logged.getQuery().getContext()).get("traceId")
+      );
     }
 
     // This test is mostly about verifying that the servlet calls the right methods the right number of times.
@@ -1026,7 +1041,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     return (int) stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE);
   }
 
-  private static void assertStatusCodeMatchesMetric(
+  private static RequestLogLine assertStatusCodeMatchesMetric(
       RequestLogger requestLogger,
       boolean isSqlQuery,
       int metricStatusCode
@@ -1036,12 +1051,13 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       final ArgumentCaptor<RequestLogLine> requestLogLineCaptor = ArgumentCaptor.forClass(RequestLogLine.class);
       Mockito.verify(requestLogger).logSqlQuery(requestLogLineCaptor.capture());
       assertStatusCode(requestLogLineCaptor.getValue(), metricStatusCode);
+      return requestLogLineCaptor.getValue();
     } else {
-      assertNativeQueryStatusCodeMatchesMetric(requestLogger, metricStatusCode);
+      return assertNativeQueryStatusCodeMatchesMetric(requestLogger, metricStatusCode);
     }
   }
 
-  private static void assertNativeQueryStatusCodeMatchesMetric(
+  private static RequestLogLine assertNativeQueryStatusCodeMatchesMetric(
       RequestLogger requestLogger,
       int metricStatusCode
   ) throws IOException
@@ -1049,6 +1065,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     final ArgumentCaptor<RequestLogLine> requestLogLineCaptor = ArgumentCaptor.forClass(RequestLogLine.class);
     Mockito.verify(requestLogger).logNativeQuery(requestLogLineCaptor.capture());
     assertStatusCode(requestLogLineCaptor.getValue(), metricStatusCode);
+    return requestLogLineCaptor.getValue();
   }
 
   private static void assertStatusCode(RequestLogLine requestLogLine, int metricStatusCode)
@@ -1082,9 +1099,10 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public javax.ws.rs.core.Response get()
+    public javax.ws.rs.core.Response get(@Context final HttpServletRequest request)
     {
       return javax.ws.rs.core.Response.ok(DEFAULT_RESPONSE_CONTENT)
+                                      .header("X-Druid-Trace-Id", request.getHeader("X-Druid-Trace-Id"))
                                       .header(QueryResource.HEADER_RESPONSE_CONTEXT, RESPONSE_CONTEXT)
                                       .build();
     }

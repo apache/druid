@@ -28,6 +28,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.context.RequestHeaders;
 import org.apache.druid.segment.loading.external.VirtualStorageManager;
 
 import javax.annotation.Nullable;
@@ -133,7 +134,7 @@ public class StorageLoadingThreadPool
   @VisibleForTesting
   StorageLoadingThreadPool(@Nullable final ListeningExecutorService exec, @Nullable final Semaphore permits)
   {
-    this.exec = exec;
+    this.exec = exec == null ? null : MoreExecutors.listeningDecorator(RequestHeaders.wrap(exec));
     this.permits = permits;
   }
 
