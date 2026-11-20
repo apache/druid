@@ -28,6 +28,8 @@ import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.ShuffleKind;
+import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 
@@ -295,6 +297,19 @@ public class ControllerQueryKernelUtils
   }
 
   /**
+   * Whether a shuffle hash-partitions and sorts its output into more than one partition. Such a shuffle sorts its
+   * partitions one at a time, and each sort finishes only after writing its whole partition (see
+   * {@code StandardShuffleOperations#localSort}), so its output channels must be buffered. With
+   * {@link OutputChannelMode#MEMORY}, writing a partition waits for that partition's reader, so readers would get one
+   * partition at a time. An adjustable shuffle counts as more than one partition, since its count is not yet known.
+   */
+  private static boolean isMultiPartitionHashLocalSort(final ShuffleSpec shuffleSpec)
+  {
+    return shuffleSpec.kind() == ShuffleKind.HASH_LOCAL_SORT
+           && (shuffleSpec.isAdjustable() || shuffleSpec.partitionCount() > 1);
+  }
+
+  /**
    * Whether output of a stage can possibly use {@link OutputChannelMode#MEMORY}. Returning true does not guarantee
    * that the stage *will* use {@link OutputChannelMode#MEMORY}. Additional requirements are checked in
    * {@link #computeStageGroups(QueryDefinition, ControllerQueryKernelConfig)}.
@@ -316,7 +331,13 @@ public class ControllerQueryKernelUtils
       return false;
     }
 
-    final StageId stageId = queryDefinition.getStageDefinition(stageNumber).getId();
+    final StageDefinition stageDefinition = queryDefinition.getStageDefinition(stageNumber);
+    if (stageDefinition.doesShuffle() && isMultiPartitionHashLocalSort(stageDefinition.getShuffleSpec())) {
+      // Cannot use MEMORY output mode: the shuffle needs buffered output channels.
+      return false;
+    }
+
+    final StageId stageId = stageDefinition.getId();
     final Set<StageId> outflowStageIds = outflowMap.get(stageId);
 
     if (outflowStageIds.isEmpty()) {
