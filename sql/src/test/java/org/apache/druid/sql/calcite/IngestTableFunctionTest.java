@@ -27,6 +27,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.inject.Binder;
 import org.apache.calcite.avatica.SqlType;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.type.SqlOperandMetadata;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.HttpInputSource;
@@ -46,21 +50,26 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.sql.calcite.external.BaseUserDefinedTableMacro;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -673,45 +682,150 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .verify();
   }
 
-  /**
-   * The CASTs that validation adds to coerce argument types are not rejected.
-   */
-  @Test
-  public void testHttpFnWithImplicitCast()
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', value = {
+      "123 | INTEGER",
+      "123.45 | DECIMAL",
+      "1e2 | DOUBLE",
+      "TRUE | BOOLEAN",
+      "DATE '2000-02-03' | DATE",
+      "TIME '09:08:07' | TIME",
+      "{d '2000-02-03'} | DATE",
+      "{t '09:08:07'} | TIME",
+      "DECIMAL '123.45' | DECIMAL"
+  })
+  public void testHttpFnRejectsNonStringUserName(final String userName, final String actualType)
   {
-    final ExternalDataSource implicitCastDataSource = new ExternalDataSource(
-        new HttpInputSource(
-            Collections.singletonList(toURI("http://foo.com/bar.csv")),
-            "123",
-            new DefaultPasswordProvider("secret"),
-            SystemFields.none(),
-            null,
-            new HttpInputSourceConfig(null, null)
-        ),
-        new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null),
-        httpDataSource.getSignature()
-    );
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT *\n" +
-             "FROM TABLE(http(userName => 123,\n" +
-             "                password => 'secret',\n" +
-             "                uris => ARRAY['http://foo.com/bar.csv'],\n" +
-             "                format => 'csv'))\n" +
-             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
-             "PARTITIONED BY ALL TIME")
+        .sql(StringUtils.format(
+            """
+            INSERT INTO dst SELECT *
+            FROM TABLE(http(uris => ARRAY['http://foo.com/bar.csv'],
+                            format => 'csv',
+                            password => 'secret',
+                            userName => %s))
+                 EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
+            PARTITIONED BY ALL TIME
+            """,
+            userName
+        ))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectTarget("dst", implicitCastDataSource.getSignature())
-        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
-        .expectQuery(
-            newScanQueryBuilder()
-                .dataSource(implicitCastDataSource)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("x", "y", "z")
-                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
-                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
-                .build()
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageIs(
+                StringUtils.format(
+                    "Argument [userName] of table function [http] must be a literal of type [VARCHAR]"
+                    + " or a compatible type, but is of type [%s].",
+                    actualType
+                )
+            )
         )
         .verify();
+  }
+
+  @Test
+  public void testHttpFnRejectsNonStringArrayElement()
+  {
+    testIngestionQuery()
+        .sql("""
+            INSERT INTO dst SELECT *
+            FROM TABLE(http(uris => ARRAY[123], format => 'csv'))
+                 EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
+            PARTITIONED BY ALL TIME
+            """)
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageIs(
+                "Argument [uris] of table function [http] must be a literal of type [VARCHAR ARRAY]"
+                + " or a compatible type, but element [1] is of type [INTEGER]."
+            )
+        )
+        .verify();
+  }
+
+  /**
+   * The error names the position of the NULL element, since the type of the array alone does not explain the failure.
+   */
+  @Test
+  public void testHttpFnRejectsNullArrayElement()
+  {
+    testIngestionQuery()
+        .sql("""
+            INSERT INTO dst SELECT *
+            FROM TABLE(http(uris => ARRAY['http://foo.com/bar.csv', NULL], format => 'csv'))
+                 EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
+            PARTITIONED BY ALL TIME
+            """)
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageIs(
+                "Argument [uris] of table function [http] must be a literal of type [VARCHAR ARRAY]"
+                + " or a compatible type, but element [2] is NULL."
+            )
+        )
+        .verify();
+  }
+
+  @Test
+  public void testHttpFnRejectsNonArrayUris()
+  {
+    testIngestionQuery()
+        .sql("""
+            INSERT INTO dst SELECT *
+            FROM TABLE(http(uris => 'http://foo.com/bar.csv', format => 'csv'))
+                 EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
+            PARTITIONED BY ALL TIME
+            """)
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageIs(
+                "Argument [uris] of table function [http] must be a literal of type [VARCHAR ARRAY]"
+                + " or a compatible type, but is of type [VARCHAR]."
+            )
+        )
+        .verify();
+  }
+
+  /**
+   * Fails when a table function declares a parameter type that argument conversion does not handle.
+   * {@link BaseUserDefinedTableMacro#convertArguments} converts only VARCHAR, BIGINT, BOOLEAN and VARCHAR ARRAY.
+   * If this test fails for a new type, add the conversion and its tests, then extend this check.
+   */
+  @Test
+  public void testTableFunctionParameterTypesAreSupported()
+  {
+    // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
+    didTest = true;
+
+    int numTableFunctions = 0;
+    for (final SqlOperator operator : queryFramework().operatorTable().getOperatorList()) {
+      if (!(operator instanceof BaseUserDefinedTableMacro)) {
+        continue;
+      }
+      numTableFunctions++;
+      final SqlOperandMetadata metadata = ((BaseUserDefinedTableMacro) operator).getOperandTypeChecker();
+      final List<RelDataType> types = metadata.paramTypes(DruidTypeSystem.TYPE_FACTORY);
+      final List<String> names = metadata.paramNames();
+      for (int i = 0; i < types.size(); i++) {
+        final RelDataType type = types.get(i);
+        final RelDataType componentType = type.getComponentType();
+        final boolean supported = componentType == null
+                                  ? type.getSqlTypeName() == SqlTypeName.VARCHAR
+                                    || type.getSqlTypeName() == SqlTypeName.BIGINT
+                                    || type.getSqlTypeName() == SqlTypeName.BOOLEAN
+                                  : componentType.getSqlTypeName() == SqlTypeName.VARCHAR;
+        Assertions.assertTrue(
+            supported,
+            StringUtils.format(
+                "Parameter [%s] of table function [%s] has type [%s], which convertArguments does not handle",
+                names.get(i),
+                operator.getName(),
+                type
+            )
+        );
+      }
+    }
+    // Guards against the loop silently checking nothing.
+    Assertions.assertTrue(numTableFunctions > 0, "No table functions found in the operator table");
   }
 
   /**

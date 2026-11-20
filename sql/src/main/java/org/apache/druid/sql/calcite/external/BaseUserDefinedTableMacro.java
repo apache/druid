@@ -19,11 +19,6 @@
 
 package org.apache.druid.sql.calcite.external;
 
-import org.apache.calcite.adapter.enumerable.EnumUtils;
-import org.apache.calcite.linq4j.tree.BlockBuilder;
-import org.apache.calcite.linq4j.tree.Expression;
-import org.apache.calcite.linq4j.tree.Expressions;
-import org.apache.calcite.linq4j.tree.FunctionExpression;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeFactoryImpl;
@@ -35,22 +30,30 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.SqlUnknownLiteral;
+import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.type.ArraySqlType;
 import org.apache.calcite.sql.type.SqlOperandMetadata;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.util.NlsString;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.planner.DruidSqlValidator;
 import org.apache.druid.sql.calcite.planner.SqlParameterizerShuttle;
 
+import javax.annotation.Nullable;
+import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -121,8 +124,13 @@ public class BaseUserDefinedTableMacro extends SqlUserDefinedTableMacro
           throw new NonLiteralException();
         }
 
-        final Object o2 = coerce(o, type);
-        arguments.add(o2);
+        if (o != null && type.getSqlTypeName() == SqlTypeName.BIGINT && isApproximateNumeric(callBinding, i)) {
+          throw new IncompatibleLiteralException();
+        }
+        arguments.add(convertLiteral(o, type));
+      }
+      catch (IncompatibleLiteralException e) {
+        throw e.toInvalidSqlInput(callBinding, i, parameter.getName(), opName, type);
       }
       catch (NonLiteralException e) {
         if (failOnNonLiteral) {
@@ -185,63 +193,207 @@ public class BaseUserDefinedTableMacro extends SqlUserDefinedTableMacro
     }
   }
 
-  // Copy of Calcite method with Druid-specific code added
-  private static Object coerce(Object o, RelDataType type) throws NonLiteralException
+  /**
+   * Returns whether operand {@code index} is an approximate numeric literal.
+   * "Approximate numeric" is the SQL term for floating-point values, as opposed to exact INTEGER and DECIMAL values.
+   * It depends on how the literal is written, not on whether the value has a fraction.
+   * <ul>
+   * <li>{@code 100} is an exact INTEGER: false.</li>
+   * <li>{@code 100.0} and {@code 1.5} are exact DECIMALs: false.</li>
+   * <li>{@code 1e2} and {@code 1.5E0} are written with an exponent, which makes them DOUBLEs: true.</li>
+   * <li>A dynamic parameter bound as FLOAT, REAL or DOUBLE: true.</li>
+   * <li>A dynamic parameter bound as INTEGER, BIGINT or DECIMAL: false.</li>
+   * </ul>
+   * An approximate value is rejected for a BIGINT parameter even when it is integral, such as {@code 1e2}.
+   * An exact value with a fraction, such as {@code 1.5}, is not handled here, {@link #convertLiteral} rejects it.
+   */
+  private static boolean isApproximateNumeric(final SqlOperatorBinding binding, final int index)
   {
-    if (o == null) {
+    if (binding instanceof SqlCallBinding sqlBinding) {
+      // Use the original literal's type.
+      // Calcite may already have added a CAST to the declared parameter type.
+      return stripCasts(sqlBinding.operand(index)) instanceof SqlNumericLiteral literal && !literal.isExact();
+    }
+    return SqlTypeName.APPROX_TYPES.contains(binding.getOperandType(index).getSqlTypeName());
+  }
+
+  private static SqlNode stripCasts(final SqlNode node)
+  {
+    SqlNode stripped = node;
+    while (stripped.getKind() == SqlKind.CAST) {
+      stripped = ((SqlCall) stripped).operand(0);
+    }
+    return stripped;
+  }
+
+  /**
+   * Converts Calcite's literal values to the Java representation of a compatible parameter.
+   * Returns null for SQL NULL.
+   * <p>
+   * Handles the parameter types that table functions can declare: VARCHAR, BIGINT, BOOLEAN and VARCHAR ARRAY.
+   * A new parameter type needs its own conversion here.
+   *
+   * @throws IncompatibleLiteralException if the value is incompatible with the type
+   */
+  @Nullable
+  private static Object convertLiteral(@Nullable final Object value, final RelDataType type)
+      throws IncompatibleLiteralException
+  {
+    if (value == null) {
       return null;
     }
-    // Druid-specific code to handle arrays. Although the type
-    // is called an ARRAY in SQL, the actual argument is a generic
-    // list, which we then convert to another list with the elements
-    // coerced to the declared element type.
-    if (type instanceof ArraySqlType) {
-      RelDataType elementType = ((ArraySqlType) type).getComponentType();
-      if (!(elementType instanceof RelDataTypeFactoryImpl.JavaType)) {
-        throw new NonLiteralException();
+
+    if (type instanceof ArraySqlType && value instanceof List<?> list) {
+      final RelDataType elementType = type.getComponentType();
+      final List<Object> converted = new ArrayList<>(list.size());
+      for (int i = 0; i < list.size(); i++) {
+        final Object element = list.get(i);
+        if (element == null) {
+          throw new IncompatibleLiteralException(i, false);
+        }
+        try {
+          converted.add(convertLiteral(element, elementType));
+        }
+        catch (IncompatibleLiteralException e) {
+          throw new IncompatibleLiteralException(i, e.outOfRange);
+        }
+      }
+      return converted;
+    }
+
+    if (type instanceof RelDataTypeFactoryImpl.JavaType javaType) {
+      final Class<?> targetClass = javaType.getJavaClass();
+      return switch (value) {
+        case NlsString literal when targetClass == String.class -> literal.getValue();
+        case BigDecimal numeric when targetClass == Long.class -> {
+          try {
+            yield numeric.longValueExact();
+          }
+          catch (ArithmeticException e) {
+            // A value with a fraction is reported by its type instead.
+            throw new IncompatibleLiteralException(null, numeric.stripTrailingZeros().scale() <= 0);
+          }
+        }
+        // Calcite uses NlsString for character literals.
+        // A plain String can come from DATE or TIME syntax.
+        case Object literal when targetClass != String.class && targetClass.isInstance(literal) -> literal;
+        default -> throw new IncompatibleLiteralException();
+      };
+    }
+    throw new IncompatibleLiteralException();
+  }
+
+  /**
+   * Thrown when a literal argument is incompatible with the declared type of its parameter.
+   * Builds the error reported to the user, see {@link #toInvalidSqlInput}.
+   */
+  private static class IncompatibleLiteralException extends Exception
+  {
+    /**
+     * Zero-based index of the offending array element, or null if the argument itself is incompatible.
+     */
+    @Nullable
+    private final Integer elementIndex;
+
+    /**
+     * Whether the literal is an integer that does not fit the parameter type.
+     */
+    private final boolean outOfRange;
+
+    private IncompatibleLiteralException()
+    {
+      this(null, false);
+    }
+
+    private IncompatibleLiteralException(@Nullable final Integer elementIndex, final boolean outOfRange)
+    {
+      this.elementIndex = elementIndex;
+      this.outOfRange = outOfRange;
+    }
+
+    /**
+     * Converts this exception to the error reported to the user.
+     *
+     * @param binding       the table function call
+     * @param index         position of the incompatible operand in the call
+     * @param parameterName name of the parameter that the operand is bound to
+     * @param opName        name of the table function
+     * @param expectedType  declared type of the parameter
+     */
+    private DruidException toInvalidSqlInput(
+        final SqlOperatorBinding binding,
+        final int index,
+        final String parameterName,
+        final SqlIdentifier opName,
+        final RelDataType expectedType
+    )
+    {
+      final RelDataType componentType = expectedType.getComponentType();
+      final String expectedTypeName = componentType == null
+                                      ? expectedType.getSqlTypeName().getName()
+                                      : componentType.getSqlTypeName().getName() + " ARRAY";
+      return InvalidSqlInput.exception(
+          this,
+          "Argument [%s] of table function [%s] must be a literal of type [%s] or a compatible type%s.",
+          parameterName,
+          opName,
+          expectedTypeName,
+          describeActual(binding, index)
+      );
+    }
+
+    /**
+     * Describes what the user passed for operand {@code index}, as a suffix for the error message.
+     * Names the type of the offending literal rather than its value, since arguments such as passwords are secrets.
+     * Returns an empty string when the literal cannot be described.
+     */
+    private String describeActual(final SqlOperatorBinding binding, final int index)
+    {
+      final String subject = elementIndex == null ? "" : StringUtils.format("element [%d] ", elementIndex + 1);
+      if (outOfRange) {
+        return StringUtils.format(", but %sis out of range", subject);
+      }
+      if (!(binding instanceof SqlCallBinding sqlBinding)) {
+        return "";
       }
 
-      // If a list (ARRAY), then coerce each member.
-      if (!(o instanceof List)) {
-        throw new NonLiteralException();
-      }
-      List<?> arg = (List<?>) o;
-      List<Object> revised = new ArrayList<>(arg.size());
-      for (Object value : arg) {
-        Object element = coerce(value, elementType);
-        if (element == null) {
-          throw new NonLiteralException();
+      SqlNode node = stripCasts(sqlBinding.operand(index));
+      if (elementIndex != null) {
+        if (node.getKind() != SqlKind.ARRAY_VALUE_CONSTRUCTOR) {
+          return "";
         }
-        revised.add(element);
+        node = stripCasts(((SqlCall) node).operand(elementIndex));
       }
-      return revised;
+
+      if (SqlUtil.isNullLiteral(node, false)) {
+        return StringUtils.format(", but %sis NULL", subject);
+      }
+      final String typeName = literalTypeName(node);
+      return typeName == null ? "" : StringUtils.format(", but %sis of type [%s]", subject, typeName);
     }
-    if (!(type instanceof RelDataTypeFactoryImpl.JavaType)) {
-      // If the type can't be converted, raise an error. Calcite returns null
-      // which causes odd downstream failures that are hard to diagnose.
-      throw new NonLiteralException();
+
+    /**
+     * Returns the SQL type name of a literal as the user wrote it, or null if the node is not a recognized literal.
+     */
+    @Nullable
+    private String literalTypeName(final SqlNode node)
+    {
+      return switch (node) {
+        // DATE and TIME literals stay unresolved until validation assigns them a type.
+        case SqlUnknownLiteral unknown -> unknown.tag;
+        case SqlNumericLiteral numeric when !numeric.isExact() -> SqlTypeName.DOUBLE.getName();
+        // Calcite types every exact numeric literal as DECIMAL.
+        // Report a literal without a fraction as INTEGER, which is how the user wrote it.
+        case SqlNumericLiteral numeric when numeric.isInteger() -> SqlTypeName.INTEGER.getName();
+        case SqlLiteral literal when literal.getTypeName() == SqlTypeName.CHAR -> SqlTypeName.VARCHAR.getName();
+        case SqlLiteral literal -> literal.getTypeName().getName();
+        default -> switch (node.getKind()) {
+          case ARRAY_VALUE_CONSTRUCTOR -> SqlTypeName.ARRAY.getName();
+          case MAP_VALUE_CONSTRUCTOR -> SqlTypeName.MAP.getName();
+          default -> null;
+        };
+      };
     }
-    final RelDataTypeFactoryImpl.JavaType javaType =
-        (RelDataTypeFactoryImpl.JavaType) type;
-    final Class<?> clazz = javaType.getJavaClass();
-    //noinspection unchecked
-    if (clazz.isAssignableFrom(o.getClass())) {
-      return o;
-    }
-    if (clazz == String.class && o instanceof NlsString) {
-      return ((NlsString) o).getValue();
-    }
-    // We need optimization here for constant folding.
-    // Not all the expressions can be interpreted (e.g. ternary), so
-    // we rely on optimization capabilities to fold non-interpretable
-    // expressions.
-    BlockBuilder bb = new BlockBuilder();
-    final Expression expr =
-        EnumUtils.convert(Expressions.constant(o), clazz);
-    bb.add(Expressions.return_(null, expr));
-    final FunctionExpression<?> convert =
-        Expressions.lambda(bb.toBlock(), Collections.emptyList());
-    return convert.compile().dynamicInvoke();
   }
 
   /**
