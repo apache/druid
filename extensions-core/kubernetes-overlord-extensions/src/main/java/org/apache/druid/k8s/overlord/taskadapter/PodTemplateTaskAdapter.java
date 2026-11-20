@@ -40,6 +40,7 @@ import org.apache.druid.error.InternalServerError;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
@@ -215,8 +216,8 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
     final List<Container> containers = selected.getPodTemplate().getTemplate().getSpec().getContainers();
     final String oldImage = containers.isEmpty() ? null : containers.get(0).getImage();
-    final int tagSeparator = getTagSeparatorIndex(oldImage);
-    if (tagSeparator < 0) {
+    final Pair<String, String> repositoryAndTag = getRepositoryAndTag(oldImage);
+    if (repositoryAndTag == null) {
       log.warn(
           "Task[%s] sets context key[%s], but image[%s] from pod template[%s] has a digest or no tag. Ignoring the key.",
           task.getId(),
@@ -227,7 +228,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       return selected;
     }
 
-    final String oldTag = oldImage.substring(tagSeparator + 1);
+    final String oldTag = repositoryAndTag.rhs;
     if (StringComparators.VERSION.compare(requestedTag, oldTag) <= 0) {
       log.info(
           "Task[%s] sets context key[%s] to tag[%s], which is not newer than tag[%s] of image[%s] from pod template[%s]."
@@ -242,7 +243,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       return selected;
     }
 
-    final String newImage = oldImage.substring(0, tagSeparator + 1) + requestedTag;
+    final String newImage = repositoryAndTag.lhs + ":" + requestedTag;
     final PodTemplate podTemplate = new PodTemplateBuilder(selected.getPodTemplate())
         .editTemplate()
         .editSpec()
@@ -264,23 +265,24 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   }
 
   /**
-   * Returns the index of the {@code :} that comes before the image tag, or -1 if the image is null, has a digest or
-   * has no tag.
+   * Returns a pair with the repository of the image as {@code lhs} and the tag of the image as {@code rhs}, or null if
+   * the image is null, has a digest or has no tag.
    * <p>
-   * An image with a digest ({@code repository@sha256:...} or {@code repository:tag@sha256:...}) returns -1, because
+   * An image with a digest ({@code repository@sha256:...} or {@code repository:tag@sha256:...}) returns null, because
    * the container runtime pulls the image by the digest and ignores the tag. Thus, a new tag has no effect. To use a
    * new tag, Druid must remove the digest, but the operator can set the digest to pin the image intentionally.
    */
-  private static int getTagSeparatorIndex(@Nullable String image)
+  @Nullable
+  private static Pair<String, String> getRepositoryAndTag(@Nullable String image)
   {
     if (image == null || image.indexOf('@') >= 0) {
-      return -1;
+      return null;
     }
     final int tagSeparator = image.lastIndexOf(':');
     if (tagSeparator <= image.lastIndexOf('/')) {
-      return -1;
+      return null;
     }
-    return tagSeparator;
+    return Pair.of(image.substring(0, tagSeparator), image.substring(tagSeparator + 1));
   }
 
   /**
