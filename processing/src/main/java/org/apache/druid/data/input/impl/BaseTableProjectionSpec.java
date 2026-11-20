@@ -62,6 +62,11 @@ import java.util.Set;
 })
 public interface BaseTableProjectionSpec
 {
+  /**
+   * Prefix of the virtual column that declares a grouping column as a multi-value string.
+   */
+  String MULTI_VALUE_VIRTUAL_COLUMN_PREFIX = "__virtualMultiValue_";
+
   VirtualColumns getVirtualColumns();
 
   DimensionsSpec getDimensionsSpec();
@@ -206,6 +211,15 @@ public interface BaseTableProjectionSpec
             Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
             ColumnHolder.TIME_COLUMN_NAME,
             columnsProperty
+        );
+      }
+      if (name.startsWith(MULTI_VALUE_VIRTUAL_COLUMN_PREFIX)) {
+        throw InvalidInput.exception(
+            "column [%s] in '%s' uses the reserved [%s] prefix, which names the virtual columns that declare a column"
+            + " to be multi-valued",
+            name,
+            columnsProperty,
+            MULTI_VALUE_VIRTUAL_COLUMN_PREFIX
         );
       }
       if (ColumnHolder.TIME_COLUMN_NAME.equals(name)) {
