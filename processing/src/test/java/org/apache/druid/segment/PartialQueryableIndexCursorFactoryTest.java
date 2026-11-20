@@ -77,6 +77,7 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -911,6 +912,67 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
   }
 
   @Test
+  void testRunFailureCancelsSiblingRunsAndReleasesHoldsOnce() throws IOException
+  {
+    // The async build shares the prefetch's failure path (see
+    // testPrefetchHandleRunFailureCancelsSiblingRunsAndReleasesHoldsOnce): one failed run cancels the rest and releases
+    // every hold, and closing the failed holder afterwards releases nothing more.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "build_sibling_cancel")) {
+      final PartialQueryableIndex index = opened.index();
+      final List<SettableFuture<?>> submitted = new ArrayList<>();
+      final AtomicInteger holdReleases = new AtomicInteger(0);
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          recordingAcquirer(submitted, holdReleases)
+      );
+
+      final AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(projectionAggSpec());
+      Assertions.assertTrue(submitted.size() >= 2, "the projection and its parent bundle each submit a run");
+      Assertions.assertFalse(asyncHolder.isReady());
+
+      submitted.get(0).setException(new IOException("deep storage went away"));
+      Assertions.assertTrue(asyncHolder.isReady(), "a failed run download completes the holder");
+      Assertions.assertThrows(RuntimeException.class, asyncHolder::release);
+      for (SettableFuture<?> sibling : submitted.subList(1, submitted.size())) {
+        Assertions.assertTrue(sibling.isCancelled(), "sibling run downloads must be cancelled by the failure");
+      }
+      Assertions.assertEquals(2, holdReleases.get(), "both bundle holds are released once the runs are unwound");
+
+      asyncHolder.close();
+      Assertions.assertEquals(2, holdReleases.get(), "closing the failed holder releases nothing twice");
+    }
+  }
+
+  @Test
+  void testSubmitRejectionAfterPartialSubmissionCancelsSubmittedRunsAndThrows() throws IOException
+  {
+    // The async build's setup fails the same way as the prefetch's (see
+    // testPrefetchHandleSubmitRejectionAfterPartialSubmissionCancelsSubmittedRuns), except that it throws, there being
+    // no handle to report through yet: nothing it submitted or held may outlive the throw.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "build_submit_rejected")) {
+      final PartialQueryableIndex index = opened.index();
+      final List<SettableFuture<?>> submitted = new ArrayList<>();
+      final AtomicInteger holdReleases = new AtomicInteger();
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          rejectingAfterFirstBundleAcquirer(submitted, holdReleases)
+      );
+
+      Assertions.assertThrows(
+          RejectedExecutionException.class,
+          () -> factory.makeCursorHolderAsync(projectionAggSpec())
+      );
+      Assertions.assertFalse(submitted.isEmpty(), "the projection bundle's runs were submitted before the rejection");
+      submitted.forEach(f -> Assertions.assertTrue(f.isCancelled(), "submitted runs are cancelled"));
+      Assertions.assertEquals(2, holdReleases.get(), "both holds taken before the rejection are released");
+    }
+  }
+
+  @Test
   void testPrefetchHandleDownloadsExactlyRequiredFiles() throws IOException
   {
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
@@ -1198,6 +1260,40 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
   }
 
   @Test
+  void testPrefetchHandleRunFailureCancelsSiblingRunsAndReleasesHoldsOnce() throws IOException
+  {
+    // Runs for two bundles are in flight when one of them fails. The failure completes the handle, after which closing
+    // it no longer runs the canceler, so the failure path itself must cancel the sibling runs rather than leave them
+    // to carry on for a warm-up nobody is waiting on.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_sibling_cancel")) {
+      final PartialQueryableIndex index = opened.index();
+      final List<SettableFuture<?>> submitted = new ArrayList<>();
+      final AtomicInteger holdReleases = new AtomicInteger(0);
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          recordingAcquirer(submitted, holdReleases)
+      );
+
+      final CursorPrefetch prefetch = factory.prefetch(projectionAggSpec());
+      Assertions.assertTrue(submitted.size() >= 2, "the projection and its parent bundle each submit a run");
+      Assertions.assertFalse(prefetch.isReady());
+
+      submitted.get(0).setException(new IOException("deep storage went away"));
+      Assertions.assertTrue(prefetch.isReady(), "a failed run download completes the prefetch");
+      Assertions.assertThrows(RuntimeException.class, prefetch::get);
+      for (SettableFuture<?> sibling : submitted.subList(1, submitted.size())) {
+        Assertions.assertTrue(sibling.isCancelled(), "sibling run downloads must be cancelled by the failure");
+      }
+      Assertions.assertEquals(2, holdReleases.get(), "both bundle holds are released once the runs are unwound");
+
+      prefetch.close();
+      Assertions.assertEquals(2, holdReleases.get(), "closing the failed handle releases nothing twice");
+    }
+  }
+
+  @Test
   void testPrefetchHandleHoldAcquisitionFailureIsReportedThroughHandle() throws IOException
   {
     // The matched projection's bundle is held, then the parent __base bundle's reservation finds no room. The warm-up
@@ -1205,8 +1301,8 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
     try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_no_room")) {
       final PartialQueryableIndex index = opened.index();
-      final ListeningExecutorService exec = directExec();
       final List<String> acquired = new ArrayList<>();
+      final List<SettableFuture<?>> submitted = new ArrayList<>();
       final AtomicInteger holdReleases = new AtomicInteger();
       final PartialBundleAcquirer acquirer = new PartialBundleAcquirer()
       {
@@ -1225,7 +1321,9 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
         @Override
         public <T> AsyncResource<T> submitDownload(Callable<T> task)
         {
-          return AsyncResources.fromFutureUnmanaged(exec.submit(task));
+          final SettableFuture<T> future = SettableFuture.create();
+          submitted.add(future);
+          return AsyncResources.fromFutureUnmanaged(future);
         }
       };
       final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
@@ -1233,22 +1331,45 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
           QueryableIndexTimeBoundaryInspector.create(index),
           acquirer
       );
-      final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
-                                                     .setGroupingColumns(List.of("dim1"))
-                                                     .setAggregators(List.of(
-                                                         new LongSumAggregatorFactory("_metric1_sum", "metric1")
-                                                     ))
-                                                     .setPhysicalColumns(Set.of("dim1", "metric1"))
-                                                     .build();
 
-      final CursorPrefetch prefetch = factory.prefetch(aggSpec);
+      final CursorPrefetch prefetch = factory.prefetch(projectionAggSpec());
       Assertions.assertEquals(List.of(PROJECTION_NAME, Projections.BASE_TABLE_PROJECTION_NAME), acquired);
       Assertions.assertTrue(prefetch.isReady(), "a warm-up that could not start is complete");
       final DruidException e = Assertions.assertThrows(DruidException.class, prefetch::get);
       Assertions.assertEquals(DruidException.Category.CAPACITY_EXCEEDED, e.getCategory());
+      Assertions.assertFalse(submitted.isEmpty(), "the projection bundle's runs were submitted before the failure");
+      submitted.forEach(f -> Assertions.assertTrue(f.isCancelled(), "runs submitted before the failure are cancelled"));
       Assertions.assertEquals(1, holdReleases.get(), "the hold taken before the failure is released");
       prefetch.close();
       Assertions.assertEquals(1, holdReleases.get(), "closing the failed handle releases nothing more");
+    }
+  }
+
+  @Test
+  void testPrefetchHandleSubmitRejectionAfterPartialSubmissionCancelsSubmittedRuns() throws IOException
+  {
+    // The projection bundle's runs are submitted, then the download executor rejects the parent bundle's first run
+    // (e.g. a shutdown). The warm-up cannot start: the runs already submitted are cancelled rather than left running
+    // with no owner, every hold taken is released, and the rejection is reported through the handle.
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "prefetch_submit_rejected")) {
+      final PartialQueryableIndex index = opened.index();
+      final List<SettableFuture<?>> submitted = new ArrayList<>();
+      final AtomicInteger holdReleases = new AtomicInteger();
+      final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
+          index,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          rejectingAfterFirstBundleAcquirer(submitted, holdReleases)
+      );
+
+      final CursorPrefetch prefetch = factory.prefetch(projectionAggSpec());
+      Assertions.assertTrue(prefetch.isReady(), "a warm-up that could not start is complete");
+      Assertions.assertThrows(RejectedExecutionException.class, prefetch::get);
+      Assertions.assertFalse(submitted.isEmpty(), "the projection bundle's runs were submitted before the rejection");
+      submitted.forEach(f -> Assertions.assertTrue(f.isCancelled(), "submitted runs are cancelled"));
+      Assertions.assertEquals(2, holdReleases.get(), "both holds taken before the rejection are released");
+      prefetch.close();
+      Assertions.assertEquals(2, holdReleases.get(), "closing the failed handle releases nothing more");
     }
   }
 
@@ -1497,6 +1618,78 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
         Assertions.assertEquals(List.of("a", "a", "b", "b"), values);
       }
     }
+  }
+
+  /**
+   * The spec the fixture's projection matches: its bundle plus the {@code __base} bundle for the parent columns its
+   * required columns read through, so a build or prefetch submits run downloads for two bundles.
+   */
+  private static CursorBuildSpec projectionAggSpec()
+  {
+    return CursorBuildSpec.builder()
+                          .setGroupingColumns(List.of("dim1"))
+                          .setAggregators(List.of(new LongSumAggregatorFactory("_metric1_sum", "metric1")))
+                          .setPhysicalColumns(Set.of("dim1", "metric1"))
+                          .build();
+  }
+
+  /**
+   * An acquirer whose bundle holds count their releases and whose download tasks never run: each is recorded as a
+   * never-completing future for the test to fail or cancel, and to observe cancellation on.
+   */
+  private static PartialBundleAcquirer recordingAcquirer(
+      List<SettableFuture<?>> submitted,
+      AtomicInteger holdReleases
+  )
+  {
+    return new PartialBundleAcquirer()
+    {
+      @Override
+      public Closeable acquire(String bundleName)
+      {
+        return holdReleases::incrementAndGet;
+      }
+
+      @Override
+      public <T> AsyncResource<T> submitDownload(Callable<T> task)
+      {
+        final SettableFuture<T> future = SettableFuture.create();
+        submitted.add(future);
+        return AsyncResources.fromFutureUnmanaged(future);
+      }
+    };
+  }
+
+  /**
+   * Like {@link #recordingAcquirer}, except that the download executor rejects every submission once a second bundle
+   * hold has been taken, modeling a shutdown partway through a multi-bundle setup.
+   */
+  private static PartialBundleAcquirer rejectingAfterFirstBundleAcquirer(
+      List<SettableFuture<?>> submitted,
+      AtomicInteger holdReleases
+  )
+  {
+    final AtomicInteger acquired = new AtomicInteger();
+    return new PartialBundleAcquirer()
+    {
+      @Override
+      public Closeable acquire(String bundleName)
+      {
+        acquired.incrementAndGet();
+        return holdReleases::incrementAndGet;
+      }
+
+      @Override
+      public <T> AsyncResource<T> submitDownload(Callable<T> task)
+      {
+        if (acquired.get() > 1) {
+          throw new RejectedExecutionException("download executor is shut down");
+        }
+        final SettableFuture<T> future = SettableFuture.create();
+        submitted.add(future);
+        return AsyncResources.fromFutureUnmanaged(future);
+      }
+    };
   }
 
   private File buildNestedSegment() throws IOException

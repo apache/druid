@@ -235,8 +235,8 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
   private PendingDownloads acquireHoldsAndSubmitRuns(List<PartialQueryableIndex.PrefetchBundle> bundles)
   {
     final List<BundleHoldRelease> holdReleases = new ArrayList<>(bundles.size());
+    final List<AsyncResource<String>> runDownloads = new ArrayList<>();
     try {
-      final List<AsyncResource<String>> runDownloads = new ArrayList<>();
       final List<String> bundleNames = new ArrayList<>(bundles.size());
       long plannedBytes = 0;
       for (PartialQueryableIndex.PrefetchBundle bundle : bundles) {
@@ -257,10 +257,17 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
     }
     catch (Throwable t) {
       // Failure while acquiring holds or submitting downloads (e.g. a bundle reservation finding no room, or a
-      // submitDownload shutdown rejection). A run download submitted before the failure may already be in flight, so
-      // release every bundle hold through the handshake (requestRelease defers to the last in-flight body) rather
-      // than dropping it directly mid-mapFile().
-      throw CloseableUtils.closeAndWrapInCatch(t, () -> holdReleases.forEach(BundleHoldRelease::requestRelease));
+      // submitDownload shutdown rejection). Unwind what was set up before it: cancel every run download submitted so
+      // far (the collect never took them over, so they are still ours to close), then release every bundle hold through
+      // the handshake (requestRelease defers to the last in-flight body) rather than dropping it directly
+      // mid-mapFile().
+      throw CloseableUtils.closeAndWrapInCatch(
+          t,
+          () -> {
+            runDownloads.forEach(run -> CloseableUtils.closeAndSuppressExceptions(run, ignored -> {}));
+            holdReleases.forEach(BundleHoldRelease::requestRelease);
+          }
+      );
     }
   }
 
@@ -287,7 +294,7 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
         pending.downloaded().get();
       }
       catch (Throwable t) {
-        fail(pending.holdReleases(), target, t);
+        fail(pending, target, t);
         return;
       }
       try {
@@ -298,7 +305,7 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
       }
       catch (Throwable t) {
         // the continuation couldn't even be submitted (e.g. executor shutdown rejection)
-        fail(pending.holdReleases(), target, t);
+        fail(pending, target, t);
       }
     });
   }
@@ -323,16 +330,12 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
       if (produced == null) {
         // a concurrent cancel requested a hold release before we could open the handshake on every bundle; the
         // consumer is gone, so release the rest of the holds and surface the cancellation
-        fail(
-            pending.holdReleases(),
-            target,
-            DruidException.defensive("Async resource was closed before it could be produced")
-        );
+        fail(pending, target, DruidException.defensive("Async resource was closed before it could be produced"));
         return;
       }
     }
     catch (Throwable t) {
-      fail(pending.holdReleases(), target, t);
+      fail(pending, target, t);
       return;
     }
     if (!target.set(produced)) {
@@ -343,13 +346,12 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
   }
 
   /**
-   * Shared failure path: request every bundle hold's release and fail the target. Releases go through the
-   * {@link BundleHoldRelease} handshake (never dropped directly) because failure can be observed while a sibling
-   * download is still mid-{@code mapFile()}.
+   * Shared failure path: unwind the downloads and holds (see {@link PendingDownloads#unwind}) and fail the target.
+   * Failing the target clears its canceler, so this is the only chance to cancel the sibling runs of a failed one.
    */
-  private static void fail(List<BundleHoldRelease> holdReleases, SettableAsyncResource<?> target, Throwable t)
+  private static void fail(PendingDownloads pending, SettableAsyncResource<?> target, Throwable t)
   {
-    holdReleases.forEach(BundleHoldRelease::requestRelease);
+    pending.unwind();
     target.setException(t);
   }
 
@@ -496,27 +498,64 @@ public class PartialQueryableIndexCursorFactory implements CursorFactory
    * The calling-thread result of {@link #acquireHoldsAndSubmitRuns}: every bundle's hold, the collected run
    * downloads submitted under them, and what was planned (for {@link CursorPrefetch.Stats}).
    */
-  private record PendingDownloads(
-      List<BundleHoldRelease> holdReleases,
-      AsyncResource<List<String>> downloaded,
-      CursorPrefetch.Stats stats
-  )
+  private static final class PendingDownloads
   {
+    private final List<BundleHoldRelease> holdReleases;
+    private final AsyncResource<List<String>> downloaded;
+    private final CursorPrefetch.Stats stats;
+    private final AtomicBoolean downloadsClosed = new AtomicBoolean(false);
+
+    PendingDownloads(
+        List<BundleHoldRelease> holdReleases,
+        AsyncResource<List<String>> downloaded,
+        CursorPrefetch.Stats stats
+    )
+    {
+      this.holdReleases = holdReleases;
+      this.downloaded = downloaded;
+      this.stats = stats;
+    }
+
+    List<BundleHoldRelease> holdReleases()
+    {
+      return holdReleases;
+    }
+
+    AsyncResource<List<String>> downloaded()
+    {
+      return downloaded;
+    }
+
+    CursorPrefetch.Stats stats()
+    {
+      return stats;
+    }
+
     /**
      * Canceler for the resource being produced, run if its consumer closes it before it's ready (e.g. query
-     * cancel/timeout). Closes the collected resource to cancel every run download that hasn't begun its deep-storage
-     * read yet (queued tasks are skipped; tasks parked on the download executor's permit are interrupted out of the
-     * interruptible wait before doing any I/O), then requests the hold release on every bundle through the handshake.
-     * Once the result is produced and handed to set(), ownership transfers to the consumer, which drains it via
-     * close() (cancel) or release() (success); each bundle's once-guard keeps its hold release safe across all of
-     * these paths.
+     * cancel/timeout): {@link #unwind}. Once the result is produced and handed to set(), ownership transfers to the
+     * consumer, which drains it via close() (cancel) or release() (success); each bundle's once-guard keeps its hold
+     * release safe across all of these paths.
      */
     Runnable canceler()
     {
-      return () -> {
+      return this::unwind;
+    }
+
+    /**
+     * Unwinds the downloads and holds because the consumer canceled or a run download failed. Closes the collected
+     * resource to cancel every download that hasn't begun its deep-storage read yet (queued tasks are skipped;
+     * tasks parked on the load permit are interrupted out of the interruptible wait before doing any I/O), then
+     * requests the hold release on every bundle through the handshake. Safe to reach more than once, and from inside
+     * itself: closing the collected resource fails it, which runs the failure path inline. The close happens at most
+     * once and the release requests are idempotent.
+     */
+    void unwind()
+    {
+      if (downloadsClosed.compareAndSet(false, true)) {
         CloseableUtils.closeAndSuppressExceptions(downloaded, ignored -> {});
-        holdReleases.forEach(BundleHoldRelease::requestRelease);
-      };
+      }
+      holdReleases.forEach(BundleHoldRelease::requestRelease);
     }
   }
 
