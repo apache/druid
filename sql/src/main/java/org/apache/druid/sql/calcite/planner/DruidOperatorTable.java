@@ -395,6 +395,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new DirectOperatorConversion(SqlLibraryOperators.COSH, "cosh"))
                    .add(new DirectOperatorConversion(SqlLibraryOperators.TANH, "tanh"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.CBRT, "cbrt"))
+                   .add(new DirectOperatorConversion(SqlLibraryOperators.HYPOT, "hypot"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.RADIANS, "toRadians"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.DEGREES, "toDegrees"))
                    .add(new UnaryPrefixOperatorConversion(SqlStdOperatorTable.NOT, "!"))
