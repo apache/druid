@@ -21,7 +21,9 @@ package org.apache.druid.query.filter;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -49,6 +51,16 @@ public class CompositeSegmentPruner implements SegmentPruner
       }
     }
     return true;
+  }
+
+  @Override
+  public EnumSet<SegmentDetail> getRequiredSegmentDetails()
+  {
+    final EnumSet<SegmentDetail> details = SegmentDetail.none();
+    for (SegmentPruner pruner : pruners) {
+      details.addAll(pruner.getRequiredSegmentDetails());
+    }
+    return details;
   }
 
   @Override
