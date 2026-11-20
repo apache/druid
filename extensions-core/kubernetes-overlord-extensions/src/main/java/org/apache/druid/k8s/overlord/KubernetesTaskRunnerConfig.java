@@ -98,6 +98,12 @@ public interface KubernetesTaskRunnerConfig
   boolean isAllowTaskPodTemplateSelection();
 
   /**
+   * Whether tasks may replace the image tag of the first container in the pod template via the
+   * {@code DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG} task context key.
+   */
+  boolean isAllowTaskImageTagOverride();
+
+  /**
    * Plaintext port reported in task pod {@code TaskLocation}s, e.g. a sidecar proxy port; null uses {@code DruidK8sConstants.PORT}.
    */
   @Nullable
@@ -134,6 +140,7 @@ public interface KubernetesTaskRunnerConfig
     private boolean useK8sSharedInformers;
     private Period k8sSharedInformerResyncPeriod;
     private boolean allowTaskPodTemplateSelection;
+    private boolean allowTaskImageTagOverride;
     private Integer advertisedPlaintextPort;
 
     public Builder()
@@ -285,6 +292,12 @@ public interface KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withAllowTaskImageTagOverride(boolean allowTaskImageTagOverride)
+    {
+      this.allowTaskImageTagOverride = allowTaskImageTagOverride;
+      return this;
+    }
+
     public Builder withAdvertisedPlaintextPort(Integer advertisedPlaintextPort)
     {
       this.advertisedPlaintextPort = advertisedPlaintextPort;
@@ -318,6 +331,7 @@ public interface KubernetesTaskRunnerConfig
           this.useK8sSharedInformers,
           this.k8sSharedInformerResyncPeriod,
           this.allowTaskPodTemplateSelection,
+          this.allowTaskImageTagOverride,
           this.advertisedPlaintextPort
       );
     }
