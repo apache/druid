@@ -74,4 +74,22 @@ public class DelegateOrMinKeyCollectorFactory<TDelegate extends KeyCollector<TDe
         snapshot.getMinKey()
     );
   }
+
+  @Override
+  public void addSnapshot(
+      final DelegateOrMinKeyCollector<TDelegate> collector,
+      final DelegateOrMinKeyCollectorSnapshot<TSnapshot> snapshot
+  )
+  {
+    final Optional<TDelegate> delegate = collector.getDelegate();
+
+    if (delegate.isPresent() && snapshot.getSnapshot() != null) {
+      // When both sides have a delegate, DelegateOrMinKeyCollector#addAll merges the delegates. Merge the snapshot's
+      // delegate directly instead.
+      delegateFactory.addSnapshot(delegate.get(), snapshot.getSnapshot());
+    } else {
+      // Otherwise addAll adds at most one key: the snapshot's smallest key.
+      collector.addAll(fromSnapshot(snapshot));
+    }
+  }
 }
