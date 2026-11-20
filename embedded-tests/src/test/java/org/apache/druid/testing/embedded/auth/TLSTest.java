@@ -326,12 +326,10 @@ public class TLSTest extends EmbeddedClusterTestBase
         .withNumConnections(httpClientConfig.getNumConnections())
         .withReadTimeout(httpClientConfig.getReadTimeout())
         .withWorkerCount(httpClientConfig.getNumMaxThreads())
-        .withCompressionCodec(
-            HttpClientConfig.CompressionCodec.valueOf(StringUtils.toUpperCase(httpClientConfig.getCompressionCodec()))
-        )
         .withUnusedConnectionTimeoutDuration(httpClientConfig.getUnusedConnectionTimeout())
         .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
-        .withSslContext(sslContext);
+        .withSslContext(sslContext)
+        .withCompressionCodec(httpClientConfig.getCompressionCodec());
   }
 
   private HttpClient makeCustomHttpClient(String keystorePath, String certAlias)

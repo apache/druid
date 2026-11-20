@@ -683,6 +683,8 @@ xml
 XOR
 znode
 znodes
+zlib
+zstd
 APPROX_COUNT_DISTINCT
 APPROX_QUANTILE
 ARRAY_AGG

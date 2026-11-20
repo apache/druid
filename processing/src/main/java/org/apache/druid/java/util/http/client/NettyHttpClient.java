@@ -72,19 +72,19 @@ public class NettyHttpClient extends AbstractHttpClient
   private static final String LAST_HANDLER_NAME = "last-handler";
 
   private final ResourcePool<String, ChannelFuture> pool;
-  private final HttpClientConfig.CompressionCodec compressionCodec;
+  private final String acceptEncoding;
   private final Duration defaultReadTimeout;
   private long backPressureStartTimeNs;
 
   NettyHttpClient(
       ResourcePool<String, ChannelFuture> pool,
       Duration defaultReadTimeout,
-      HttpClientConfig.CompressionCodec compressionCodec
+      String acceptEncoding
   )
   {
     this.pool = Preconditions.checkNotNull(pool, "pool");
     this.defaultReadTimeout = defaultReadTimeout;
-    this.compressionCodec = Preconditions.checkNotNull(compressionCodec);
+    this.acceptEncoding = Preconditions.checkNotNull(acceptEncoding, "acceptEncoding");
   }
 
   public ResourcePool<String, ChannelFuture> getPool()
@@ -205,9 +205,9 @@ public class NettyHttpClient extends AbstractHttpClient
         httpRequest.headers().add(HttpHeaderNames.HOST, getHost(url));
       }
 
-      // If Accept-Encoding is set in the Request, use that. Otherwise use the default from "compressionCodec".
+      // If Accept-Encoding is set in the Request, use that. Otherwise use the default from "acceptEncoding".
       if (!httpRequest.headers().contains(HttpHeaderNames.ACCEPT_ENCODING)) {
-        httpRequest.headers().set(HttpHeaderNames.ACCEPT_ENCODING, compressionCodec.getEncodingString());
+        httpRequest.headers().set(HttpHeaderNames.ACCEPT_ENCODING, acceptEncoding);
       }
 
       if (request.hasContent()) {

@@ -24,6 +24,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.server.initialization.HttpServerCompression;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.eclipse.jetty.http.UriCompliance;
 import org.junit.jupiter.api.Assertions;
@@ -62,8 +63,11 @@ public class ServerConfigTest
         defaultConfig.getMaxRequestHeaderSize(),
         defaultConfig.getGracefulShutdownTimeout(),
         defaultConfig.getUnannouncePropagationDelay(),
-        defaultConfig.getInflateBufferSize(),
-        defaultConfig.getCompressionLevel(),
+        new HttpServerCompression(
+            ImmutableList.of("gzip"),
+            new HttpServerCompression.Zstd(3),
+            new HttpServerCompression.Gzip(9, 2048)
+        ),
         true,
         ImmutableList.of(HttpMethod.OPTIONS),
         true,
