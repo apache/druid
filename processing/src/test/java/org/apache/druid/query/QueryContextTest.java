@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -72,6 +71,35 @@ public class QueryContextTest
                   .forClass(QueryContext.class)
                   .withNonnullFields("context")
                   .verify();
+  }
+
+  @Test
+  public void testOverrideDefaults()
+  {
+    final QueryContext defaults = QueryContext.of(Map.of("key1", "default1", "key2", "default2"));
+    final Map<String, Object> userContext = new HashMap<>();
+    userContext.put("key1", "user1");
+    userContext.put("key2", null);
+    userContext.put("key3", "user3");
+
+    // A null user value falls back to the default instead of removing the key, unlike override()
+    assertEquals(
+        QueryContext.of(Map.of("key1", "user1", "key2", "default2", "key3", "user3")),
+        defaults.overrideDefaults(userContext)
+    );
+    assertEquals(QueryContext.of(Map.of("key1", "user1", "key3", "user3")), defaults.override(userContext));
+
+    assertEquals(defaults, defaults.overrideDefaults((Map<String, Object>) null));
+    assertEquals(defaults, defaults.overrideDefaults((QueryContext) null));
+    assertEquals(
+        QueryContext.of(Map.of("key1", "user1", "key2", "default2", "key3", "user3")),
+        defaults.overrideDefaults(QueryContext.of(userContext))
+    );
+    assertEquals(defaults, defaults.overrideDefaults(Map.of()));
+    assertEquals(
+        QueryContext.of(Map.of("key3", "user3")),
+        QueryContext.empty().overrideDefaults(Map.of("key3", "user3"))
+    );
   }
 
   /**
@@ -126,6 +154,67 @@ public class QueryContextTest
   }
 
   @Test
+  public void testOverrideTypedParameter()
+  {
+    final QueryContext original = QueryContext.of(
+        ImmutableMap.of(
+            "k", "v",
+            QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), 10
+        )
+    );
+
+    assertEquals(
+        ImmutableMap.of(
+            "k", "v",
+            QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), 20,
+            QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName(), false
+        ),
+        original.override(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 20)
+                .override(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false)
+                .asMap()
+    );
+    assertEquals(
+        ImmutableMap.of("k", "v"),
+        original.override(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, null).asMap()
+    );
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> original.override(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false).asMap().put("k", "v2")
+    );
+    assertThrows(
+        BadQueryContextException.class,
+        () -> original.override(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
+    );
+
+    // The original context is unchanged.
+    assertEquals(
+        ImmutableMap.of("k", "v", QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), 10),
+        original.asMap()
+    );
+  }
+
+  @Test
+  public void testOverrideKeepsKeysSorted()
+  {
+    // A HashMap iterates these keys out of order, so the assertions fail unless the result is sorted.
+    final QueryContext original = QueryContext.of(ImmutableMap.of("sqlQueryId", 1, "priority", 2, "lane", 3));
+    final Map<String, Object> overrides = new HashMap<>();
+    overrides.put("timeout", 4);
+    overrides.put("finalize", 5);
+    overrides.put("vectorize", 6);
+    overrides.put("lane", null);
+
+    assertEquals(
+        List.of("finalize", "priority", "sqlQueryId", "timeout", "vectorize"),
+        List.copyOf(original.override(overrides).asMap().keySet())
+    );
+    assertEquals(
+        List.of("lane", "priority", "queryId", "sqlQueryId"),
+        List.copyOf(original.override(QueryContext.of(ImmutableMap.of("queryId", 7))).asMap().keySet())
+    );
+  }
+
+  @Test
   public void testIsEmpty()
   {
     assertTrue(QueryContext.empty().isEmpty());
@@ -143,7 +232,6 @@ public class QueryContextTest
     assertEquals("val", context.get("key"));
     assertEquals("val", context.getString("key"));
     assertNull(context.getString("non-exist"));
-    assertEquals("foo", context.getString("non-exist", "foo"));
 
     assertThrows(BadQueryContextException.class, () -> context.getString("key2"));
   }
@@ -163,6 +251,31 @@ public class QueryContextTest
     assertTrue(context.getBoolean("key1"));
     assertFalse(context.getBoolean("non-exist", false));
     assertNull(context.getBoolean("non-exist"));
+  }
+
+  @Test
+  public void testGetBooleanFollowsTypedParameterRule()
+  {
+    final QueryContext context = QueryContext.of(
+        ImmutableMap.<String, Object>builder()
+                    .put("upper", "TRUE")
+                    .put("one", "1")
+                    .put("zero", 0)
+                    .put("yes", "yes")
+                    .put("decimal", 1.0)
+                    .build()
+    );
+
+    assertTrue(context.getBoolean("upper", false));
+    assertTrue(context.getBoolean("one", false));
+    assertFalse(context.getBoolean("zero", true));
+
+    // Strings other than true/false or 1/0 used to be read as false
+    assertEquals(
+        "Context parameter [yes] is boolean, which allows only 0/1, '0'/'1', true/false, or 'true'/'false' (in any case), but was given [yes]",
+        assertThrows(BadQueryContextException.class, () -> context.getBoolean("yes", false)).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> context.getBoolean("decimal"));
   }
 
   @Test
@@ -386,7 +499,7 @@ public class QueryContextTest
   }
 
   @Test
-  public void testGetHumanReadableBytes()
+  public void testGetLongAcceptsHumanReadableNumbers()
   {
     final QueryContext context = new QueryContext(
         QueryContext.builder()
@@ -398,13 +511,13 @@ public class QueryContextTest
                     .putRaw("m6", "abc")
                     .toMap()
     );
-    assertEquals(500_000_000, context.getHumanReadableBytes("m1", HumanReadableBytes.ZERO).getBytes());
-    assertEquals(500_000_000, context.getHumanReadableBytes("m2", HumanReadableBytes.ZERO).getBytes());
-    assertEquals(500 * 1024 * 1024L, context.getHumanReadableBytes("m3", HumanReadableBytes.ZERO).getBytes());
-    assertEquals(500 * 1024 * 1024L, context.getHumanReadableBytes("m4", HumanReadableBytes.ZERO).getBytes());
-    assertEquals(500_000_000, context.getHumanReadableBytes("m5", HumanReadableBytes.ZERO).getBytes());
+    assertEquals(500_000_000L, context.getLong("m1"));
+    assertEquals(500_000_000L, context.getLong("m2"));
+    assertEquals(500 * 1024 * 1024L, context.getLong("m3"));
+    assertEquals(500 * 1024 * 1024L, context.getLong("m4"));
+    assertEquals(500_000_000L, context.getLong("m5"));
 
-    assertThrows(BadQueryContextException.class, () -> context.getHumanReadableBytes("m6", HumanReadableBytes.ZERO));
+    assertThrows(BadQueryContextException.class, () -> context.getLong("m6"));
   }
 
   @Test
@@ -431,12 +544,13 @@ public class QueryContextTest
     assertEquals("100", parameter.parse(100));
     assertEquals("1000000000", parameter.parse(1e9));
 
+    assertEquals("1GiB", parameter.parse("1GiB"));
+    assertEquals("256 MiB", parameter.parse("256 MiB"));
     assertEquals(
-        "Query context parameter [maxSubqueryBytes] should be 'auto', 'disabled' or a non-negative number of bytes, "
-        + "but got [true]",
+        "Query context parameter [maxSubqueryBytes] should be 'auto', 'disabled' or a non-negative number of bytes, such as '10 K' or '256 MiB', but got [true]",
         assertThrows(BadQueryContextException.class, () -> parameter.parse(true)).getMessage()
     );
-    assertThrows(BadQueryContextException.class, () -> parameter.parse("1GiB"));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("-1K"));
     assertThrows(BadQueryContextException.class, () -> parameter.parse("-1"));
     assertThrows(BadQueryContextException.class, () -> parameter.parse(-1));
     assertThrows(BadQueryContextException.class, () -> parameter.parse(1.5));

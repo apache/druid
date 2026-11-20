@@ -24,6 +24,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -33,7 +34,6 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngines;
 import org.apache.druid.sql.destination.IngestDestination;
 
-import java.util.Map;
 
 /**
  * Engine used to plan the body of a projection definition without running it. The planned {@link DruidQuery} is
@@ -105,7 +105,7 @@ public class ProjectionSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(Map<String, Object> queryContext)
+  public void validateContext(QueryContext queryContext)
   {
     // The context is supplied by the translator, not by the user.
   }
@@ -114,7 +114,7 @@ public class ProjectionSqlEngine implements SqlEngine
   public RelDataType resultTypeForSelect(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   )
   {
     return validatedRowType;
@@ -124,7 +124,7 @@ public class ProjectionSqlEngine implements SqlEngine
   public RelDataType resultTypeForInsert(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   )
   {
     throw new UnsupportedOperationException();

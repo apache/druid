@@ -32,6 +32,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -42,6 +44,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 public class DruidHttpClientTest
@@ -130,6 +133,77 @@ public class DruidHttpClientTest
           exception.getMessage(),
           Matchers.containsString("Password is required for basicRaw authentication")
       );
+    }
+  }
+
+  @Test
+  public void testBearerAuthenticationRequiresPassword() throws SQLException
+  {
+    final Properties props = new Properties();
+    props.setProperty("authentication", "bearer");
+
+    final DruidConnectionUrl connectionUrl = DruidConnectionUrl.parse(
+        "jdbc:druid:http://localhost:8888/druid/v2/sql/",
+        props
+    );
+    try (final DruidHttpClientImpl httpClient = new DruidHttpClientImpl(connectionUrl, OBJECT_MAPPER)) {
+      final SqlRequest request = SqlRequest.of("SELECT 1", null, null);
+
+      final SQLException exception = Assertions.assertThrows(
+          SQLException.class,
+          () -> httpClient.runQuery(request)
+      );
+
+      MatcherAssert.assertThat(
+          exception.getMessage(),
+          Matchers.containsString("Password is required for bearer authentication")
+      );
+    }
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+      "basic,    admin, secret, Basic YWRtaW46c2VjcmV0",
+      "basicRaw, ,      abc123, Basic abc123",
+      "bearer,   ,      abc123, Bearer abc123"
+  })
+  public void testAuthorizationHeader(
+      final String authentication,
+      @Nullable final String user,
+      final String password,
+      final String expectedHeader
+  ) throws Exception
+  {
+    final AtomicReference<String> authorizationHeader = new AtomicReference<>();
+    final HttpServer server = startSqlServer(
+        exchange -> {
+          authorizationHeader.set(exchange.getRequestHeaders().getFirst("Authorization"));
+          final byte[] body = "[[\"x\"],[\"LONG\"],[\"BIGINT\"]]".getBytes(StandardCharsets.UTF_8);
+          exchange.getResponseHeaders().add("Content-Type", "application/json");
+          exchange.sendResponseHeaders(200, body.length);
+          try (OutputStream os = exchange.getResponseBody()) {
+            os.write(body);
+          }
+        }
+    );
+
+    final Properties props = new Properties();
+    props.setProperty("authentication", authentication);
+    if (user != null) {
+      props.setProperty("user", user);
+    }
+    props.setProperty("password", password);
+
+    final DruidConnectionUrl connectionUrl = DruidConnectionUrl.parse(
+        "jdbc:druid:http://localhost:" + server.getAddress().getPort() + "/druid/v2/sql/",
+        props
+    );
+
+    try (Closeable ignored = () -> server.stop(0);
+         DruidHttpClientImpl httpClient = new DruidHttpClientImpl(connectionUrl, OBJECT_MAPPER);
+         QueryResultsIterator iterator = httpClient.runQuery(SqlRequest.of("SELECT 1", null, null))) {
+      Assertions.assertFalse(iterator.hasNext());
+      Assertions.assertEquals(expectedHeader, authorizationHeader.get());
     }
   }
 

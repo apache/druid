@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
@@ -88,7 +89,7 @@ public class ExternalTableScanRuleTest
         engine,
         null,
         Collections.emptySet(),
-        Collections.emptyMap(),
+        QueryContext.empty(),
         null
     );
     plannerContext.setQueryMaker(

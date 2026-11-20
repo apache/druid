@@ -107,7 +107,7 @@ public class ProjectionSpecTranslator
       .toMap();
 
   private final PlannerFactory plannerFactory;
-  private final Map<String, Object> queryContext;
+  private final QueryContext queryContext;
 
   /**
    * @param queryContext the context of the statement being planned, including anything its {@code SET} clauses set.
@@ -117,7 +117,7 @@ public class ProjectionSpecTranslator
    *                     reach the nested planner but have nothing to act on, since the body is planned and lifted
    *                     rather than run.
    */
-  public ProjectionSpecTranslator(PlannerFactory plannerFactory, Map<String, Object> queryContext)
+  public ProjectionSpecTranslator(PlannerFactory plannerFactory, QueryContext queryContext)
   {
     this.plannerFactory = plannerFactory;
     this.queryContext = queryContext;
@@ -556,8 +556,7 @@ public class ProjectionSpecTranslator
 
     final ProjectionSqlEngine engine = new ProjectionSqlEngine();
     final String sql = query.toString();
-    final Map<String, Object> context = new HashMap<>(queryContext);
-    context.putAll(CONTEXT);
+    final QueryContext context = queryContext.override(CONTEXT);
     try (DruidPlanner planner = plannerFactory.createPlannerForTable(
         engine,
         sql,

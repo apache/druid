@@ -77,6 +77,36 @@ public class LocalDataStorageDruidModuleTest
     Assertions.assertTrue(new File(pushSegment(tempDir, null), "index").isDirectory());
   }
 
+  @Test
+  public void testDataSegmentPusherHonorsCompressionFormatZip(@TempDir File tempDir) throws IOException
+  {
+    Assertions.assertTrue(new File(pushSegmentWithFormat(tempDir, "zip"), "index.zip").isFile());
+  }
+
+  @Test
+  public void testDataSegmentPusherHonorsCompressionFormatNone(@TempDir File tempDir) throws IOException
+  {
+    Assertions.assertTrue(new File(pushSegmentWithFormat(tempDir, "none"), "index").isDirectory());
+  }
+
+  private static File pushSegmentWithFormat(File tempDir, String format) throws IOException
+  {
+    final File storageDir = new File(tempDir, "deepStorage");
+    final File segmentDir = new File(tempDir, "segment");
+    FileUtils.mkdirp(segmentDir);
+    Files.asByteSink(new File(segmentDir, "version.bin")).write(Ints.toByteArray(0x9));
+
+    final Injector injector = createInjector();
+    final Properties properties = injector.getInstance(Properties.class);
+    properties.setProperty("druid.storage.storageDirectory", storageDir.getAbsolutePath());
+    properties.setProperty("druid.storage.compressionFormat", format);
+
+    final DataSegmentPusher pusher = injector.getInstance(DataSegmentPusher.class);
+    final DataSegment segment = DataSegment.builder(SegmentId.of("ds", Intervals.utc(0, 1), "v1", 0)).build();
+
+    return new File(storageDir, pusher.getStorageDir(pusher.push(segmentDir, segment, false), false));
+  }
+
   /**
    * Pushes a one-file segment through a {@link DataSegmentPusher} provisioned by this module, and returns the
    * directory it was pushed to.

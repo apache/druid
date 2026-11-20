@@ -47,7 +47,7 @@ public class DefaultQueryConfigTest
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final DefaultQueryConfig defaultQueryConfig = provider.get();
     Assertions.assertNotNull(defaultQueryConfig.getContext());
-    Assertions.assertEquals(2, defaultQueryConfig.getContext().size());
+    Assertions.assertEquals(2, defaultQueryConfig.getContext().asMap().size());
     Assertions.assertEquals("10", defaultQueryConfig.getContext().get("joinFilterRewriteMaxSize"));
     Assertions.assertEquals("true", defaultQueryConfig.getContext().get("vectorize"));
   }
@@ -65,7 +65,7 @@ public class DefaultQueryConfigTest
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final DefaultQueryConfig defaultQueryConfig = provider.get();
     Assertions.assertNotNull(defaultQueryConfig.getContext());
-    Assertions.assertEquals(0, defaultQueryConfig.getContext().size());
+    Assertions.assertEquals(0, defaultQueryConfig.getContext().asMap().size());
   }
 
   private Injector createInjector()

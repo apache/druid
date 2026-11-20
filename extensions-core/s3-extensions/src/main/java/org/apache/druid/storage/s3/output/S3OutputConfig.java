@@ -25,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.storage.s3.S3Utils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -79,7 +80,7 @@ public class S3OutputConfig
       boolean validation
   )
   {
-    this.bucket = bucket;
+    this.bucket = S3Utils.normalizeBucketName(bucket);
     this.prefix = prefix;
     this.tempDir = tempDir;
     if (chunkSize != null) {

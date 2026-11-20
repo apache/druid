@@ -82,7 +82,9 @@ public class FilteredRequestLoggerTest
         delegate,
         1000,
         2000,
-        Set.of()
+        Set.of(),
+        false,
+        false
     );
     RequestLogLine nativeRequestLogLine = EasyMock.createMock(RequestLogLine.class);
     EasyMock.expect(nativeRequestLogLine.getQueryStats())
@@ -125,7 +127,9 @@ public class FilteredRequestLoggerTest
         delegate,
         1000,
         2000,
-        Set.of()
+        Set.of(),
+        false,
+        false
     );
 
     RequestLogLine nativeRequestLogLine = RequestLogLine.forNative(
@@ -161,7 +165,9 @@ public class FilteredRequestLoggerTest
         delegate,
         1000,
         2000,
-        Set.of(Query.SEGMENT_METADATA)
+        Set.of(Query.SEGMENT_METADATA),
+        false,
+        false
     );
 
     RequestLogLine nativeRequestLogLine = RequestLogLine.forNative(
@@ -183,6 +189,126 @@ public class FilteredRequestLoggerTest
     logger.logSqlQuery(sqlRequestLogLine);
 
     Assertions.assertEquals(0, delegate.nativeCount);
+    Assertions.assertEquals(1, delegate.sqlCount);
+  }
+
+  @Test
+  public void testAlwaysLogFailuresBypassesFilters() throws IOException
+  {
+    final RequestLogLine nativeFailure = RequestLogLine.forNative(
+        testSegmentMetadataQuery.withSqlQueryId("sql-id"),
+        DateTimes.nowUtc(),
+        null,
+        new QueryStats(ImmutableMap.of("query/time", 1, "success", false))
+    );
+    final RequestLogLine sqlFailure = RequestLogLine.forSql(
+        "SELECT * FROM foo",
+        null,
+        DateTimes.nowUtc(),
+        null,
+        new QueryStats(ImmutableMap.of("sqlQuery/time", 1, "success", false))
+    );
+
+    final MockLogger enabledDelegate = new MockLogger();
+    final FilteredRequestLoggerProvider.FilteredRequestLogger enabled = new FilteredRequestLoggerProvider.FilteredRequestLogger(
+        enabledDelegate,
+        1000,
+        2000,
+        Set.of(Query.SEGMENT_METADATA),
+        true,
+        true
+    );
+    enabled.logNativeQuery(nativeFailure);
+    enabled.logSqlQuery(sqlFailure);
+    Assertions.assertEquals(1, enabledDelegate.nativeCount);
+    Assertions.assertEquals(1, enabledDelegate.sqlCount);
+
+    final MockLogger disabledDelegate = new MockLogger();
+    final FilteredRequestLoggerProvider.FilteredRequestLogger disabled = new FilteredRequestLoggerProvider.FilteredRequestLogger(
+        disabledDelegate,
+        1000,
+        2000,
+        Set.of(),
+        false,
+        false
+    );
+    disabled.logNativeQuery(nativeFailure);
+    disabled.logSqlQuery(sqlFailure);
+    Assertions.assertEquals(0, disabledDelegate.nativeCount);
+    Assertions.assertEquals(0, disabledDelegate.sqlCount);
+  }
+
+  @Test
+  public void testAlwaysLogFailuresStillFiltersSuccesses() throws IOException
+  {
+    final MockLogger delegate = new MockLogger();
+    final FilteredRequestLoggerProvider.FilteredRequestLogger logger = new FilteredRequestLoggerProvider.FilteredRequestLogger(
+        delegate,
+        1000,
+        2000,
+        Set.of(),
+        true,
+        false
+    );
+
+    logger.logNativeQuery(
+        RequestLogLine.forNative(
+            testSegmentMetadataQuery,
+            DateTimes.nowUtc(),
+            null,
+            new QueryStats(ImmutableMap.of("query/time", 1, "success", true))
+        )
+    );
+    logger.logSqlQuery(
+        RequestLogLine.forSql(
+            "SELECT * FROM foo",
+            null,
+            DateTimes.nowUtc(),
+            null,
+            new QueryStats(ImmutableMap.of("sqlQuery/time", 1, "success", true))
+        )
+    );
+
+    Assertions.assertEquals(0, delegate.nativeCount);
+    Assertions.assertEquals(0, delegate.sqlCount);
+  }
+
+  @Test
+  public void testMuteSqlPlannedNativeQueries() throws IOException
+  {
+    final MockLogger delegate = new MockLogger();
+    final FilteredRequestLoggerProvider.FilteredRequestLogger logger = new FilteredRequestLoggerProvider.FilteredRequestLogger(
+        delegate,
+        5,
+        5,
+        Set.of(),
+        false,
+        true
+    );
+
+    final QueryStats stats = new QueryStats(ImmutableMap.of("query/time", 10, "success", true));
+    logger.logNativeQuery(
+        RequestLogLine.forNative(
+            testSegmentMetadataQuery.withSqlQueryId("sql-id"),
+            DateTimes.nowUtc(),
+            null,
+            stats
+        )
+    );
+    Assertions.assertEquals(0, delegate.nativeCount);
+
+    logger.logNativeQuery(RequestLogLine.forNative(testSegmentMetadataQuery, DateTimes.nowUtc(), null, stats));
+    Assertions.assertEquals(1, delegate.nativeCount);
+
+    logger.logSqlQuery(
+        RequestLogLine.forSql(
+            "SELECT * FROM foo",
+            null,
+            DateTimes.nowUtc(),
+            null,
+            new QueryStats(ImmutableMap.of("sqlQuery/time", 10, "success", true))
+        )
+    );
     Assertions.assertEquals(1, delegate.sqlCount);
   }
 
@@ -212,8 +338,37 @@ public class FilteredRequestLoggerTest
     final LoggingRequestLogger delegate = (LoggingRequestLogger) logger.getDelegate();
 
     Assertions.assertEquals(100, logger.getQueryTimeThresholdMs());
+    Assertions.assertFalse(logger.isAlwaysLogFailures());
+    Assertions.assertFalse(logger.isMuteSqlPlannedNativeQueries());
     Assertions.assertTrue(delegate.isSetContextMDC());
     Assertions.assertTrue(delegate.isSetMDC());
+  }
+
+  @Test
+  public void testConfigurationFailureAndSqlPlannedFlags()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("log.type", "filtered");
+    properties.setProperty("log.alwaysLogFailures", "true");
+    properties.setProperty("log.muteSqlPlannedNativeQueries", "true");
+    properties.setProperty("log.delegate.type", "noop");
+
+    final JsonConfigurator configurator = new JsonConfigurator(
+        mapper,
+        Validation.buildDefaultValidatorFactory()
+                  .getValidator()
+    );
+
+    final FilteredRequestLoggerProvider provider = (FilteredRequestLoggerProvider) configurator.configurate(
+        properties,
+        "log",
+        RequestLoggerProvider.class
+    );
+    final FilteredRequestLoggerProvider.FilteredRequestLogger logger =
+        ((FilteredRequestLoggerProvider.FilteredRequestLogger) provider.get());
+
+    Assertions.assertTrue(logger.isAlwaysLogFailures());
+    Assertions.assertTrue(logger.isMuteSqlPlannedNativeQueries());
   }
 
   @Test

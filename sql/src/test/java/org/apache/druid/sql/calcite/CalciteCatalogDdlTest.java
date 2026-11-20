@@ -43,6 +43,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.RangeFilter;
@@ -276,7 +277,7 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         explain,
         CalciteTests.SUPER_USER_AUTH_RESULT,
         Collections.emptySet(),
-        Collections.emptyMap(),
+        QueryContext.empty(),
         null
     )) {
       final DruidException e = assertThrows(DruidException.class, planner::validate);

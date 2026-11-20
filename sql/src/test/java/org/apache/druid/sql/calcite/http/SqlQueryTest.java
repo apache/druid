@@ -113,7 +113,7 @@ public class SqlQueryTest extends CalciteTestBase
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(SqlQuery.class).withNonnullFields("query").usingGetClass().verify();
+    EqualsVerifier.forClass(SqlQuery.class).withNonnullFields("query", "queryContext").usingGetClass().verify();
     EqualsVerifier.forClass(SqlParameter.class).withNonnullFields("type").usingGetClass().verify();
   }
 }
