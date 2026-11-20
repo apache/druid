@@ -792,6 +792,17 @@ The following parameters apply to SQL queries only. For how to set them, see [SQ
 |**Engine**|Native|
 |**Since**|0.10.0|
 
+### `useDruidEngineForSystemTables`
+
+| | |
+|---|---|
+|**Description**|Runs queries on supported [system tables](../querying/sql-metadata-tables.md#native-query-execution) on the query engine instead of the Broker's built-in SQL interpreter (Calcite `Bindable` execution), when the resolved SQL engine is `native`. This parameter is experimental. System tables without this support continue to use the SQL interpreter. Has no effect unless `druid.query.enableDruidEngineForSystemTables` is set on all services.<br /><br /> During a rolling upgrade, leave this parameter disabled until all services have been upgraded. You can set a cluster-wide default on Brokers with `druid.query.default.context.useDruidEngineForSystemTables`.|
+|**Type**|Boolean|
+|**Default**|`false`|
+|**Query**|SQL|
+|**Engine**|Native|
+|**Since**|40.0.0|
+
 ### `useGroupingSetForExactDistinct`
 
 | | |

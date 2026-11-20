@@ -24,8 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
+import com.google.inject.TypeLiteral;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.apache.commons.io.FileUtils;
@@ -37,6 +39,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.annotations.JSR311Resource;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -66,6 +69,7 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.java.util.metrics.StubServiceEmitterModule;
 import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -74,9 +78,15 @@ import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.system.module.SystemTableModule;
+import org.apache.druid.server.system.query.SystemTableQueryResource;
+import org.apache.druid.server.system.query.SystemTableQuerySegmentWalker;
+import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
+import org.apache.druid.server.system.table.SystemTableDataProvider;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.Duration;
@@ -108,6 +118,40 @@ public class CliPeonTest
       new CompactionTask.Builder("test_ds", SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, mapper))
       .id("compact_test_taskid")
       .inputSpec(new CompactionIntervalSpec(Intervals.of("2020/2021"), null));
+
+  @Test
+  public void testPeonNativeServerPropertiesInjection() throws IOException
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(SystemTableModule.ENABLE_DRUID_ENGINE_FOR_SYSTEM_TABLES_PROPERTY, "true");
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
+    final Map<String, SystemTableDataProvider> dataProviders = peonInjector.getInstance(
+        Key.get(new TypeLiteral<>() {})
+    );
+
+    // Peons use the normal query resource to serve native queries over both segments and system tables.
+    Assertions.assertTrue(jerseyResources(peonInjector).contains(QueryResource.class));
+    Assertions.assertFalse(jerseyResources(peonInjector).contains(SystemTableQueryResource.class));
+    Assertions.assertTrue(dataProviders.containsKey(ServerPropertiesTableDescriptor.TABLE_NAME));
+    // The task runner's walker is wrapped so that queries on system tables read the Peon's own rows.
+    Assertions.assertNotNull(
+        peonInjector.getExistingBinding(Key.get(QuerySegmentWalker.class, SystemTableQuerySegmentWalker.Delegate.class))
+    );
+  }
+
+  @Test
+  public void testPeonWithoutDruidEngineForSystemTables() throws IOException
+  {
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), new Properties());
+
+    Assertions.assertTrue(jerseyResources(peonInjector).contains(QueryResource.class));
+    Assertions.assertNull(
+        peonInjector.getExistingBinding(Key.get(QuerySegmentWalker.class, SystemTableQuerySegmentWalker.Delegate.class))
+    );
+    Assertions.assertNull(
+        peonInjector.getExistingBinding(Key.get(new TypeLiteral<Map<String, SystemTableDataProvider>>() {}))
+    );
+  }
 
   @Test
   public void testCliPeonK8sMode() throws IOException
@@ -482,5 +526,10 @@ public class CliPeonTest
           null
       );
     }
+  }
+
+  private static Set<Class<?>> jerseyResources(final Injector injector)
+  {
+    return injector.getInstance(Key.get(new TypeLiteral<>() {}, JSR311Resource.class));
   }
 }

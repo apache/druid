@@ -31,6 +31,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.policy.Policy;
 
 import javax.annotation.Nullable;
@@ -39,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -595,6 +598,46 @@ public class AuthorizationUtils
       );
     }
     return allReadAndWrite;
+  }
+
+  /**
+   * Returns the resources a query on the given datasource reads: a {@link ResourceType#DATASOURCE} resource for each
+   * table, and a {@link ResourceType#SYSTEM_TABLE} resource, named after the table, for each
+   * {@link SystemTableDataSource}. System tables aren't Druid datasources, so their {@code sys.}-prefixed
+   * {@link DataSource#getTableNames()} entries are never used as datasource resources.
+   */
+  public static Set<Resource> getDataSourceResources(final DataSource dataSource)
+  {
+    final Set<Resource> resources = new LinkedHashSet<>();
+    if (containsSystemTable(dataSource)) {
+      addDataSourceResources(dataSource, resources);
+    } else {
+      for (final String tableName : dataSource.getTableNames()) {
+        resources.add(new Resource(tableName, ResourceType.DATASOURCE));
+      }
+    }
+    return resources;
+  }
+
+  private static void addDataSourceResources(final DataSource dataSource, final Set<Resource> resources)
+  {
+    if (dataSource instanceof SystemTableDataSource systemTableDataSource) {
+      resources.add(new Resource(systemTableDataSource.getTable(), ResourceType.SYSTEM_TABLE));
+    } else if (dataSource.getChildren().isEmpty()) {
+      for (final String tableName : dataSource.getTableNames()) {
+        resources.add(new Resource(tableName, ResourceType.DATASOURCE));
+      }
+    } else {
+      for (final DataSource child : dataSource.getChildren()) {
+        addDataSourceResources(child, resources);
+      }
+    }
+  }
+
+  private static boolean containsSystemTable(final DataSource dataSource)
+  {
+    return dataSource instanceof SystemTableDataSource
+           || dataSource.getChildren().stream().anyMatch(AuthorizationUtils::containsSystemTable);
   }
 
   /**

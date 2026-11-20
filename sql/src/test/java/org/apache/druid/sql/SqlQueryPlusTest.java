@@ -33,6 +33,43 @@ import java.util.Map;
 
 public class SqlQueryPlusTest
 {
+  /**
+   * SET useDruidEngineForSystemTables = 'true' uses the registered boolean parameter.
+   */
+  @Test
+  public void testSetUseDruidEngineForSystemTables()
+  {
+    final SqlQueryPlus query = SqlQueryPlus
+        .builder("SET useDruidEngineForSystemTables = 'true'; SELECT COUNT(DISTINCT server) FROM sys.server_properties")
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+
+    Assertions.assertTrue(
+        query.context().getOrDefault(QueryContextParameters.USE_DRUID_ENGINE_FOR_SYSTEM_TABLES)
+    );
+  }
+
+  /**
+   * SET useDruidEngineForSystemTables = 2 rejects a non-boolean value before planning.
+   */
+  @Test
+  public void testSetRejectsNonBooleanUseDruidEngineForSystemTables()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET useDruidEngineForSystemTables = 2; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher.invalidSqlInput().expectMessageContains(
+            "Context parameter [useDruidEngineForSystemTables] is boolean, which allows only 0/1"
+        )
+    );
+  }
+
   @Test
   public void testSetValuesAreFoldedIntoContext()
   {
