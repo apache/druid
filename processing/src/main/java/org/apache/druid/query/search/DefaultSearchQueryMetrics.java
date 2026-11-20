@@ -110,6 +110,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public void engine(String engine)
+  {
+    delegateQueryMetrics.engine(engine);
+  }
+
+  @Override
   public void granularity(SearchQuery query)
   {
     // Don't emit by default

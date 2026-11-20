@@ -47,12 +47,14 @@ import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.RestrictedDataSource;
@@ -2382,7 +2384,7 @@ public class MSQSelectTest extends MSQTestBase
             Map.of(
                 DruidMetrics.DATASOURCE, "foo",
                 DruidMetrics.INTERVAL, List.of(Intervals.ETERNITY.toString()),
-                DruidMetrics.SUCCESS, false
+                DruidMetrics.SUCCESS, "false"
             )
         )
         .verifyExecutionError();
@@ -2844,10 +2846,22 @@ public class MSQSelectTest extends MSQTestBase
             Map.of(
                 DruidMetrics.DATASOURCE, "foo2",
                 DruidMetrics.INTERVAL, List.of(Intervals.ETERNITY.toString()),
-                DruidMetrics.SUCCESS, true
+                DruidMetrics.SUCCESS, "true"
             )
         )
         .verifyResults();
+
+    Assertions.assertEquals(
+        1,
+        getEmittedMetrics(
+            "query/time",
+            Map.of(
+                MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION, MSQTestOverlordServiceClient.METRIC_CONTROLLER_TASK_TYPE,
+                DruidMetrics.TYPE, Query.SCAN,
+                "hasFilters", "false"
+            )
+        ).size()
+    );
   }
 
   @MethodSource("data")

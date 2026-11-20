@@ -67,7 +67,7 @@ public class DefaultSearchQueryMetricsTest extends InitializedNullHandlingTest
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
-    Assertions.assertEquals(13, actualEvent.size());
+    Assertions.assertEquals(12, actualEvent.size());
     Assertions.assertTrue(actualEvent.containsKey("feed"));
     Assertions.assertTrue(actualEvent.containsKey("timestamp"));
     Assertions.assertEquals("localhost", actualEvent.get("host"));
@@ -80,7 +80,8 @@ public class DefaultSearchQueryMetricsTest extends InitializedNullHandlingTest
     Assertions.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
     Assertions.assertEquals("false", actualEvent.get("hasFilters"));
     Assertions.assertEquals(expectedIntervals.get(0).toDuration().toString(), actualEvent.get("duration"));
-    Assertions.assertEquals("", actualEvent.get(DruidMetrics.ID));
+    Assertions.assertFalse(actualEvent.containsKey(DruidMetrics.ID));
+    Assertions.assertFalse(actualEvent.containsKey(DruidMetrics.QUERY_ID));
     Assertions.assertEquals(ImmutableMap.of("testKey", "testValue"), actualEvent.get("context"));
 
     // Metric

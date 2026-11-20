@@ -31,6 +31,7 @@ import org.apache.druid.java.util.emitter.core.EventMap;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -187,6 +188,14 @@ public class ServiceMetricEvent implements Event
     public Object getDimension(String dim)
     {
       return userDims.get(dim);
+    }
+
+    /**
+     * Returns a read-only view of the dimensions set on this builder.
+     */
+    public Map<String, Object> getDimensions()
+    {
+      return Collections.unmodifiableMap(userDims);
     }
 
     /**

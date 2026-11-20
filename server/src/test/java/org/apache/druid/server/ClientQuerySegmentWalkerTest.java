@@ -990,6 +990,7 @@ public class ClientQuerySegmentWalkerTest
         Assertions.assertTrue(map.containsKey("host"));
         Assertions.assertTrue(map.containsKey("service"));
         Assertions.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
+        Assertions.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.QUERY_ID));
         Assertions.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
         Assertions.assertEquals(3, map.get("value"));
       }

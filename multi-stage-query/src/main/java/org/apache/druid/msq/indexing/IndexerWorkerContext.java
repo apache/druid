@@ -36,7 +36,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
-import org.apache.druid.msq.exec.MSQMetricEventBuilder;
+import org.apache.druid.msq.exec.MSQMetrics;
+import org.apache.druid.msq.exec.MSQMetricsQuery;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -51,8 +52,10 @@ import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
 import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -71,9 +74,11 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.StorageMonitor;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -274,11 +279,24 @@ public class IndexerWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(MSQMetricEventBuilder metricBuilder)
+  public QueryMetrics<?> makeQueryMetrics(final Set<String> tableNames, final Collection<Interval> intervals)
   {
-    // Attach task specific dimensions
-    metricBuilder.setTaskDimensions(task, QueryContext.of(task.getContext()));
-    toolbox.getEmitter().emit(metricBuilder);
+    return MSQMetrics.makeQueryMetrics(
+        injector,
+        MSQMetricsQuery.create(tableNames, intervals, QueryContext.of(task.getContext())),
+        MSQTaskSqlEngine.NAME
+    );
+  }
+
+  @Override
+  public void emitQueryMetrics(final QueryMetrics<?> queryMetrics)
+  {
+    MSQMetrics.emitQueryMetrics(
+        queryMetrics,
+        toolbox.getEmitter(),
+        MSQTaskSqlEngine.NAME,
+        task.getMetricBuilder().getDimensions()
+    );
   }
 
   @Override

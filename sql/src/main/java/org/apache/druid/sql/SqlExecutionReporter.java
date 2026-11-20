@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -27,13 +28,17 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -107,6 +112,7 @@ public class SqlExecutionReporter
       ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
       if (plannerContext != null) {
         metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
+        metricBuilder.setDimensionIfNotNull(DruidMetrics.QUERY_ID, getQueryId(plannerContext));
         metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
       if (stmt.sqlToolbox.engine != null) {
@@ -179,5 +185,22 @@ public class SqlExecutionReporter
     catch (Exception ex) {
       log.error(ex, "Unable to log SQL [%s]!", stmt.queryPlus.sql());
     }
+  }
+
+  /**
+   * Returns the value of the {@link DruidMetrics#QUERY_ID} dimension: the {@code queryId} from the query context if
+   * set, else the auto-generated native query ID if exactly one distinct ID was issued, else null. Multiple distinct
+   * IDs arise when a statement runs several native queries, such as a top-level {@code UNION ALL}.
+   */
+  @Nullable
+  private static String getQueryId(final PlannerContext plannerContext)
+  {
+    final String contextQueryId = plannerContext.queryContext().get(QueryContextParameters.QUERY_ID);
+    if (contextQueryId != null) {
+      return contextQueryId;
+    }
+
+    final Set<String> nativeQueryIds = new HashSet<>(plannerContext.getNativeQueryIds());
+    return nativeQueryIds.size() == 1 ? Iterables.getOnlyElement(nativeQueryIds) : null;
   }
 }

@@ -96,6 +96,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -169,11 +170,9 @@ import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MSQMetricUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.DefaultQueryMetrics;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -221,6 +220,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -307,6 +307,10 @@ public class ControllerImpl implements Controller
   // WorkerNumber -> WorkOrders which need to be retried and are determined by the controller.
   // Map is always populated in the main controller thread by addToRetryQueue and pruned in retryFailedTasks.
   private final Map<Integer, Set<WorkOrder>> workOrdersToRetry = new HashMap<>();
+
+  // Stage number -> number of segments read by the stage's work orders, for query/segments/count. Keyed by stage, so
+  // a stage that starts again is not counted twice. Written by the main controller thread.
+  private final ConcurrentHashMap<Integer, Long> stageSegmentCounts = new ConcurrentHashMap<>();
 
   // Time at which the query started.
   // For live reports. Written by the main controller thread, read by HTTP threads.
@@ -624,24 +628,32 @@ public class ControllerImpl implements Controller
 
   private void emitQueryMetrics(@Nullable final QueryDefinition queryDef, final boolean success)
   {
-    final Set<String> datasources = new HashSet<>();
-    final Set<Interval> intervals = new HashSet<>();
-    if (queryDef != null) {
-      for (StageDefinition stageDefinition : queryDef.getStageDefinitions()) {
-        datasources.addAll(stageDefinition.getDatasources());
-        intervals.addAll(MSQMetricUtils.getIntervals(stageDefinition));
+    final Query<?> metricsQuery;
+
+    if (querySpec instanceof LegacyMSQSpec) {
+      // Use the native query, so metrics have the same dimensions as they would for native execution.
+      metricsQuery = ((LegacyMSQSpec) querySpec).getQuery();
+    } else {
+      final Set<String> datasources = new HashSet<>();
+      final Set<Interval> intervals = new HashSet<>();
+      if (queryDef != null) {
+        for (StageDefinition stageDefinition : queryDef.getStageDefinitions()) {
+          datasources.addAll(stageDefinition.getDatasources());
+          intervals.addAll(MSQMetricUtils.getIntervals(stageDefinition));
+        }
       }
+
+      metricsQuery = MSQMetricsQuery.create(datasources, intervals, querySpec.getContext());
     }
 
-    long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(querySpec.getContext()));
+    final QueryMetrics<?> queryMetrics = context.makeQueryMetrics(metricsQuery);
 
-    final MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
-    metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
-                 .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
-                 .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
-                 .setDimension(DruidMetrics.SUCCESS, success)
-                 .setMetric("query/time", System.currentTimeMillis() - startTime);
-    context.emitMetric(metricBuilder);
+    final long startTime =
+        DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(querySpec.getContext()));
+    queryMetrics.success(success);
+    queryMetrics.reportQueryTime(TimeUnit.MILLISECONDS.toNanos(System.currentTimeMillis() - startTime));
+    queryMetrics.reportQueriedSegmentCount(stageSegmentCounts.values().stream().mapToLong(Long::longValue).sum());
+    context.emitQueryMetrics(queryMetrics);
   }
 
   private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
@@ -680,7 +692,7 @@ public class ControllerImpl implements Controller
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getId());
 
-    final MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
+    final ServiceMetricEvent.Builder metricBuilder = context.makeMetricBuilder();
     metricBuilder.setMetric("ingest/input/bytes", totalProcessedBytes);
     context.emitMetric(metricBuilder);
   }
@@ -1526,6 +1538,12 @@ public class ControllerImpl implements Controller
         queryKernel.createWorkOrders(stageNumber, maxInputFilesPerWorker, extraInfos);
     final StageId stageId = new StageId(queryDef.getQueryId(), stageNumber);
 
+    long segmentCount = 0;
+    for (final WorkOrder workOrder : workOrders.values()) {
+      segmentCount += MSQMetricUtils.countSegments(workOrder.getInputs());
+    }
+    stageSegmentCounts.put(stageNumber, segmentCount);
+
     queryKernel.startStage(stageId);
     contactWorkersForStage(
         queryKernel,
@@ -1640,7 +1658,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
+    final ServiceMetricEvent.Builder metricBuilder = context.makeMetricBuilder();
 
     metricBuilder.setMetric("ingest/tombstones/count", numTombstones);
     context.emitMetric(metricBuilder);

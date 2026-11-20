@@ -2725,8 +2725,8 @@ public class MSQReplaceTest extends MSQTestBase
                          Map.of(
                              DruidMetrics.DATASOURCE, "foo",
                              DruidMetrics.INTERVAL, List.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z"),
-                             DruidMetrics.DURATION, Duration.standardDays(1),
-                             DruidMetrics.SUCCESS, true
+                             DruidMetrics.DURATION, Duration.standardDays(1).toString(),
+                             DruidMetrics.SUCCESS, "true"
                              )
                      )
                      .verifyResults();

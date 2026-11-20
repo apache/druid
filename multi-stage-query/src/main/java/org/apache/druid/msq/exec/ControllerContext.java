@@ -24,12 +24,14 @@ import com.google.inject.Injector;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
@@ -65,10 +67,26 @@ public interface ControllerContext
   ObjectMapper jsonMapper();
 
   /**
-   * Emit the metric in the {@link MSQMetricEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
-   * context dependant dimensions.
+   * Returns a new builder with appropriate dimensions for non-query controller metrics. Query metrics,
+   * such as {@code query/time}, use {@link #makeQueryMetrics} instead.
    */
-  void emitMetric(MSQMetricEventBuilder metricBuilder);
+  ServiceMetricEvent.Builder makeMetricBuilder();
+
+  /**
+   * Emits the provided metric.
+   */
+  void emitMetric(ServiceMetricEvent.Builder metricBuilder);
+
+  /**
+   * Returns new {@link QueryMetrics} for a controller query metric. The query is the native query run by the
+   * controller, if there is one, else an {@link MSQMetricsQuery}.
+   */
+  QueryMetrics<?> makeQueryMetrics(Query<?> query);
+
+  /**
+   * Emits the metrics reported to the provided {@link QueryMetrics}.
+   */
+  void emitQueryMetrics(QueryMetrics<?> queryMetrics);
 
   /**
    * Provides a way for tasks to request injectable objects. Useful because tasks are not able to request injection
