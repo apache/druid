@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.indexing;
+package org.apache.druid.indexing.kafka.simulate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputFormat;
@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -45,19 +44,19 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /** End-to-end IT for Kafka share-group ingestion; requires Docker. */
 public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
@@ -70,7 +69,6 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
       new CsvInputFormat(List.of(COL_TIMESTAMP, COL_ITEM, COL_VALUE), null, null, false, 0, false);
 
   /** Lets a freshly submitted share-group task reach STABLE before records are produced. */
-  private static final long SHARE_CONSUMER_READY_DELAY_MS = 3_000L;
 
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
@@ -80,12 +78,10 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 
   private ShareGroupKafkaResource kafkaServer;
 
-  @TempDir
-  private Path inboxDirectory;
-
   @Override
   public EmbeddedDruidCluster createCluster()
   {
+    ShareGroupKafkaResource.assignAvailablePorts(coordinator, overlord, indexer, historical, broker);
     kafkaServer = new ShareGroupKafkaResource();
 
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
@@ -120,8 +116,6 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
         defaultTuningConfig()
     );
 
-    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
-
     final int numRecords = 10;
     kafkaServer.produceRecordsToTopic(
         generateRecords(topic, numRecords, DateTimes.of("2025-06-01"))
@@ -148,8 +142,6 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
         new JsonInputFormat(null, Collections.emptyMap(), null, null, true),
         defaultTuningConfig()
     );
-
-    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
 
     final int numRecords = 5;
     final int rowsPerRecord = 4;
@@ -180,8 +172,6 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
         defaultTuningConfig()
     );
 
-    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
-
     final int numRecords = 10;
     kafkaServer.produceRecordsToTopic(
         generateRecords(topic, numRecords, DateTimes.of("2025-08-01"))
@@ -209,8 +199,6 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
         defaultTuningConfig()
     );
 
-    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
-
     final int numRecords = 5;
     kafkaServer.produceRecordsToTopic(
         generateRecords(topic, numRecords, DateTimes.of("2025-09-01"))
@@ -222,44 +210,59 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     cancelAndAwaitTermination(taskId);
   }
 
-  /** Three tasks sharing one group on a 2-partition topic ingest every record exactly once (KIP-932). */
   @Test
-  public void test_shareGroupIngestion_multiTaskShareGroup_noDuplicatesNoLoss() throws InterruptedException
+  public void test_shareGroupIngestion_moreTasksThanPartitions() throws InterruptedException
   {
     final String topic = dataSource + "_topic";
-    kafkaServer.createTopicWithPartitions(topic, 2);
+    kafkaServer.createTopicWithPartitions(topic, 1);
 
     final String groupId = "druid-share-group-fanout";
+    final Map<String, Object> consumerProperties = new HashMap<>(kafkaServer.consumerProperties());
+    consumerProperties.put("max.poll.records", 4);
     final String taskA = submitShareGroupTask(
         topic,
         groupId,
-        kafkaServer.consumerProperties(),
+        consumerProperties,
         DEFAULT_CSV_FORMAT,
         defaultTuningConfig()
     );
     final String taskB = submitShareGroupTask(
         topic,
         groupId,
-        kafkaServer.consumerProperties(),
+        consumerProperties,
         DEFAULT_CSV_FORMAT,
         defaultTuningConfig()
     );
     final String taskC = submitShareGroupTask(
         topic,
         groupId,
-        kafkaServer.consumerProperties(),
+        consumerProperties,
         DEFAULT_CSV_FORMAT,
         defaultTuningConfig()
     );
 
-    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
+    try (final Admin admin = kafkaServer.newAdminClient()) {
+      cluster.callApi().waitForResult(
+          () -> admin.describeShareGroups(List.of(groupId)).describedGroups().get(groupId)
+                     .get(5, TimeUnit.SECONDS).members().size(),
+          count -> count == 3
+      ).withTimeoutMillis(30_000).go();
+    }
 
     final int numRecords = 30;
-    kafkaServer.produceRecordsToTopic(
-        generateRecords(topic, numRecords, DateTimes.of("2025-10-01"))
+    kafkaServer.publishRecordsToTopic(
+        topic,
+        generateRecords(topic, numRecords, DateTimes.of("2025-10-01")).stream().map(ProducerRecord::value).toList()
     );
-
-    waitForRowsProcessed(numRecords);
+    final String ackMetric = "ingest/kafka/shareGroup/acknowledged";
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName(ackMetric).hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        aggregate -> aggregate.hasSumAtLeast(numRecords)
+    );
+    final long tasksWithAcknowledgements = List.of(taskA, taskB, taskC).stream()
+        .filter(taskId -> !indexer.latchableEmitter().getMetricValues(ackMetric, Map.of(DruidMetrics.TASK_ID, taskId)).isEmpty())
+        .count();
+    Assertions.assertTrue(tasksWithAcknowledgements > 1);
 
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     assertRowCountEventually(numRecords);
@@ -283,8 +286,6 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
         DEFAULT_CSV_FORMAT,
         tuningConfigWithMaxRowsInMemory(100)
     );
-
-    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
 
     final int numRecords = 1000;
     kafkaServer.produceRecordsToTopic(
@@ -386,9 +387,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
         groupId,
         consumerProperties,
         inputFormat,
-        null,
-        groupId + "-generation",
-        new LocalFileStorageConnectorProvider(inboxDirectory.resolve(groupId).toFile())
+        null
     );
 
     final ObjectMapper mapper = new DefaultObjectMapper();

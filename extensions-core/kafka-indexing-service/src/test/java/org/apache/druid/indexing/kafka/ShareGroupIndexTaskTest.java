@@ -23,16 +23,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -51,8 +51,7 @@ public class ShareGroupIndexTaskTest
     mapper.registerSubtypes(
         new NamedType(ShareGroupIndexTask.class, "index_kafka_share_group"),
         new NamedType(ShareGroupIndexTaskIOConfig.class, "kafka_share_group"),
-        new NamedType(KafkaIndexTaskTuningConfig.class, "KafkaTuningConfig"),
-        new NamedType(LocalFileStorageConnectorProvider.class, LocalFileStorageConnectorProvider.TYPE_NAME)
+        new NamedType(KafkaIndexTaskTuningConfig.class, "KafkaTuningConfig")
     );
     // Inject the ObjectMapper itself since ShareGroupIndexTask uses @JacksonInject
     mapper.setInjectableValues(new com.fasterxml.jackson.databind.InjectableValues.Std()
@@ -148,6 +147,19 @@ public class ShareGroupIndexTaskTest
     Assertions.assertEquals(99, task.getPriority());
   }
 
+  @Test
+  public void testRejectsUnsupportedLocks()
+  {
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> createTask("task_exclusive", Map.of(Tasks.USE_CONCURRENT_LOCKS, false))
+    );
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> createTask("task_segment", Map.of(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, false))
+    );
+  }
+
   private ShareGroupIndexTask createTask(String id)
   {
     return createTask(id, null);
@@ -169,10 +181,8 @@ public class ShareGroupIndexTaskTest
         "test-topic",
         "test-share-group",
         consumerProps,
-        null,
-        null,
-        "test-inbox",
-        new LocalFileStorageConnectorProvider(new File("/tmp/share-inbox"))
+        new JsonInputFormat(null, null, null, null, null),
+        null
     );
 
     final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(

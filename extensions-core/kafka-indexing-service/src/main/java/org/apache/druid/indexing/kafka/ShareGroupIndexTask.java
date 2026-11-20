@@ -24,9 +24,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
@@ -45,11 +48,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Indexing task that consumes from a Kafka topic with share-group semantics
- * (KIP-932). The task durably stages acquired records before acknowledging
- * them, then atomically publishes segments with inbox completion.
- */
 public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
   private static final Logger log = new Logger(ShareGroupIndexTask.class);
@@ -86,6 +84,10 @@ public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentA
         addConcurrentLocksContext(context),
         IngestionMode.APPEND
     );
+    if (TaskLocks.determineLockTypeForAppend(getContext()) != TaskLockType.APPEND
+        || !Boolean.TRUE.equals(getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK))) {
+      throw InvalidInput.exception("Kafka share-group tasks require time-chunk APPEND locks");
+    }
     this.dataSchema = dataSchema;
     this.tuningConfig = tuningConfig;
     this.ioConfig = ioConfig;
@@ -115,7 +117,7 @@ public class ShareGroupIndexTask extends AbstractTask implements PendingSegmentA
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(this, toolbox, configMapper);
+    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(this, toolbox);
     activeRunner.set(runner);
     try {
       return runner.run();

@@ -78,8 +78,6 @@ public class SQLMetadataConnectorTest
     tables.add(tablesConfig.getAuditTable());
     tables.add(tablesConfig.getSupervisorTable());
     tables.add(tablesConfig.getIndexingStatesTable());
-    tables.add(tablesConfig.getShareReceiptsTable());
-    tables.add(tablesConfig.getShareInboxTable());
 
     connector.createSegmentTable();
     connector.createConfigTable();
@@ -88,8 +86,6 @@ public class SQLMetadataConnectorTest
     connector.createAuditTable();
     connector.createSupervisorsTable();
     connector.createIndexingStatesTable();
-    connector.createShareReceiptsTable();
-    connector.createShareInboxTable();
 
     connector.getDBI().withHandle(
         handle -> {
@@ -300,11 +296,6 @@ public class SQLMetadataConnectorTest
     Assertions.assertTrue(
         metadataConnector.isTransientException(
             new CallbackFailedException(new SQLTransientException())
-        )
-    );
-    Assertions.assertTrue(
-        metadataConnector.isTransientException(
-            new CallbackFailedException(new RetryTransactionException(""))
         )
     );
     Assertions.assertTrue(

@@ -19,124 +19,46 @@
 
 package org.apache.druid.indexing.kafka;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 
 public class ShareGroupConsumerPropertiesTest
 {
   @Test
-  public void testSanitizeKeepsSupportedProperties()
+  public void testEnforcesExplicitAcknowledgementsAfterDynamicConfigExpansion()
   {
-    final Map<String, Object> input = ImmutableMap.of(
-        "bootstrap.servers", "broker:9092",
-        "max.poll.records", 100,
-        "ssl.protocol", "TLSv1.3"
+    final ShareGroupIndexTaskIOConfig config = new ShareGroupIndexTaskIOConfig(
+        "topic",
+        "share-group",
+        Map.of(
+            "bootstrap.servers", "localhost:9092",
+            KafkaSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, Map.of(
+                "type", "mapString",
+                "config", Map.of(
+                    ConsumerConfig.GROUP_ID_CONFIG, "ignored",
+                    ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true",
+                    ConsumerConfig.SHARE_ACKNOWLEDGEMENT_MODE_CONFIG, "implicit",
+                    ConsumerConfig.SHARE_ACQUIRE_MODE_CONFIG, "batch_optimized",
+                    ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "25"
+                )
+            )
+        ),
+        new JsonInputFormat(null, null, null, null, null),
+        null
     );
-    final Map<String, Object> sanitized = ShareGroupConsumerProperties.sanitize(input);
-    Assertions.assertEquals(input, sanitized);
-  }
-
-  @Test
-  public void testSanitizeStripsAutoOffsetReset()
-  {
-    final Map<String, Object> input = ImmutableMap.of(
-        "bootstrap.servers", "broker:9092",
-        "auto.offset.reset", "earliest"
-    );
-    final Map<String, Object> sanitized = ShareGroupConsumerProperties.sanitize(input);
-    Assertions.assertEquals(1, sanitized.size());
-    Assertions.assertEquals("broker:9092", sanitized.get("bootstrap.servers"));
-    Assertions.assertFalse(sanitized.containsKey("auto.offset.reset"));
-  }
-
-  @Test
-  public void testSanitizeStripsAllUnsupportedKeys()
-  {
-    final Map<String, Object> input = new LinkedHashMap<>();
-    input.put("bootstrap.servers", "broker:9092");
-    for (String key : ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS) {
-      input.put(key, "some-value");
-    }
-    final Map<String, Object> sanitized = ShareGroupConsumerProperties.sanitize(input);
-    Assertions.assertEquals(1, sanitized.size());
-    Assertions.assertEquals("broker:9092", sanitized.get("bootstrap.servers"));
-  }
-
-  @Test
-  public void testSanitizePreservesInsertionOrder()
-  {
-    final Map<String, Object> input = new LinkedHashMap<>();
-    input.put("a.first", 1);
-    input.put("group.protocol", "consumer");
-    input.put("b.second", 2);
-    input.put("c.third", 3);
-
-    final Map<String, Object> sanitized = ShareGroupConsumerProperties.sanitize(input);
-    Assertions.assertArrayEquals(
-        new String[]{"a.first", "b.second", "c.third"},
-        sanitized.keySet().toArray(new String[0])
-    );
-  }
-
-  @Test
-  public void testSanitizeOnEmptyMap()
-  {
-    Assertions.assertTrue(ShareGroupConsumerProperties.sanitize(ImmutableMap.of()).isEmpty());
-  }
-
-  @Test
-  public void testSanitizePropertiesRemovesUnsupportedKeysInPlace()
-  {
-    final Properties props = new Properties();
-    props.setProperty("bootstrap.servers", "broker:9092");
-    props.setProperty("enable.auto.commit", "true");
-    props.setProperty("auto.offset.reset", "earliest");
-    props.setProperty("group.instance.id", "test-instance");
-    props.setProperty("isolation.level", "read_committed");
-    props.setProperty("session.timeout.ms", "30000");
-
-    ShareGroupConsumerProperties.sanitize(props);
-
-    Assertions.assertEquals("broker:9092", props.getProperty("bootstrap.servers"));
-    for (String key : ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS) {
-      Assertions.assertFalse(
-          props.containsKey(key),
-          "expected unsupported key removed: " + key
-      );
-    }
-  }
-
-  @Test
-  public void testSanitizePropertiesIsNoopWhenAllKeysAllowed()
-  {
-    final Properties props = new Properties();
-    props.setProperty("bootstrap.servers", "broker:9092");
-    props.setProperty("client.id", "share-group-client");
-
-    ShareGroupConsumerProperties.sanitize(props);
-
-    Assertions.assertEquals(2, props.size());
-    Assertions.assertEquals("broker:9092", props.getProperty("bootstrap.servers"));
-    Assertions.assertEquals("share-group-client", props.getProperty("client.id"));
-  }
-
-  @Test
-  public void testUnsupportedConfigsContainsKnownKafka42Keys()
-  {
-    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("auto.offset.reset"));
-    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("enable.auto.commit"));
-    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("group.instance.id"));
-    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("isolation.level"));
-    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("partition.assignment.strategy"));
-    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("interceptor.classes"));
-    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("session.timeout.ms"));
-    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("heartbeat.interval.ms"));
-    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("group.protocol"));
-    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("group.remote.assignor"));
+    final Properties resolved = ShareGroupConsumerProperties.resolve(config, new DefaultObjectMapper());
+    Assertions.assertEquals("share-group", resolved.getProperty(ConsumerConfig.GROUP_ID_CONFIG));
+    Assertions.assertEquals("explicit", resolved.getProperty(ConsumerConfig.SHARE_ACKNOWLEDGEMENT_MODE_CONFIG));
+    Assertions.assertEquals("record_limit", resolved.getProperty(ConsumerConfig.SHARE_ACQUIRE_MODE_CONFIG));
+    Assertions.assertNull(resolved.getProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG));
+    Assertions.assertEquals("25", resolved.getProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG));
+    Assertions.assertEquals("localhost:9092", resolved.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
   }
 }

@@ -17,11 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.indexing;
+package org.apache.druid.indexing.kafka.simulate;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -30,11 +28,12 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTask;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTaskIOConfig;
+import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -44,20 +43,19 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/** Verifies that ShareGroupIndexTask can be submitted via raw JSON through the Overlord HTTP API. */
-public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
+/** Verifies that a restarted share-group task does not re-ingest durable records. */
+public class ShareGroupTaskRestartTest extends EmbeddedClusterTestBase
 {
-  private static final long SHARE_CONSUMER_READY_DELAY_MS = 3_000L;
   private static final String COL_TIMESTAMP = "__time";
   private static final String COL_ITEM = "item";
   private static final String COL_VALUE = "value";
+  private static final String GROUP_ID = "restart-it-group";
 
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
@@ -66,25 +64,12 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
   private final EmbeddedBroker broker = new EmbeddedBroker();
 
   private ShareGroupKafkaResource kafkaServer;
-  private final ObjectMapper mapper = createMapper();
-
-  @TempDir
-  private Path inboxDirectory;
-
-  private static ObjectMapper createMapper()
-  {
-    final ObjectMapper m = new DefaultObjectMapper();
-    m.registerSubtypes(
-        new NamedType(ShareGroupIndexTask.class, "index_kafka_share_group"),
-        new NamedType(ShareGroupIndexTaskIOConfig.class, "kafka_share_group"),
-        new NamedType(KafkaIndexTaskTuningConfig.class, "KafkaTuningConfig")
-    );
-    return m;
-  }
+  private final ObjectMapper mapper = new DefaultObjectMapper();
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
+    ShareGroupKafkaResource.assignAvailablePorts(coordinator, overlord, indexer, historical, broker);
     kafkaServer = new ShareGroupKafkaResource();
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
@@ -92,7 +77,7 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addResource(kafkaServer)
            .useLatchableEmitter()
-           .useDefaultTimeoutForLatchableEmitter(30)
+           .useDefaultTimeoutForLatchableEmitter(60)
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
            .addServer(coordinator)
            .addServer(overlord)
@@ -103,35 +88,48 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_jsonSubmit_csvFormat_ingestsData() throws Exception
+  public void test_restartedTask_sameGroupId_doesNotReingestAlreadyCommittedRecords() throws Exception
   {
-    final String topic = dataSource + "_topic";
-    kafkaServer.createTopicWithPartitions(topic, 2);
-    kafkaServer.setShareGroupAutoOffsetReset("json-submit-group", "earliest");
+    final String topic = dataSource + "_restart_topic";
+    kafkaServer.createTopicWithPartitions(topic, 1);
 
-    final ShareGroupIndexTask task = buildTask(topic, "json-submit-group");
-    final JsonNode taskJson = mapper.readTree(mapper.writeValueAsString(task));
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(task.getId(), taskJson));
+    // Task 1: ingest and acknowledge 10 records before stopping.
+    kafkaServer.setShareGroupAutoOffsetReset(GROUP_ID, "earliest");
+    final String taskId1 = submitTask(topic);
+    final int batchA = 10;
+    kafkaServer.publishRecordsToTopic(topic, csvRecords(batchA, 0, "2025-07-01"));
 
-    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
-
-    final int numRecords = 8;
-    kafkaServer.publishRecordsToTopic(topic, generateRecords(numRecords));
-
-    indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/events/processed")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(numRecords)
-    );
+    awaitAcknowledgedRecords(taskId1, batchA);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    assertRowCountEventually(batchA);
+    cancelAndAwaitTermination(taskId1);
 
-    assertRowCountEventually(numRecords);
+    // Task 2: same group-id, no offset-reset override — broker delivers only NEW records.
+    final String taskId2 = submitTask(topic);
+    final int batchB = 10;
+    kafkaServer.publishRecordsToTopic(topic, csvRecords(batchB, batchA, "2025-07-02"));
 
-    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(task.getId()));
-    cluster.callApi().waitForTaskToFinish(task.getId(), overlord.latchableEmitter());
+    awaitAcknowledgedRecords(taskId2, batchB);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    assertRowCountEventually(batchA + batchB);
+    cancelAndAwaitTermination(taskId2);
   }
 
-  private ShareGroupIndexTask buildTask(String topic, String groupId)
+  private void awaitAcknowledgedRecords(String taskId, int expected)
+  {
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/kafka/shareGroup/acknowledged")
+                      .hasDimension(DruidMetrics.TASK_ID, taskId),
+        aggregate -> aggregate.hasSumAtLeast(expected)
+    );
+  }
+
+  private String submitTask(String topic)
+  {
+    return submitTaskWithGroup(topic, GROUP_ID);
+  }
+
+  private String submitTaskWithGroup(String topic, String groupId)
   {
     final Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     final ShareGroupIndexTaskIOConfig ioConfig = new ShareGroupIndexTaskIOConfig(
@@ -146,29 +144,30 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
             0,
             false
         ),
-        null,
-        groupId + "-generation",
-        new LocalFileStorageConnectorProvider(inboxDirectory.resolve(groupId).toFile())
+        null
     );
     final DataSchema dataSchema = DataSchema.builder()
                                             .withDataSource(dataSource)
                                             .withTimestamp(new TimestampSpec(COL_TIMESTAMP, "auto", null))
-                                            .withDimensions(DimensionsSpec.builder()
-                                                                          .setDimensions(
-                                                                              DimensionsSpec.getDefaultSchemas(
-                                                                                  List.of(COL_ITEM, COL_VALUE)
-                                                                              )
-                                                                          )
-                                                                          .build())
+                                            .withDimensions(
+                                                DimensionsSpec.builder()
+                                                              .setDimensions(
+                                                                  DimensionsSpec.getDefaultSchemas(
+                                                                      List.of(COL_ITEM, COL_VALUE)
+                                                                  )
+                                                              )
+                                                              .build()
+                                            )
                                             .withGranularity(
                                                 new UniformGranularitySpec(
                                                     Granularities.DAY,
                                                     Granularities.NONE,
+                                                    false,
                                                     null
                                                 )
                                             )
                                             .build();
-    return new ShareGroupIndexTask(
+    final ShareGroupIndexTask task = new ShareGroupIndexTask(
         null,
         null,
         dataSchema,
@@ -201,6 +200,35 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
         null,
         mapper
     );
+    cluster.callApi().submitTask(task);
+    return task.getId();
+  }
+
+  private void cancelAndAwaitTermination(String taskId)
+  {
+    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId));
+    cluster.callApi().waitForTaskToFinish(taskId, overlord.latchableEmitter());
+
+    final TaskRunner taskRunner = indexer.bindings().getInstance(TaskRunner.class);
+    final long deadlineMillis = System.currentTimeMillis() + 10_000L;
+    while (System.currentTimeMillis() < deadlineMillis) {
+      final boolean taskPresent = taskRunner.getKnownTasks()
+                                            .stream()
+                                            .anyMatch(task -> taskId.equals(task.getTaskId()));
+      if (!taskPresent) {
+        return;
+      }
+
+      try {
+        Thread.sleep(100L);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        Assertions.fail("Interrupted while waiting for task runner cleanup", e);
+      }
+    }
+
+    Assertions.fail("Task [" + taskId + "] remained in the indexer task runner after cancellation");
   }
 
   private void assertRowCountEventually(long expected)
@@ -228,12 +256,13 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
     Assertions.fail("Expected row count [" + expectedStr + "] but last result was [" + last + "]");
   }
 
-  private List<byte[]> generateRecords(int count)
+  private List<byte[]> csvRecords(int count, int startIndex, String dateStr)
   {
     final List<byte[]> records = new ArrayList<>();
     for (int i = 0; i < count; i++) {
-      final String csv = "2025-06-01T00:0" + (i % 6) + ":00Z,item" + i + "," + i;
-      records.add(csv.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      final String csv = dateStr + "T00:" + StringUtils.format("%02d", (startIndex + i) % 60) + ":00Z"
+                         + ",item" + (startIndex + i) + "," + (startIndex + i);
+      records.add(csv.getBytes(StandardCharsets.UTF_8));
     }
     return records;
   }

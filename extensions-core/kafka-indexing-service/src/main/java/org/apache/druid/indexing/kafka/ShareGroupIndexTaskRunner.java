@@ -19,600 +19,331 @@
 
 package org.apache.druid.indexing.kafka;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.common.config.Configs;
-import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputRowSchema;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
-import org.apache.druid.data.input.kafka.KafkaTopicPartition;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
-import org.apache.druid.indexing.common.actions.TaskLocks;
-import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
+import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.InputRowFilter;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.input.InputRowSchemas;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.StreamChunkReader;
-import org.apache.druid.indexing.seekablestream.common.AcknowledgingRecordSupplier;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
-import org.apache.druid.storage.StorageConnector;
-import org.apache.kafka.clients.admin.Admin;
+import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
+import org.apache.druid.segment.realtime.sink.Committers;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.kafka.clients.consumer.AcknowledgeType;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaShareConsumer;
+import org.apache.kafka.clients.consumer.ShareConsumer;
+import org.apache.kafka.common.KafkaException;
+import org.apache.kafka.common.TopicIdPartition;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.WakeupException;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
-/**
- * Runs durable acquisition and inbox processing for {@link ShareGroupIndexTask}.
- */
-public class ShareGroupIndexTaskRunner
+final class ShareGroupIndexTaskRunner
 {
   private static final Logger log = new Logger(ShareGroupIndexTaskRunner.class);
-  private static final long DEFAULT_MAX_POLL_INTERVAL_MS = 300_000L;
+  private static final int DEFAULT_MAX_POLL_INTERVAL_MS = 300_000;
+  private static final int DEFAULT_ACQUISITION_LOCK_MS = 30_000;
+  private static final int MAX_PENDING_HANDOFFS = 8;
 
   private final ShareGroupIndexTask task;
   private final TaskToolbox toolbox;
-  private final ObjectMapper configMapper;
-  private final LockGranularity lockGranularity;
-  private final TaskLockType lockType;
-  private final Function<ShareGroupIndexTaskIOConfig,
-      AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>> supplierFactory;
-  private final Function<ShareGroupIndexTaskIOConfig, ShareGroupSourceIdentity> sourceIdentityFactory;
+  private final AtomicReference<ShareConsumer<byte[], byte[]>> activeConsumer = new AtomicReference<>();
 
-  @Nullable
-  private ShareGroupSourceIdentity sourceIdentity;
-  @Nullable
-  private String specFingerprint;
-
-  private final AtomicReference<AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>>
-      activeSupplier = new AtomicReference<>();
-  private final AtomicReference<ShareGroupAcquisitionLoop> activeAcquisitionLoop = new AtomicReference<>();
-  private final AtomicReference<ShareInboxProcessor> activeInboxProcessor = new AtomicReference<>();
-
-  ShareGroupIndexTaskRunner(
-      ShareGroupIndexTask task,
-      TaskToolbox toolbox,
-      ObjectMapper configMapper
-  )
-  {
-    this(task, toolbox, configMapper, null, null);
-  }
-
-  @VisibleForTesting
-  ShareGroupIndexTaskRunner(
-      ShareGroupIndexTask task,
-      TaskToolbox toolbox,
-      ObjectMapper configMapper,
-      @Nullable Function<ShareGroupIndexTaskIOConfig,
-          AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>> supplierFactory
-  )
-  {
-    this(task, toolbox, configMapper, supplierFactory, null);
-  }
-
-  @VisibleForTesting
-  ShareGroupIndexTaskRunner(
-      ShareGroupIndexTask task,
-      TaskToolbox toolbox,
-      ObjectMapper configMapper,
-      @Nullable Function<ShareGroupIndexTaskIOConfig,
-          AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>> supplierFactory,
-      @Nullable Function<ShareGroupIndexTaskIOConfig, ShareGroupSourceIdentity> sourceIdentityFactory
-  )
+  ShareGroupIndexTaskRunner(ShareGroupIndexTask task, TaskToolbox toolbox)
   {
     this.task = task;
     this.toolbox = toolbox;
-    this.configMapper = configMapper;
-    final boolean useTimeChunkLocks = Configs.valueOrDefault(
-        task.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK),
-        Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
-    );
-    this.lockGranularity = useTimeChunkLocks ? LockGranularity.TIME_CHUNK : LockGranularity.SEGMENT;
-    this.lockType = TaskLocks.determineLockTypeForAppend(task.getContext());
-    this.supplierFactory = supplierFactory != null ? supplierFactory : this::createDefaultRecordSupplier;
-    this.sourceIdentityFactory = sourceIdentityFactory != null ? sourceIdentityFactory : this::resolveSourceIdentity;
   }
 
-  public TaskStatus run() throws Exception
+  TaskStatus run() throws Exception
   {
+    final ShareGroupIndexTaskIOConfig ioConfig = task.getIOConfig();
+    final Properties properties = ShareGroupConsumerProperties.resolve(ioConfig, task.getConfigMapper());
+    final int maxPollIntervalMs = Integer.parseInt(properties.getProperty(
+        ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG,
+        Integer.toString(DEFAULT_MAX_POLL_INTERVAL_MS)
+    ).trim());
+    if (ioConfig.getPollTimeout() >= maxPollIntervalMs) {
+      throw InvalidInput.exception("pollTimeout must be less than max.poll.interval.ms [%d]", maxPollIntervalMs);
+    }
+
     final DataSchema dataSchema = task.getDataSchema();
     final KafkaIndexTaskTuningConfig tuningConfig = task.getTuningConfig();
-    final ShareGroupIndexTaskIOConfig ioConfig = task.getIOConfig();
-    initializeInboxContext(ioConfig);
-
-    final RowIngestionMeters rowIngestionMeters =
-        toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
+    final RowIngestionMeters meters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
-        rowIngestionMeters,
+        meters,
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions()
     );
-    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
-
-    final InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
-    final InputFormat inputFormat = ioConfig.getInputFormat();
-    if (inputFormat == null) {
-      throw new ISE("inputFormat must be specified in ioConfig");
-    }
-    // Raw type mirrors SeekableStreamIndexTaskRunner; works around
-    // OrderedPartitionableRecord.getData() returning a wildcard list.
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    final StreamChunkReader chunkReader = new StreamChunkReader<KafkaRecordEntity>(
-        inputFormat,
-        inputRowSchema,
+    final SegmentGenerationMetrics metrics = new SegmentGenerationMetrics();
+    final StreamChunkReader<KafkaRecordEntity> chunkReader = new StreamChunkReader<>(
+        ioConfig.getInputFormat(),
+        InputRowSchemas.fromDataSchema(dataSchema),
         dataSchema.getTransformSpec(),
         toolbox.getIndexingTmpDir(),
         InputRowFilter.allowAll(),
-        rowIngestionMeters,
+        meters,
         parseExceptionHandler
     );
-
     final Appenderator appenderator = SeekableStreamIndexTask.newAppenderator(
         toolbox,
         task.getId(),
         dataSchema,
         tuningConfig,
-        segmentGenerationMetrics,
-        rowIngestionMeters,
+        metrics,
+        meters,
         parseExceptionHandler
     );
-
-    final StreamAppenderatorDriver driver = SeekableStreamIndexTask.newDriver(
+    final TaskRealtimeMetricsMonitor monitor = new TaskRealtimeMetricsMonitor(metrics, meters, task.getMetricBuilder());
+    boolean completed = false;
+    try (final StreamAppenderatorDriver driver = SeekableStreamIndexTask.newDriver(
         appenderator,
         toolbox,
-        segmentGenerationMetrics,
+        metrics,
         dataSchema,
-        lockGranularity,
-        lockType
-    );
-
-    final org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor metricsMonitor =
-        new org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor(
-            segmentGenerationMetrics,
-            rowIngestionMeters,
-            task.getMetricBuilder()
-        );
-    toolbox.addMonitor(metricsMonitor);
-
-    boolean runLoopCompleted = false;
-    try {
-      final TaskStatus status = runDurableInbox(driver, appenderator, chunkReader, ioConfig);
-      runLoopCompleted = true;
-      return status;
+        LockGranularity.TIME_CHUNK,
+        TaskLockType.APPEND
+    )) {
+      toolbox.addMonitor(monitor);
+      driver.startJob(null);
+      if (!appenderator.getSegments().isEmpty()) {
+        driver.clear();
+      }
+      try (final ShareConsumer<byte[], byte[]> consumer = createConsumer(properties)) {
+        activeConsumer.set(consumer);
+        try {
+          runLoop(consumer, chunkReader, driver, maxPollIntervalMs);
+        }
+        catch (WakeupException e) {
+          if (!task.isStopRequested()) {
+            throw e;
+          }
+        }
+        finally {
+          activeConsumer.set(null);
+        }
+      }
+      appenderator.close();
+      completed = true;
+      return TaskStatus.success(task.getId());
     }
     finally {
-      activeSupplier.set(null);
-      if (!runLoopCompleted) {
+      if (!completed) {
         try {
           appenderator.closeNow();
         }
-        catch (Exception e) {
-          log.warn(e, "Exception during emergency closeNow() of Appenderator in run(); continuing teardown.");
+        catch (RuntimeException e) {
+          log.warn(e, "Failed to close appenderator for task [%s].", task.getId());
         }
       }
-      try {
-        toolbox.removeMonitor(metricsMonitor);
-      }
-      catch (Exception e) {
-        log.warn(e, "Exception removing TaskRealtimeMetricsMonitor; continuing teardown.");
-      }
-      try {
-        driver.close();
-      }
-      catch (Exception e) {
-        log.warn(e, "Exception closing StreamAppenderatorDriver; continuing teardown.");
-      }
+      toolbox.removeMonitor(monitor);
     }
   }
 
-  @VisibleForTesting
-  boolean acquireLockForRestoredSegment(SegmentIdWithShardSpec segmentId)
-  {
-    try {
-      if (lockGranularity == LockGranularity.SEGMENT) {
-        return toolbox.getTaskActionClient().submit(
-            new SegmentLockAcquireAction(
-                lockType,
-                segmentId.getInterval(),
-                segmentId.getVersion(),
-                segmentId.getShardSpec().getPartitionNum(),
-                1000L
-            )
-        ).isOk();
-      } else {
-        final TaskLock lock = toolbox.getTaskActionClient().submit(
-            new TimeChunkLockAcquireAction(
-                lockType,
-                segmentId.getInterval(),
-                1000L
-            )
-        );
-        if (lock == null) {
-          return false;
-        }
-        lock.assertNotRevoked();
-        return true;
-      }
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /** Interrupts an in-flight poll so the loop can exit on graceful stop. */
   void requestWakeup()
   {
-    final ShareInboxProcessor inboxProcessor = activeInboxProcessor.get();
-    if (inboxProcessor != null) {
-      inboxProcessor.requestStop();
-    }
-    final ShareGroupAcquisitionLoop acquisitionLoop = activeAcquisitionLoop.get();
-    if (acquisitionLoop != null) {
-      acquisitionLoop.requestStop();
-      return;
-    }
-    final AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> supplier = activeSupplier.get();
-    if (supplier == null) {
-      return;
-    }
-    try {
-      supplier.wakeup();
-    }
-    catch (Exception e) {
-      log.warn(e, "Exception calling wakeup() on the active record supplier; ignoring.");
+    final ShareConsumer<byte[], byte[]> consumer = activeConsumer.get();
+    if (consumer != null) {
+      consumer.wakeup();
     }
   }
 
-  private AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> createDefaultRecordSupplier(
-      ShareGroupIndexTaskIOConfig ioConfig
-  )
-  {
-    final ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
-    try {
-      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      return new KafkaShareGroupRecordSupplier(
-          ioConfig.getConsumerProperties(),
-          configMapper,
-          ioConfig.getGroupId()
-      );
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(currCtxCl);
-    }
-  }
-
-  private TaskStatus runDurableInbox(
-      StreamAppenderatorDriver driver,
-      Appenderator appenderator,
+  @VisibleForTesting
+  void runLoop(
+      ShareConsumer<byte[], byte[]> consumer,
       StreamChunkReader<KafkaRecordEntity> chunkReader,
-      ShareGroupIndexTaskIOConfig ioConfig
+      StreamAppenderatorDriver driver,
+      int maxPollIntervalMs
   ) throws Exception
   {
-    if (sourceIdentity == null || specFingerprint == null) {
-      throw new ISE("Durable share inbox context is not initialized");
-    }
-    final StorageConnector storageConnector = ioConfig.getInboxStorage()
-                                                      .createStorageConnector(toolbox.getIndexingTmpDir());
-    final ShareGroupBatchStore batchStore = new ShareGroupBatchStore(storageConnector, task.getId());
-    final ShareGroupBatchStager batchStager = new DurableShareGroupBatchStager(
-        batchStore,
-        toolbox.getTaskActionClient(),
-        task.getDataSource(),
-        ioConfig.getInboxId(),
-        ioConfig.getGroupId(),
-        sourceIdentity,
-        specFingerprint,
-        ioConfig.getReceiptPageSize()
+    final ShareGroupIndexTaskIOConfig ioConfig = task.getIOConfig();
+    final Duration pollTimeout = Duration.ofMillis(ioConfig.getPollTimeout());
+    final Deque<ListenableFuture<SegmentsAndCommitMetadata>> handoffs = new ArrayDeque<>();
+    final long configuredHandoffTimeout = task.getTuningConfig().getHandoffConditionTimeout();
+    final long handoffTimeoutMs = Math.max(
+        1L,
+        Math.min(maxPollIntervalMs / 2L, configuredHandoffTimeout > 0 ? configuredHandoffTimeout : Long.MAX_VALUE)
     );
-    final int uploadThreads = ioConfig.getMaxConcurrentUploads();
-    final ExecutorService stagingExecutor = new ThreadPoolExecutor(
-        uploadThreads,
-        uploadThreads,
-        0L,
-        TimeUnit.MILLISECONDS,
-        new ArrayBlockingQueue<>(uploadThreads),
-        Execs.makeThreadFactory("share-inbox-stager-%d"),
-        new ThreadPoolExecutor.AbortPolicy()
-    );
-    final ScheduledExecutorService claimRenewalExecutor = Execs.scheduledSingleThreaded(
-        "share-inbox-claim-renewal-%d"
-    );
-    final ExecutorService processorExecutor = Execs.singleThreaded("share-inbox-processor-%d");
-    final ShareInboxProcessor inboxProcessor = new ShareInboxProcessor(
-        toolbox.getTaskActionClient(),
-        new ShareInboxManifestReader(
-            batchStore,
-            task.getDataSource(),
-            ioConfig.getInboxId(),
-            ioConfig.getGroupId(),
-            sourceIdentity,
-            specFingerprint
-        ),
-        new AppenderatorShareInboxBatchHandler(
-            driver,
-            chunkReader,
-            toolbox.getTaskActionClient(),
-            task.getId()
-        ),
-        claimRenewalExecutor,
-        task.getDataSource(),
-        ioConfig.getInboxId(),
-        specFingerprint,
-        task.getId(),
-        ioConfig.getMaxProcessingManifests(),
-        ioConfig.getMaxProcessingRecords(),
-        ioConfig.getMaxProcessingBytes(),
-        ioConfig.getClaimDurationMillis(),
-        ioConfig.getClaimRenewalPeriodMillis(),
-        ioConfig.getInboxPollPeriodMillis()
-    );
-    driver.startJob(this::acquireLockForRestoredSegment);
-    try (final AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier =
-             supplierFactory.apply(ioConfig)) {
-      final TaskStatus status = runDurableInboxLoops(
-          recordSupplier,
-          batchStager,
-          stagingExecutor,
-          inboxProcessor,
-          processorExecutor,
-          ioConfig
+    final TransactionalSegmentPublisher publisher = new TransactionalSegmentPublisher()
+    {
+      @Override
+      public SegmentPublishResult publishAnnotatedSegments(
+          @Nullable Set<DataSegment> overwriteSegments,
+          Set<DataSegment> segments,
+          @Nullable Object commitMetadata,
+          SegmentSchemaMapping segmentSchemaMapping
+      ) throws IOException
+      {
+        return appendSegments(segments, segmentSchemaMapping);
+      }
+    };
+
+    consumer.subscribe(Set.of(ioConfig.getTopic()));
+    final Stopwatch batchTime = Stopwatch.createUnstarted();
+    while (!task.isStopRequested()) {
+      for (final Iterator<ListenableFuture<SegmentsAndCommitMetadata>> it = handoffs.iterator(); it.hasNext(); ) {
+        final ListenableFuture<SegmentsAndCommitMetadata> handoff = it.next();
+        if (handoff.isDone()) {
+          handoff.get();
+          it.remove();
+        }
+      }
+      if (handoffs.size() >= MAX_PENDING_HANDOFFS) {
+        handoffs.removeFirst().get(handoffTimeoutMs, TimeUnit.MILLISECONDS);
+      }
+      if (task.isStopRequested()) {
+        break;
+      }
+
+      batchTime.restart();
+      final ConsumerRecords<byte[], byte[]> records = consumer.poll(pollTimeout);
+      if (records.isEmpty()) {
+        continue;
+      }
+      final long batchBudgetMs = Math.min(
+          maxPollIntervalMs,
+          consumer.acquisitionLockTimeoutMs().orElse(DEFAULT_ACQUISITION_LOCK_MS)
       );
-      appenderator.close();
-      return status;
+      final long publishBudgetMs = batchBudgetMs - Math.min(5_000L, batchBudgetMs / 5L);
+      final String sequenceName = task.getId() + "-share-" + UUID.randomUUID();
+      boolean addedRows = false;
+      for (final ConsumerRecord<byte[], byte[]> record : records) {
+        remainingMillis(batchTime, publishBudgetMs);
+        final List<KafkaRecordEntity> input = record.value() == null
+                                            ? List.of()
+                                            : List.of(new KafkaRecordEntity(record));
+        for (final InputRow row : chunkReader.parse(input, false)) {
+          final AppenderatorDriverAddResult addResult = driver.add(
+              row,
+              sequenceName,
+              Committers.nilSupplier(),
+              true,
+              true
+          );
+          if (!addResult.isOk()) {
+            throw new ISE("Could not allocate a segment for Kafka share group [%s].", ioConfig.getGroupId());
+          }
+          addedRows = true;
+        }
+      }
+      if (addedRows) {
+        remainingMillis(batchTime, publishBudgetMs);
+        final SegmentsAndCommitMetadata published = driver.publish(publisher, Committers.nil(), List.of(sequenceName))
+                                                          .get(
+                                                              remainingMillis(batchTime, publishBudgetMs),
+                                                              TimeUnit.MILLISECONDS
+                                                          );
+        if (published == null || !published.wasPublished() || published.getSegments().isEmpty()) {
+          throw new ISE("Publication was not confirmed for Kafka share group [%s].", ioConfig.getGroupId());
+        }
+        handoffs.addLast(driver.registerHandoff(published));
+      }
+
+      // ACCEPT can also be flushed by close(), so queue it only after publication.
+      records.forEach(record -> consumer.acknowledge(record, AcknowledgeType.ACCEPT));
+      final Map<TopicIdPartition, Optional<KafkaException>> results = consumer.commitSync(
+          Duration.ofMillis(remainingMillis(batchTime, batchBudgetMs))
+      );
+      final Set<TopicPartition> unconfirmed = new HashSet<>(records.partitions());
+      for (final Map.Entry<TopicIdPartition, Optional<KafkaException>> entry : results.entrySet()) {
+        if (entry.getValue().isPresent()) {
+          throw new ISE(entry.getValue().get(), "Kafka acknowledgement failed for partition [%s].", entry.getKey());
+        }
+        unconfirmed.remove(entry.getKey().topicPartition());
+      }
+      if (!unconfirmed.isEmpty()) {
+        throw new ISE("Kafka acknowledgement was not confirmed for partitions [%s].", unconfirmed);
+      }
+      task.emitMetric(toolbox.getEmitter(), "ingest/kafka/shareGroup/acknowledged", records.count());
+      task.emitMetric(toolbox.getEmitter(), "ingest/kafka/shareGroup/pollToAck/time", batchTime.millisElapsed());
+    }
+  }
+
+  private SegmentPublishResult appendSegments(Set<DataSegment> segments, SegmentSchemaMapping segmentSchemaMapping)
+      throws IOException
+  {
+    final SegmentPublishResult result = toolbox.getTaskActionClient().submit(
+        SegmentTransactionalAppendAction.forSegments(segments, segmentSchemaMapping)
+    );
+    if (result.isSuccess()) {
+      final Map<SegmentId, DataSegment> confirmed = new HashMap<>();
+      for (final DataSegment segment : result.getSegments()) {
+        confirmed.put(segment.getId(), segment);
+      }
+      for (final DataSegment segment : segments) {
+        final DataSegment actual = confirmed.get(segment.getId());
+        if (actual == null || !Objects.equals(actual.getLoadSpec(), segment.getLoadSpec())) {
+          throw new ISE("Publication did not confirm segment [%s] for task [%s].", segment.getId(), task.getId());
+        }
+      }
+    }
+    return result;
+  }
+
+  private static long remainingMillis(Stopwatch elapsed, long budgetMs) throws TimeoutException
+  {
+    final long remaining = budgetMs - elapsed.millisElapsed();
+    if (remaining <= 0) {
+      throw new TimeoutException("Kafka share group batch exceeded its time budget of " + budgetMs + " ms");
+    }
+    return remaining;
+  }
+
+  private static ShareConsumer<byte[], byte[]> createConsumer(Properties properties)
+  {
+    final Thread thread = Thread.currentThread();
+    final ClassLoader originalClassLoader = thread.getContextClassLoader();
+    try {
+      thread.setContextClassLoader(ShareGroupIndexTaskRunner.class.getClassLoader());
+      return new KafkaShareConsumer<>(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer());
     }
     finally {
-      inboxProcessor.requestStop();
-      processorExecutor.shutdownNow();
-      claimRenewalExecutor.shutdownNow();
-      stagingExecutor.shutdownNow();
+      thread.setContextClassLoader(originalClassLoader);
     }
   }
-
-  @VisibleForTesting
-  TaskStatus runDurableInboxLoops(
-      AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier,
-      ShareGroupBatchStager batchStager,
-      ExecutorService stagingExecutor,
-      ShareInboxProcessor inboxProcessor,
-      ExecutorService processorExecutor,
-      ShareGroupIndexTaskIOConfig ioConfig
-  ) throws Exception
-  {
-    final ShareGroupAcquisitionLoop acquisitionLoop = createAcquisitionLoop(
-        recordSupplier,
-        batchStager,
-        stagingExecutor,
-        ioConfig
-    );
-    activeSupplier.set(recordSupplier);
-    activeAcquisitionLoop.set(acquisitionLoop);
-    activeInboxProcessor.set(inboxProcessor);
-    if (task.isStopRequested()) {
-      inboxProcessor.requestStop();
-      acquisitionLoop.requestStop();
-    }
-
-    Future<?> processorFuture = null;
-    Exception acquisitionFailure = null;
-    try {
-      processorFuture = processorExecutor.submit(() -> {
-        try {
-          inboxProcessor.run();
-          return null;
-        }
-        finally {
-          acquisitionLoop.requestStop();
-        }
-      });
-      log.info(
-          "Starting durable share inbox acquisition and processing for topic[%s], group[%s], inbox[%s].",
-          ioConfig.getTopic(),
-          ioConfig.getGroupId(),
-          ioConfig.getInboxId()
-      );
-      try {
-        acquisitionLoop.run();
-      }
-      catch (Exception e) {
-        acquisitionFailure = e;
-      }
-      finally {
-        inboxProcessor.requestStop();
-      }
-
-      try {
-        processorFuture.get();
-      }
-      catch (ExecutionException e) {
-        if (acquisitionFailure != null) {
-          acquisitionFailure.addSuppressed(e.getCause());
-        } else {
-          throwFailure(e.getCause());
-        }
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        if (acquisitionFailure != null) {
-          acquisitionFailure.addSuppressed(e);
-        } else {
-          throw e;
-        }
-      }
-      if (acquisitionFailure != null) {
-        throw acquisitionFailure;
-      }
-      return TaskStatus.success(task.getId());
-    }
-    finally {
-      inboxProcessor.requestStop();
-      if (processorFuture != null && !processorFuture.isDone()) {
-        processorFuture.cancel(true);
-      }
-      activeInboxProcessor.compareAndSet(inboxProcessor, null);
-      activeAcquisitionLoop.compareAndSet(acquisitionLoop, null);
-      activeSupplier.compareAndSet(recordSupplier, null);
-    }
-  }
-
-  @VisibleForTesting
-  TaskStatus runDurableInboxLoop(
-      AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier,
-      ShareGroupBatchStager batchStager,
-      ExecutorService stagingExecutor,
-      ShareGroupIndexTaskIOConfig ioConfig
-  ) throws Exception
-  {
-    final ShareGroupAcquisitionLoop acquisitionLoop = createAcquisitionLoop(
-        recordSupplier,
-        batchStager,
-        stagingExecutor,
-        ioConfig
-    );
-    activeSupplier.set(recordSupplier);
-    activeAcquisitionLoop.set(acquisitionLoop);
-    if (task.isStopRequested()) {
-      acquisitionLoop.requestStop();
-    }
-    try {
-      log.info(
-          "Starting durable share inbox acquisition for topic[%s], group[%s], inbox[%s].",
-          ioConfig.getTopic(),
-          ioConfig.getGroupId(),
-          ioConfig.getInboxId()
-      );
-      acquisitionLoop.run();
-      return TaskStatus.success(task.getId());
-    }
-    finally {
-      activeAcquisitionLoop.compareAndSet(acquisitionLoop, null);
-      activeSupplier.compareAndSet(recordSupplier, null);
-    }
-  }
-
-  private ShareGroupAcquisitionLoop createAcquisitionLoop(
-      AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier,
-      ShareGroupBatchStager batchStager,
-      ExecutorService stagingExecutor,
-      ShareGroupIndexTaskIOConfig ioConfig
-  )
-  {
-    final ShareGroupAcquisitionRegistry registry = new ShareGroupAcquisitionRegistry(
-        ioConfig.getMaxStagingRecords(),
-        ioConfig.getMaxStagingBytes(),
-        ioConfig.getRenewalFraction(),
-        System::nanoTime
-    );
-    return new ShareGroupAcquisitionLoop(
-        ioConfig.getTopic(),
-        recordSupplier,
-        batchStager,
-        stagingExecutor,
-        registry,
-        ShareGroupRawBatch::estimatedRecordSize,
-        ioConfig.getPollTimeout(),
-        resolveMaxPollIntervalMs(ioConfig)
-    );
-  }
-
-  private static void throwFailure(Throwable failure) throws Exception
-  {
-    if (failure instanceof Exception) {
-      throw (Exception) failure;
-    }
-    if (failure instanceof Error) {
-      throw (Error) failure;
-    }
-    throw new RuntimeException(failure);
-  }
-
-  @VisibleForTesting
-  long resolveMaxPollIntervalMs(ShareGroupIndexTaskIOConfig ioConfig)
-  {
-    final Properties properties = new Properties();
-    KafkaRecordSupplier.addConsumerPropertiesFromConfig(
-        properties,
-        configMapper,
-        ioConfig.getConsumerProperties()
-    );
-    final String value = properties.getProperty(
-        ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG,
-        String.valueOf(DEFAULT_MAX_POLL_INTERVAL_MS)
-    );
-    try {
-      final long interval = Long.parseLong(value);
-      if (interval <= 0) {
-        throw new NumberFormatException("must be positive");
-      }
-      return interval;
-    }
-    catch (NumberFormatException e) {
-      throw new ISE(e, "Invalid Kafka max.poll.interval.ms[%s]", value);
-    }
-  }
-
-  @VisibleForTesting
-  void initializeInboxContext(ShareGroupIndexTaskIOConfig ioConfig)
-  {
-    sourceIdentity = sourceIdentityFactory.apply(ioConfig);
-    specFingerprint = ShareGroupIngestionSpecFingerprint.compute(
-        configMapper,
-        task.getDataSchema(),
-        task.getTuningConfig(),
-        ioConfig
-    );
-  }
-
-  @Nullable
-  ShareGroupSourceIdentity getSourceIdentity()
-  {
-    return sourceIdentity;
-  }
-
-  @Nullable
-  String getSpecFingerprint()
-  {
-    return specFingerprint;
-  }
-
-  private ShareGroupSourceIdentity resolveSourceIdentity(ShareGroupIndexTaskIOConfig ioConfig)
-  {
-    try (Admin admin = KafkaShareGroupSourceIdentityResolver.createAdmin(
-        ioConfig.getConsumerProperties(),
-        configMapper
-    )) {
-      return KafkaShareGroupSourceIdentityResolver.resolve(
-          admin,
-          ioConfig.getTopic(),
-          Duration.ofSeconds(30)
-      );
-    }
-  }
-
 }

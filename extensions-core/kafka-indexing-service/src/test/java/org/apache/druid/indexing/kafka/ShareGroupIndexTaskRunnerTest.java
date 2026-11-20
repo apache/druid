@@ -19,512 +19,169 @@
 
 package org.apache.druid.indexing.kafka;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
+import com.google.common.util.concurrent.Futures;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
-import org.apache.druid.data.input.kafka.KafkaTopicPartition;
-import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.ClaimShareInboxManifestsAction;
-import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
-import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.overlord.LockResult;
-import org.apache.druid.indexing.overlord.ShareInboxClaimResult;
-import org.apache.druid.indexing.seekablestream.common.AcknowledgeType;
-import org.apache.druid.indexing.seekablestream.common.AcknowledgingRecordSupplier;
-import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
-import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.seekablestream.StreamChunkReader;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
+import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
+import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.kafka.clients.consumer.AcknowledgeType;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.ShareConsumer;
+import org.apache.kafka.common.KafkaException;
+import org.apache.kafka.common.TopicIdPartition;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.Uuid;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mockito;
 
-import java.io.File;
-import java.util.Collection;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ShareGroupIndexTaskRunnerTest
 {
-  private static final SegmentIdWithShardSpec RESTORED_SEGMENT = new SegmentIdWithShardSpec(
-      "test_datasource",
-      Intervals.of("2025-01-01/2025-01-02"),
-      "version",
-      new NumberedShardSpec(3, 4)
+  private static final TopicPartition PARTITION = new TopicPartition("topic", 0);
+  private static final TopicIdPartition TOPIC_ID_PARTITION = new TopicIdPartition(Uuid.randomUuid(), PARTITION);
+  private static final ConsumerRecord<byte[], byte[]> RECORD = new ConsumerRecord<>(
+      PARTITION.topic(),
+      PARTITION.partition(),
+      0L,
+      null,
+      new byte[]{1}
   );
+  private static final DataSegment SEGMENT = DataSegment.builder(SegmentId.of("data", Intervals.of("2026-01-01/2026-01-02"), "version", 0))
+      .loadSpec(Map.of("path", "segment.zip"))
+      .size(1)
+      .build();
 
-  private ObjectMapper mapper;
-  private ShareGroupIndexTask task;
-  private TaskToolbox toolbox;
+  private final TaskToolbox toolbox = Mockito.mock(TaskToolbox.class);
+  private final ShareGroupIndexTask task = Mockito.mock(ShareGroupIndexTask.class);
+  private final TaskActionClient actionClient = Mockito.mock(TaskActionClient.class);
+  private final StreamAppenderatorDriver driver = Mockito.mock(StreamAppenderatorDriver.class);
+  private final AtomicBoolean stopped = new AtomicBoolean();
+  private final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox);
+
+  @SuppressWarnings("unchecked")
+  private final ShareConsumer<byte[], byte[]> consumer = Mockito.mock(ShareConsumer.class);
+  @SuppressWarnings("unchecked")
+  private final StreamChunkReader<KafkaRecordEntity> reader = Mockito.mock(StreamChunkReader.class);
 
   @BeforeEach
-  public void setUp()
+  public void setUp() throws IOException
   {
-    mapper = new DefaultObjectMapper();
-    toolbox = Mockito.mock(TaskToolbox.class);
-
-    final DataSchema dataSchema = DataSchema.builder()
-                                            .withDataSource("test_datasource")
-                                            .withTimestamp(new TimestampSpec("__time", null, null))
-                                            .withDimensions(DimensionsSpec.EMPTY)
-                                            .build();
-    final ShareGroupIndexTaskIOConfig ioConfig = new ShareGroupIndexTaskIOConfig(
-        "test-topic",
-        "test-share-group",
-        ImmutableMap.of("bootstrap.servers", "localhost:9092"),
-        null,
-        null,
-        "test-inbox",
-        new LocalFileStorageConnectorProvider(new File("/tmp/share-inbox"))
-    );
-    final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
+    Mockito.when(task.getIOConfig()).thenReturn(new ShareGroupIndexTaskIOConfig(
+        PARTITION.topic(),
+        "group",
+        Map.of(),
+        new JsonInputFormat(null, null, null, null, null),
         null
+    ));
+    Mockito.when(task.getTuningConfig()).thenReturn(Mockito.mock(KafkaIndexTaskTuningConfig.class));
+    Mockito.when(task.isStopRequested()).thenAnswer(invocation -> stopped.get());
+    Mockito.when(toolbox.getTaskActionClient()).thenReturn(actionClient);
+    Mockito.when(consumer.acquisitionLockTimeoutMs()).thenReturn(Optional.of(30_000));
+    Mockito.when(consumer.poll(Mockito.any())).thenReturn(
+        new ConsumerRecords<>(Map.of(PARTITION, List.of(RECORD)), Map.of())
     );
-    task = new ShareGroupIndexTask(
-        "task_runner_test",
-        null,
-        dataSchema,
-        tuningConfig,
-        ioConfig,
-        null,
-        mapper
-    );
+    Mockito.when(reader.parse(Mockito.anyList(), Mockito.eq(false))).thenReturn(List.of(Mockito.mock(InputRow.class)));
+    Mockito.when(driver.add(Mockito.any(), Mockito.anyString(), Mockito.any(), Mockito.eq(true), Mockito.eq(true)))
+           .thenReturn(AppenderatorDriverAddResult.ok(SegmentIdWithShardSpec.fromDataSegment(SEGMENT), 1, 1, true));
+    Mockito.when(driver.registerHandoff(Mockito.any())).thenReturn(Futures.immediateFuture(null));
+    Mockito.when(consumer.commitSync(Mockito.any())).thenAnswer(invocation -> {
+      stopped.set(true);
+      return Map.of(TOPIC_ID_PARTITION, Optional.empty());
+    });
   }
 
   @Test
-  public void testRequestWakeupIsNullSafeWhenNoActiveSupplier()
+  public void testAcknowledgesAfterPublishing() throws Exception
   {
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox, mapper);
-    runner.requestWakeup();
+    preparePublishResult(SegmentPublishResult.ok(Set.of(SEGMENT)));
+
+    runner.runLoop(consumer, reader, driver, 300_000);
+
+    final InOrder order = Mockito.inOrder(actionClient, consumer);
+    order.verify(actionClient).submit(Mockito.any(SegmentTransactionalAppendAction.class));
+    order.verify(consumer).acknowledge(RECORD, AcknowledgeType.ACCEPT);
+    order.verify(consumer).commitSync(Mockito.any());
+    Mockito.verify(driver).registerHandoff(Mockito.any());
   }
 
   @Test
-  public void testStopGracefullyBeforeRunTaskIsSafe()
+  public void testDoesNotAcknowledgeFailedPublication()
   {
-    Assertions.assertFalse(task.isStopRequested());
-    task.stopGracefully(null);
-    Assertions.assertTrue(task.isStopRequested());
-  }
-
-  @Test
-  public void testRunnerAcceptsCustomSupplierFactory()
-  {
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(
-        task,
-        toolbox,
-        mapper,
-        ioConfig -> Mockito.mock(AcknowledgingRecordSupplier.class)
-    );
-    Assertions.assertNotNull(runner);
-    runner.requestWakeup();
-  }
-
-  @Test
-  public void testInitializeInboxContextResolvesIdentityAndFingerprint()
-  {
-    final ShareGroupSourceIdentity identity = new ShareGroupSourceIdentity("cluster-id", "topic-id", "test-topic");
-    final AtomicInteger resolutions = new AtomicInteger();
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(
-        task,
-        toolbox,
-        mapper,
-        null,
-        ioConfig -> {
-          resolutions.incrementAndGet();
-          return identity;
-        }
+    Mockito.when(driver.publish(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(
+        Futures.immediateFailedFuture(new IOException("Publish failed"))
     );
 
-    runner.initializeInboxContext(task.getIOConfig());
-
-    Assertions.assertSame(identity, runner.getSourceIdentity());
-    Assertions.assertEquals(64, runner.getSpecFingerprint().length());
-    Assertions.assertEquals(1, resolutions.get());
+    Assertions.assertThrows(ExecutionException.class, () -> runner.runLoop(consumer, reader, driver, 300_000));
+    Mockito.verify(consumer, Mockito.never()).acknowledge(Mockito.any(), Mockito.any());
+    Mockito.verify(consumer, Mockito.never()).commitSync(Mockito.any());
   }
 
   @Test
-  public void testDurableInboxLoopStagesBeforeAcceptAndStopsCleanly() throws Exception
+  public void testDoesNotAcknowledgePublicationOfDifferentLoadSpec() throws IOException
   {
-    final DurableInboxFakeSupplier supplier = new DurableInboxFakeSupplier();
-    final AtomicInteger staged = new AtomicInteger();
-    final ExecutorService stagingExecutor = Execs.directExecutor();
-    final ExecutorService ownerExecutor = Executors.newSingleThreadExecutor();
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox, mapper);
-    try {
-      final Future<TaskStatus> status = ownerExecutor.submit(
-          () -> runner.runDurableInboxLoop(
-              supplier,
-              records -> staged.incrementAndGet(),
-              stagingExecutor,
-              task.getIOConfig()
-          )
-      );
+    final DataSegment otherSegment = DataSegment.builder(SEGMENT).loadSpec(Map.of("path", "other.zip")).build();
+    preparePublishResult(SegmentPublishResult.ok(Set.of(otherSegment)));
 
-      Assertions.assertTrue(supplier.accepted.await(10, TimeUnit.SECONDS));
-      runner.requestWakeup();
-
-      Assertions.assertTrue(status.get(10, TimeUnit.SECONDS).isSuccess());
-      Assertions.assertEquals(1, staged.get());
-      Assertions.assertEquals(1, supplier.flushCount.get());
-      Assertions.assertTrue(supplier.wakeupCount.get() > 0);
-    }
-    finally {
-      stagingExecutor.shutdownNow();
-      ownerExecutor.shutdownNow();
-    }
+    Assertions.assertThrows(ISE.class, () -> runner.runLoop(consumer, reader, driver, 300_000));
+    Mockito.verify(consumer, Mockito.never()).acknowledge(Mockito.any(), Mockito.any());
   }
 
   @Test
-  public void testDurableInboxLoopsRunAcquisitionAndProcessorUntilGracefulStop() throws Exception
+  public void testAcknowledgementFailureLeavesPublicationInPlace() throws IOException
   {
-    final DurableInboxFakeSupplier supplier = new DurableInboxFakeSupplier();
-    final ExecutorService stagingExecutor = Execs.directExecutor();
-    final ExecutorService processorExecutor = Executors.newSingleThreadExecutor();
-    final ExecutorService ownerExecutor = Executors.newSingleThreadExecutor();
-    final ScheduledExecutorService claimExecutor = Mockito.mock(ScheduledExecutorService.class);
-    final TaskActionClient actionClient = Mockito.mock(TaskActionClient.class);
-    Mockito.when(actionClient.submit(Mockito.any(ClaimShareInboxManifestsAction.class)))
-           .thenReturn(new ShareInboxClaimResult(List.of()));
-    final ShareInboxProcessor processor = inboxProcessor(actionClient, claimExecutor);
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox, mapper);
-    try {
-      final Future<TaskStatus> status = ownerExecutor.submit(
-          () -> runner.runDurableInboxLoops(
-              supplier,
-              records -> {},
-              stagingExecutor,
-              processor,
-              processorExecutor,
-              task.getIOConfig()
-          )
-      );
+    preparePublishResult(SegmentPublishResult.ok(Set.of(SEGMENT)));
+    Mockito.doReturn(Map.of(TOPIC_ID_PARTITION, Optional.of(new KafkaException("Acquisition expired"))))
+           .when(consumer).commitSync(Mockito.any());
 
-      Assertions.assertTrue(supplier.accepted.await(10, TimeUnit.SECONDS));
-      runner.requestWakeup();
-
-      Assertions.assertTrue(status.get(10, TimeUnit.SECONDS).isSuccess());
-      Mockito.verify(actionClient, Mockito.atLeastOnce()).submit(Mockito.any(ClaimShareInboxManifestsAction.class));
-    }
-    finally {
-      stagingExecutor.shutdownNow();
-      processorExecutor.shutdownNow();
-      ownerExecutor.shutdownNow();
-    }
+    Assertions.assertThrows(ISE.class, () -> runner.runLoop(consumer, reader, driver, 300_000));
+    Mockito.verify(driver).publish(Mockito.any(), Mockito.any(), Mockito.any());
+    Mockito.verify(driver).registerHandoff(Mockito.any());
+    Mockito.verify(consumer).poll(Mockito.any());
   }
 
   @Test
-  public void testDurableInboxProcessorFailureStopsAcquisitionAndFailsTask() throws Exception
+  public void testAcknowledgesBatchWithNoInputRowsWithoutPublishing() throws Exception
   {
-    final DurableInboxFakeSupplier supplier = new DurableInboxFakeSupplier();
-    final ExecutorService stagingExecutor = Execs.directExecutor();
-    final ExecutorService processorExecutor = Executors.newSingleThreadExecutor();
-    final ScheduledExecutorService claimExecutor = Mockito.mock(ScheduledExecutorService.class);
-    final TaskActionClient actionClient = Mockito.mock(TaskActionClient.class);
-    Mockito.when(actionClient.submit(Mockito.any(ClaimShareInboxManifestsAction.class)))
-           .thenThrow(new java.io.IOException("processor failure"));
-    final ShareInboxProcessor processor = inboxProcessor(actionClient, claimExecutor);
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox, mapper);
-    try {
-      final java.io.IOException failure = Assertions.assertThrows(
-          java.io.IOException.class,
-          () -> runner.runDurableInboxLoops(
-              supplier,
-              records -> {},
-              stagingExecutor,
-              processor,
-              processorExecutor,
-              task.getIOConfig()
-          )
-      );
+    Mockito.when(reader.parse(Mockito.anyList(), Mockito.eq(false))).thenReturn(List.of());
 
-      Assertions.assertEquals("processor failure", failure.getMessage());
-      Assertions.assertTrue(supplier.wakeupCount.get() > 0);
-    }
-    finally {
-      stagingExecutor.shutdownNow();
-      processorExecutor.shutdownNow();
-    }
+    runner.runLoop(consumer, reader, driver, 300_000);
+
+    Mockito.verify(driver, Mockito.never()).publish(Mockito.any(), Mockito.any(), Mockito.any());
+    Mockito.verify(consumer).acknowledge(RECORD, AcknowledgeType.ACCEPT);
+    Mockito.verify(consumer).commitSync(Mockito.any());
   }
 
-  @Test
-  public void testResolveMaxPollIntervalUsesConsumerConfiguration()
+  private void preparePublishResult(SegmentPublishResult result) throws IOException
   {
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox, mapper);
-    final ShareGroupIndexTaskIOConfig ioConfig = new ShareGroupIndexTaskIOConfig(
-        "test-topic",
-        "test-share-group",
-        Map.of("bootstrap.servers", "localhost:9092", "max.poll.interval.ms", 12_345),
-        null,
-        null,
-        "test-inbox",
-        new LocalFileStorageConnectorProvider(new File("/tmp/share-inbox"))
-    );
-
-    Assertions.assertEquals(12_345L, runner.resolveMaxPollIntervalMs(ioConfig));
-  }
-
-  @Test
-  public void testReacquiresSegmentLockForRestoredSegment() throws Exception
-  {
-    final ShareGroupIndexTask segmentLockTask = buildTask(
-        "segment_lock_task",
-        ImmutableMap.of(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, false)
-    );
-    final TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
-    final TaskLock taskLock = Mockito.mock(TaskLock.class);
-    Mockito.when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
-    Mockito.when(taskActionClient.submit(Mockito.any(SegmentLockAcquireAction.class)))
-           .thenReturn(LockResult.ok(taskLock, null));
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(segmentLockTask, toolbox, mapper);
-
-    Assertions.assertTrue(runner.acquireLockForRestoredSegment(RESTORED_SEGMENT));
-
-    final ArgumentCaptor<SegmentLockAcquireAction> actionCaptor =
-        ArgumentCaptor.forClass(SegmentLockAcquireAction.class);
-    Mockito.verify(taskActionClient).submit(actionCaptor.capture());
-    final SegmentLockAcquireAction action = actionCaptor.getValue();
-    Assertions.assertEquals(TaskLockType.APPEND, action.getLockType());
-    Assertions.assertEquals(RESTORED_SEGMENT.getInterval(), action.getInterval());
-    Assertions.assertEquals(RESTORED_SEGMENT.getVersion(), action.getVersion());
-    Assertions.assertEquals(RESTORED_SEGMENT.getShardSpec().getPartitionNum(), action.getPartitionId());
-    Assertions.assertEquals(1000L, action.getTimeoutMs());
-  }
-
-  @Test
-  public void testRestoredSegmentLockAcquisitionFailureReturnsFalse() throws Exception
-  {
-    final ShareGroupIndexTask segmentLockTask = buildTask(
-        "segment_lock_task",
-        ImmutableMap.of(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, false)
-    );
-    final TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
-    Mockito.when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
-    Mockito.when(taskActionClient.submit(Mockito.any(SegmentLockAcquireAction.class)))
-           .thenReturn(LockResult.fail());
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(segmentLockTask, toolbox, mapper);
-
-    Assertions.assertFalse(runner.acquireLockForRestoredSegment(RESTORED_SEGMENT));
-  }
-
-  @Test
-  public void testReacquiresTimeChunkLockForRestoredSegment() throws Exception
-  {
-    final ShareGroupIndexTask timeChunkTask = buildTask(
-        "time_chunk_lock_task",
-        ImmutableMap.of(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true)
-    );
-    final TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
-    final TaskLock taskLock = Mockito.mock(TaskLock.class);
-    Mockito.when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
-    Mockito.when(taskActionClient.submit(Mockito.any(TimeChunkLockAcquireAction.class))).thenReturn(taskLock);
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(timeChunkTask, toolbox, mapper);
-
-    Assertions.assertTrue(runner.acquireLockForRestoredSegment(RESTORED_SEGMENT));
-
-    final ArgumentCaptor<TimeChunkLockAcquireAction> actionCaptor =
-        ArgumentCaptor.forClass(TimeChunkLockAcquireAction.class);
-    Mockito.verify(taskActionClient).submit(actionCaptor.capture());
-    final TimeChunkLockAcquireAction action = actionCaptor.getValue();
-    Assertions.assertEquals(TaskLockType.APPEND, action.getType());
-    Assertions.assertEquals(RESTORED_SEGMENT.getInterval(), action.getInterval());
-    Assertions.assertEquals(1000L, action.getTimeoutMs());
-    Mockito.verify(taskLock).assertNotRevoked();
-  }
-
-  @Test
-  public void testRestoredTimeChunkLockAcquisitionFailureReturnsFalse() throws Exception
-  {
-    final ShareGroupIndexTask timeChunkTask = buildTask(
-        "time_chunk_lock_task",
-        ImmutableMap.of(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true)
-    );
-    final TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
-    Mockito.when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
-    Mockito.when(taskActionClient.submit(Mockito.any(TimeChunkLockAcquireAction.class))).thenReturn(null);
-    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(timeChunkTask, toolbox, mapper);
-
-    Assertions.assertFalse(runner.acquireLockForRestoredSegment(RESTORED_SEGMENT));
-  }
-
-  private ShareGroupIndexTask buildTask(String id, Map<String, Object> context)
-  {
-    return new ShareGroupIndexTask(
-        id,
-        null,
-        task.getDataSchema(),
-        task.getTuningConfig(),
-        task.getIOConfig(),
-        context,
-        mapper
-    );
-  }
-
-  private ShareInboxProcessor inboxProcessor(
-      TaskActionClient actionClient,
-      ScheduledExecutorService claimExecutor
-  )
-  {
-    final ShareGroupIndexTaskIOConfig ioConfig = task.getIOConfig();
-    return new ShareInboxProcessor(
-        actionClient,
-        Mockito.mock(ShareInboxRecordSource.class),
-        Mockito.mock(ShareInboxBatchHandler.class),
-        claimExecutor,
-        task.getDataSource(),
-        ioConfig.getInboxId(),
-        "fingerprint",
-        task.getId(),
-        ioConfig.getMaxProcessingManifests(),
-        ioConfig.getMaxProcessingRecords(),
-        ioConfig.getMaxProcessingBytes(),
-        ioConfig.getClaimDurationMillis(),
-        ioConfig.getClaimRenewalPeriodMillis(),
-        ioConfig.getInboxPollPeriodMillis()
-    );
-  }
-
-  private static class DurableInboxFakeSupplier
-      implements AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>
-  {
-    private final CountDownLatch accepted = new CountDownLatch(1);
-    private final AtomicInteger pollCount = new AtomicInteger();
-    private final AtomicInteger flushCount = new AtomicInteger();
-    private final AtomicInteger wakeupCount = new AtomicInteger();
-
-    @Override
-    public void subscribe(Set<String> topics)
-    {
-    }
-
-    @Override
-    public void unsubscribe()
-    {
-    }
-
-    @Override
-    public Set<String> subscription()
-    {
-      return Set.of("test-topic");
-    }
-
-    @Override
-    public List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> poll(long timeoutMs)
-    {
-      if (pollCount.getAndIncrement() > 0) {
-        return List.of();
-      }
-      return List.of(KafkaShareGroupRecord.from(new ConsumerRecord<>(
-          "test-topic",
-          0,
-          1L,
-          new byte[]{1},
-          new byte[]{2}
-      )));
-    }
-
-    @Override
-    public void acknowledge(KafkaTopicPartition partitionId, Long offset)
-    {
-      acknowledge(partitionId, offset, AcknowledgeType.ACCEPT);
-    }
-
-    @Override
-    public void acknowledge(KafkaTopicPartition partitionId, Long offset, AcknowledgeType type)
-    {
-      if (type == AcknowledgeType.ACCEPT) {
-        accepted.countDown();
-      }
-    }
-
-    @Override
-    public void acknowledge(Map<KafkaTopicPartition, Collection<Long>> offsets, AcknowledgeType type)
-    {
-      for (Map.Entry<KafkaTopicPartition, Collection<Long>> entry : offsets.entrySet()) {
-        for (Long offset : entry.getValue()) {
-          acknowledge(entry.getKey(), offset, type);
-        }
-      }
-    }
-
-    @Override
-    public Map<KafkaTopicPartition, Optional<Exception>> flushAcknowledgementsSync()
-    {
-      flushCount.incrementAndGet();
-      return Map.of(new KafkaTopicPartition(true, "test-topic", 0), Optional.empty());
-    }
-
-    @Override
-    public Map<KafkaTopicPartition, Optional<Exception>> commitSync()
-    {
-      return flushAcknowledgementsSync();
-    }
-
-    @Override
-    public Set<KafkaTopicPartition> getPartitionIds(String stream)
-    {
-      return Set.of();
-    }
-
-    @Override
-    public void wakeup()
-    {
-      wakeupCount.incrementAndGet();
-    }
-
-    @Override
-    public Optional<Integer> acquisitionLockTimeoutMs()
-    {
-      return Optional.of(30_000);
-    }
-
-    @Override
-    public void close()
-    {
-    }
+    Mockito.when(actionClient.submit(Mockito.any(SegmentTransactionalAppendAction.class))).thenReturn(result);
+    Mockito.when(driver.publish(Mockito.any(), Mockito.any(), Mockito.any())).thenAnswer(invocation -> {
+      final TransactionalSegmentPublisher publisher = invocation.getArgument(0);
+      publisher.publishAnnotatedSegments(null, Set.of(SEGMENT), null, null);
+      return Futures.immediateFuture(new SegmentsAndCommitMetadata(List.of(SEGMENT), null).withWasPublished(true));
+    });
   }
 }

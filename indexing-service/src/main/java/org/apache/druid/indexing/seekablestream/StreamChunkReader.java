@@ -42,11 +42,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Parses one stream record's worth of {@link ByteEntity} chunks into zero-or-more
- * {@link InputRow}s, honouring the configured {@link InputRowFilter},
- * {@link RowIngestionMeters}, and {@link ParseExceptionHandler}. Public so it
- * can be reused by stream-ingestion implementations outside the
- * {@code seekablestream} package.
+ * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}.
  */
 public class StreamChunkReader<RecordType extends ByteEntity>
 {
@@ -102,8 +98,7 @@ public class StreamChunkReader<RecordType extends ByteEntity>
     return transformFilter.and(rowFilter);
   }
 
-  public List<InputRow> parse(@Nullable List<? extends RecordType> streamChunk, boolean isEndOfShard)
-      throws IOException
+  public List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
   {
     return parse(streamChunk, isEndOfShard, false);
   }
@@ -120,7 +115,7 @@ public class StreamChunkReader<RecordType extends ByteEntity>
    *                     the parse cost is the point of pre-ingestion filtering. The record still flows through so that
    *                     stream offsets advance.
    */
-  List<InputRow> parse(@Nullable List<? extends RecordType> streamChunk, boolean isEndOfShard, boolean isFiltered)
+  List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard, boolean isFiltered)
       throws IOException
   {
     if (isFiltered) {

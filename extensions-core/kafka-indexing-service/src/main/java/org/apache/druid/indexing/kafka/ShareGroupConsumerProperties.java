@@ -19,24 +19,18 @@
 
 package org.apache.druid.indexing.kafka;
 
-import com.google.common.collect.ImmutableSet;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.utils.CollectionUtils;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-/**
- * Removes consumer properties rejected by
- * {@link org.apache.kafka.clients.consumer.KafkaShareConsumer} before the share consumer is created.
- */
-public final class ShareGroupConsumerProperties
+final class ShareGroupConsumerProperties
 {
   private static final Logger log = new Logger(ShareGroupConsumerProperties.class);
 
-  /** Mirrors the unsupported configuration set of the Kafka client used by Druid. */
-  static final Set<String> UNSUPPORTED_CONFIGS = ImmutableSet.of(
+  private static final Set<String> UNSUPPORTED_CONFIGS = Set.of(
       "auto.offset.reset",
       "enable.auto.commit",
       "group.instance.id",
@@ -53,42 +47,18 @@ public final class ShareGroupConsumerProperties
   {
   }
 
-  /**
-   * Returns a copy of {@code consumerProperties} with unsupported keys
-   * removed; each removed key is logged at WARN. Iteration order is preserved.
-   */
-  public static Map<String, Object> sanitize(Map<String, Object> consumerProperties)
+  static Properties resolve(ShareGroupIndexTaskIOConfig ioConfig, ObjectMapper mapper)
   {
-    final Map<String, Object> sanitized = CollectionUtils.newLinkedHashMapWithExpectedSize(consumerProperties.size());
-    for (Map.Entry<String, Object> entry : consumerProperties.entrySet()) {
-      if (UNSUPPORTED_CONFIGS.contains(entry.getKey())) {
-        log.warn(
-            "Stripping unsupported consumer property [%s] for share-group consumer "
-            + "(see Kafka ShareConsumerConfig).",
-            entry.getKey()
-        );
-      } else {
-        sanitized.put(entry.getKey(), entry.getValue());
-      }
-    }
-    return sanitized;
-  }
-
-  /**
-   * Removes unsupported keys from a fully-resolved {@link Properties} object in place.
-   * Use this after expanding {@code druid.dynamic.config.provider} so that values
-   * pulled from a secrets vault cannot reintroduce a forbidden key.
-   */
-  public static void sanitize(Properties properties)
-  {
-    for (String key : UNSUPPORTED_CONFIGS) {
+    final Properties properties = new Properties();
+    KafkaRecordSupplier.addConsumerPropertiesFromConfig(properties, mapper, ioConfig.getConsumerProperties());
+    for (final String key : UNSUPPORTED_CONFIGS) {
       if (properties.remove(key) != null) {
-        log.warn(
-            "Stripping unsupported consumer property [%s] for share-group consumer "
-            + "(see Kafka ShareConsumerConfig).",
-            key
-        );
+        log.warn("Ignoring consumer property [%s] for Kafka share group [%s].", key, ioConfig.getGroupId());
       }
     }
+    properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, ioConfig.getGroupId());
+    properties.setProperty(ConsumerConfig.SHARE_ACKNOWLEDGEMENT_MODE_CONFIG, "explicit");
+    properties.setProperty(ConsumerConfig.SHARE_ACQUIRE_MODE_CONFIG, "record_limit");
+    return properties;
   }
 }

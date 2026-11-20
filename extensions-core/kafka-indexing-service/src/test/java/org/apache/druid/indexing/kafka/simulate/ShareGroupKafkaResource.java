@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.indexing;
+package org.apache.druid.indexing.kafka.simulate;
 
-import org.apache.druid.indexing.kafka.simulate.KafkaResource;
+import org.apache.druid.common.utils.SocketUtil;
+import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.AlterConfigOp;
 import org.apache.kafka.clients.admin.ConfigEntry;
@@ -51,6 +52,16 @@ public class ShareGroupKafkaResource extends KafkaResource
       throw new IllegalArgumentException("recordLockDurationMs must be at least 1000");
     }
     this.recordLockDurationMs = recordLockDurationMs;
+  }
+
+  static void assignAvailablePorts(EmbeddedDruidServer<?>... servers)
+  {
+    for (final EmbeddedDruidServer<?> server : servers) {
+      server.addBeforeStartHook((cluster, self) -> self.addProperty(
+          "druid.plaintextPort",
+          String.valueOf(SocketUtil.findOpenPort(10_000))
+      ));
+    }
   }
 
   @Override
