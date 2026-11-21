@@ -22,7 +22,9 @@ package org.apache.druid.msq.querykit;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.frame.Frame;
@@ -30,6 +32,7 @@ import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.Bouncer;
+import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessorExecutorTest;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.manager.NilFrameProcessor;
@@ -65,6 +68,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
@@ -195,6 +199,36 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
   }
 
   @Test
+  public void test_asynchronously_completing_processor_manager() throws Exception
+  {
+    final ImmutableList<Long> expectedValues = ImmutableList.of(1L, 2L, 3L);
+    final BlockingQueueFrameChannel outputChannel = new BlockingQueueFrameChannel(3);
+
+    final ChainedProcessorManager<List<Long>, Long, Long> chainedProcessorManager = new ChainedProcessorManager<>(
+        new CompleteAfterProcessorRunsProcessorManager<>(new SimpleReturningFrameProcessor<>(expectedValues)),
+        (values) -> createNextProcessors(
+            outputChannel.writable(),
+            values.stream().flatMap(List::stream).collect(Collectors.toList())
+        )
+    );
+
+    exec.runAllFully(
+        chainedProcessorManager,
+        maxOutstandingProcessors,
+        bouncer,
+        null
+    ).get(1, TimeUnit.MINUTES);
+
+    final HashSet<Long> actualValues = new HashSet<>();
+    try (ReadableFrameChannel readable = outputChannel.readable()) {
+      while (readable.canRead()) {
+        actualValues.add(extractColumnValue(readable.readFrame(), 1));
+      }
+    }
+    Assertions.assertEquals(new HashSet<>(expectedValues), actualValues);
+  }
+
+  @Test
   public void test_first_processor_manager_closed_after_exhaustion() throws ExecutionException, InterruptedException
   {
     final BlockingQueueFrameChannel outputChannel = new BlockingQueueFrameChannel(3);
@@ -235,6 +269,29 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     ).get();
 
     Assertions.assertTrue(firstClosed.get(), "first manager must be closed even after returning all its processors");
+  }
+
+  @Test
+  public void test_close_cancels_pending_next_from_rest() throws Exception
+  {
+    final ChainedProcessorManager<List<Long>, Long, Long> chainedProcessorManager = new ChainedProcessorManager<>(
+        ProcessorManagers.of(() -> new SimpleReturningFrameProcessor<>(ImmutableList.of(1L, 2L, 3L))),
+        values -> {
+          throw new AssertionError("restFactory must not be called");
+        }
+    );
+
+    final Optional<ProcessorAndCallback<Object>> firstProcessor = chainedProcessorManager.next().get();
+    Assertions.assertTrue(firstProcessor.isPresent());
+
+    // First manager is exhausted, but its processor has not completed, so this waits for restFuture.
+    final ListenableFuture<Optional<ProcessorAndCallback<Object>>> nextFromRest = chainedProcessorManager.next();
+    Assertions.assertFalse(nextFromRest.isDone());
+
+    chainedProcessorManager.close();
+    Assertions.assertTrue(nextFromRest.isCancelled());
+
+    firstProcessor.get().processor().cleanup();
   }
 
   @Test
@@ -344,6 +401,47 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
   {
     final Map<String, Object> event = TestHelper.makeMap(true, kv);
     return new MapBasedInputRow(0L, ImmutableList.copyOf(event.keySet()), event);
+  }
+
+  /**
+   * Processor manager that returns a single processor, and only reports that it has no more processors once that
+   * processor has completed.
+   */
+  private static class CompleteAfterProcessorRunsProcessorManager<T> implements ProcessorManager<T, Long>
+  {
+    private final FrameProcessor<T> processor;
+    private final SettableFuture<Optional<ProcessorAndCallback<T>>> doneFuture = SettableFuture.create();
+    private boolean returnedProcessor;
+
+    public CompleteAfterProcessorRunsProcessorManager(final FrameProcessor<T> processor)
+    {
+      this.processor = processor;
+    }
+
+    @Override
+    public ListenableFuture<Optional<ProcessorAndCallback<T>>> next()
+    {
+      if (returnedProcessor) {
+        return doneFuture;
+      }
+
+      returnedProcessor = true;
+      return Futures.immediateFuture(
+          Optional.of(new ProcessorAndCallback<>(processor, ignored -> doneFuture.set(Optional.empty())))
+      );
+    }
+
+    @Override
+    public Long result()
+    {
+      return 0L;
+    }
+
+    @Override
+    public void close()
+    {
+      doneFuture.cancel(false);
+    }
   }
 
   public static class PrintFirstAndReturnRestFrameProcessor extends SingleChannelFrameProcessor<List<Long>>
