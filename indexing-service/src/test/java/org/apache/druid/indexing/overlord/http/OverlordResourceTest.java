@@ -63,6 +63,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
@@ -1256,6 +1257,28 @@ public class OverlordResourceTest
 
     Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), response.getStatus());
     Assertions.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
+  }
+
+  @Test
+  public void testHandoffWorkerTasksWhenTaskRunnerIsNotWorkerTaskRunner()
+  {
+    replayAll();
+
+    final Response response = overlordResource.handoffWorkerTasks(
+        "mm-0.svc.ns.svc.cluster.local:8091"
+    );
+
+    Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), response.getStatus());
+    Assertions.assertEquals(
+        ImmutableMap.of(
+            "error",
+            StringUtils.format(
+                "Task runner type[%s] does not support worker handoff",
+                taskRunner.getClass().getName()
+            )
+        ),
+        response.getEntity()
+    );
   }
 
   @Test

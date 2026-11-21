@@ -36,10 +36,12 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.actions.TaskLocks;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
@@ -62,14 +64,18 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
+import java.util.function.Function;
 
 /**
  * Manages the creation and lifetime of {@link Supervisor}.
@@ -180,6 +186,80 @@ public class SupervisorManager implements SupervisorStatsProvider
     final StreamSupervisor streamSupervisor = requireStreamSupervisor(id, "handoff");
     streamSupervisor.handoffTaskGroupsEarly(taskGroupIds);
     return true;
+  }
+
+  public WorkerHandoffResult submitHandoffNotices(
+      Collection<String> runningTaskIds,
+      Function<String, Optional<Task>> taskLookup
+  )
+  {
+    final Map<String, Set<Integer>> grouped = new LinkedHashMap<>();
+    final Map<String, List<String>> taskIdsBySupervisor = new LinkedHashMap<>();
+    final List<WorkerHandoffResult.SkippedTask> skipped = new ArrayList<>();
+    for (String taskId : runningTaskIds) {
+      if (taskId == null || taskId.isEmpty()) {
+        continue;
+      }
+      final Optional<Task> taskOptional = taskLookup.apply(taskId);
+      if (!taskOptional.isPresent()) {
+        continue;
+      }
+      final Task task = taskOptional.get();
+      if (!(task instanceof SeekableStreamIndexTask<?, ?, ?>)) {
+        continue;
+      }
+      final SeekableStreamIndexTask<?, ?, ?> streamTask = (SeekableStreamIndexTask<?, ?, ?>) task;
+      final Integer taskGroupId = streamTask.getIOConfig().getTaskGroupId();
+      if (taskGroupId == null) {
+        log.info("Skipping task [%s]: streaming task has no taskGroupId", taskId);
+        skipped.add(new WorkerHandoffResult.SkippedTask(taskId, WorkerHandoffResult.REASON_MISSING_TASK_GROUP_ID));
+        continue;
+      }
+      final String supervisorId = streamTask.getSupervisorId();
+      if (supervisorId == null || supervisorId.isEmpty()) {
+        log.info("Skipping task [%s]: streaming task has no supervisorId", taskId);
+        skipped.add(new WorkerHandoffResult.SkippedTask(taskId, WorkerHandoffResult.REASON_MISSING_SUPERVISOR_ID));
+        continue;
+      }
+      grouped.computeIfAbsent(supervisorId, ignored -> new TreeSet<>()).add(taskGroupId);
+      taskIdsBySupervisor.computeIfAbsent(supervisorId, ignored -> new ArrayList<>()).add(taskId);
+    }
+
+    if (grouped.isEmpty()) {
+      return new WorkerHandoffResult(Collections.emptyMap(), skipped);
+    }
+
+    final Map<String, List<Integer>> accepted = new LinkedHashMap<>();
+    for (Map.Entry<String, Set<Integer>> entry : grouped.entrySet()) {
+      final String supervisorId = entry.getKey();
+      final List<Integer> taskGroupIds = new ArrayList<>(entry.getValue());
+      try {
+        if (handoffTaskGroupsEarly(supervisorId, taskGroupIds)) {
+          accepted.put(supervisorId, taskGroupIds);
+        } else {
+          log.info(
+              "Supervisor [%s] was not found; skipping early handoff for task groups [%s]",
+              supervisorId,
+              taskGroupIds
+          );
+          for (String taskId : taskIdsBySupervisor.getOrDefault(supervisorId, Collections.emptyList())) {
+            skipped.add(new WorkerHandoffResult.SkippedTask(taskId, WorkerHandoffResult.REASON_SUPERVISOR_NOT_FOUND));
+          }
+        }
+      }
+      catch (UnsupportedOperationException | DruidException e) {
+        log.warn(
+            e,
+            "Supervisor [%s] does not support early handoff; skipping task groups [%s]",
+            supervisorId,
+            taskGroupIds
+        );
+        for (String taskId : taskIdsBySupervisor.getOrDefault(supervisorId, Collections.emptyList())) {
+          skipped.add(new WorkerHandoffResult.SkippedTask(taskId, WorkerHandoffResult.REASON_HANDOFF_UNSUPPORTED));
+        }
+      }
+    }
+    return new WorkerHandoffResult(accepted, skipped);
   }
 
   /**
