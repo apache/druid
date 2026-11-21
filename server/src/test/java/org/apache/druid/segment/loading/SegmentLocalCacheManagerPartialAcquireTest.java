@@ -351,17 +351,18 @@ class SegmentLocalCacheManagerPartialAcquireTest
         full.close();
         gate.release.countDown();
 
-        // The download must still finish against containers that are all still there. Nothing observes the abandoned
-        // result directly (the producer closes it when delivery fails against the closed action), so completion shows
-        // up in the location's load-complete accounting: the gated fetch - exactly where an eviction-under-the-
-        // download used to fail - must complete its container file, and the task's holds must all unwind afterward.
+        // The in-flight container fetch must still complete against containers that are all still there (the task
+        // stops at the next between-fetch abandonment checkpoint, but never mid-fetch). Nothing observes the
+        // abandoned result directly, so completion shows up in the location's load-complete accounting: the gated
+        // fetch - exactly where an eviction-under-the-download used to fail - must complete its container file, and
+        // the task's holds must all unwind afterward.
         final long deadline = System.currentTimeMillis() + 60_000;
         while (location.getWeakStats().getLoadBytes() <= loadBytesAtGate && System.currentTimeMillis() < deadline) {
           Thread.sleep(10);
         }
         Assertions.assertTrue(
             location.getWeakStats().getLoadBytes() > loadBytesAtGate,
-            "the abandoned download should still complete container files"
+            "the abandoned download should still complete the in-flight container fetch"
         );
         // Only the warm action's metadata hold should remain once the abandoned task unwinds.
         while (location.getWeakStats().getHoldCount() > 1 && System.currentTimeMillis() < deadline) {
@@ -371,6 +372,76 @@ class SegmentLocalCacheManagerPartialAcquireTest
       }
       finally {
         DOWNLOAD_GATE.set(null);
+      }
+    }
+  }
+
+  @Test
+  void testCloseMidFullDownloadAbandonsRemainingContainerFetches() throws Exception
+  {
+    jsonMapper.registerSubtypes(new NamedType(GatedLocalLoadSpec.class, GatedLocalLoadSpec.TYPE));
+    final DataSegment gatedSegment = DataSegment.builder(SEGMENT_ID)
+                                                .shardSpec(NoneShardSpec.instance())
+                                                .loadSpec(Map.of(
+                                                    "type", GatedLocalLoadSpec.TYPE,
+                                                    "path", DEEP_STORAGE_DIR.getAbsolutePath()
+                                                ))
+                                                .size(0)
+                                                .build();
+
+    // Warm the metadata entry (and keep it held) so the gate below can only be reached from inside the full
+    // download's container fetches.
+    try (AcquireSegmentAction warm = manager.acquireSegment(gatedSegment, AcquireMode.PARTIAL)) {
+      warm.await();
+      final StorageLocation location = manager.getLocations().get(0);
+
+      final DownloadGate gate = new DownloadGate();
+      DOWNLOAD_GATE.set(gate);
+      try {
+        final AcquireSegmentAction full = manager.acquireSegment(gatedSegment, AcquireMode.FULL);
+        Assertions.assertTrue(
+            gate.entered.await(60, TimeUnit.SECONDS),
+            "the full download should have reached a container fetch"
+        );
+        // Parked at the gate, the task holds its metadata reservation plus one acquire hold per bundle (two bundles
+        // here: __base and the projection). Mounted entries keep their own self-holds in a non-ephemeral location,
+        // so drain is measured as the task releasing those three acquire holds, not as an absolute count.
+        final long holdsDuringDownload = location.getWeakStats().getHoldCount();
+
+        // Abandon the acquire while the first container fetch is parked at the gate, then let it go: the task
+        // completes the in-flight fetch, observes abandonment at the next between-fetch checkpoint, and unwinds
+        // without fetching the remaining containers.
+        full.close();
+        gate.release.countDown();
+
+        final long deadline = System.currentTimeMillis() + 60_000;
+        while (location.getWeakStats().getHoldCount() > holdsDuringDownload - 3
+               && System.currentTimeMillis() < deadline) {
+          Thread.sleep(10);
+        }
+        Assertions.assertEquals(
+            holdsDuringDownload - 3,
+            location.getWeakStats().getHoldCount(),
+            "the abandoned task's reservation and bundle holds did not drain"
+        );
+      }
+      finally {
+        DOWNLOAD_GATE.set(null);
+      }
+
+      // The abandoned task must have left work undone: a fresh FULL acquire (gate cleared, weak entries are not
+      // ephemeral here, so the fetched container stayed resident) still has containers to download, and completes
+      // the segment normally.
+      try (AcquireSegmentAction resumed = manager.acquireSegment(gatedSegment, AcquireMode.FULL)) {
+        resumed.await();
+        final AcquireSegmentResult result = resumed.release();
+        Assertions.assertTrue(
+            result.getLoadSizeBytes() > 0,
+            "the abandoned download must have stopped before fetching every container"
+        );
+        try (Segment segment = result.getSegment().orElseThrow()) {
+          Assertions.assertEquals(SEGMENT_ID, segment.getId());
+        }
       }
     }
   }
