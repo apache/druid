@@ -58,6 +58,8 @@ public class KafkaInputReader implements InputEntityReader
   private final String topicColumnName;
   private final String partitionColumnName;
   private final String offsetColumnName;
+  @Nullable
+  private final String keyColumnPrefix;
 
   /**
    * @param inputRowSchema       Actual schema from the ingestion spec
@@ -67,6 +69,8 @@ public class KafkaInputReader implements InputEntityReader
    * @param valueParser          Value parser is a required section in kafkaInputFormat. It cannot be null.
    * @param keyColumnName        Default key column name
    * @param timestampColumnName  Default kafka record's timestamp column name
+   * @param keyColumnPrefix      If non-null, every field of the parsed key is added as a column with this prefix,
+   *                             instead of only the first field being added as keyColumnName
    */
   public KafkaInputReader(
       InputRowSchema inputRowSchema,
@@ -78,7 +82,8 @@ public class KafkaInputReader implements InputEntityReader
       String timestampColumnName,
       String topicColumnName,
       String partitionColumnName,
-      String offsetColumnName
+      String offsetColumnName,
+      @Nullable String keyColumnPrefix
   )
   {
     this.inputRowSchema = inputRowSchema;
@@ -91,6 +96,7 @@ public class KafkaInputReader implements InputEntityReader
     this.topicColumnName = topicColumnName;
     this.partitionColumnName = partitionColumnName;
     this.offsetColumnName = offsetColumnName;
+    this.keyColumnPrefix = keyColumnPrefix;
   }
 
   @Override
@@ -152,8 +158,14 @@ public class KafkaInputReader implements InputEntityReader
         // Key currently only takes the first row and ignores the rest.
         if (keyIterator.hasNext()) {
           final InputRow keyRow = keyIterator.next();
-          // Add the key to the mergeList only if the key string is not already present
-          mergedHeaderMap.computeIfAbsent(keyColumnName, ignored -> getFirstValue(keyRow));
+          if (keyColumnPrefix == null) {
+            // Add the key to the mergeList only if the key string is not already present
+            mergedHeaderMap.computeIfAbsent(keyColumnName, ignored -> getFirstValue(keyRow));
+          } else {
+            for (String field : keyRow.getDimensions()) {
+              putKeyFieldIfAbsent(mergedHeaderMap, field, keyRow.getRaw(field));
+            }
+          }
         }
       }
       catch (ClassCastException e) {
@@ -203,11 +215,27 @@ public class KafkaInputReader implements InputEntityReader
           // Return type for the key parser should be of type MapBasedInputRow
           // Parsers returning other types are not compatible currently.
           InputRowListPlusRawValues keyRow = keyIterator.next();
-          // Add the key to the mergeList only if the key string is not already present
-          mergedHeaderMap.putIfAbsent(
-              keyColumnName,
-              keyRow.getRawValues().entrySet().stream().findFirst().get().getValue()
-          );
+          if (keyColumnPrefix == null) {
+            // Add the key to the mergeList only if the key string is not already present
+            mergedHeaderMap.putIfAbsent(
+                keyColumnName,
+                keyRow.getRawValues().entrySet().stream().findFirst().get().getValue()
+            );
+          } else {
+            // Prefer the parsed row so the sampler shows the same key columns as ingestion (including any fields
+            // produced by a flattenSpec on keyFormat). Fall back to the raw values if the key did not parse.
+            final List<InputRow> keyInputRows = keyRow.getInputRows();
+            final InputRow parsedKeyRow = keyInputRows == null || keyInputRows.isEmpty() ? null : keyInputRows.get(0);
+            if (parsedKeyRow != null) {
+              for (String field : parsedKeyRow.getDimensions()) {
+                putKeyFieldIfAbsent(mergedHeaderMap, field, parsedKeyRow.getRaw(field));
+              }
+            } else if (keyRow.getRawValues() != null) {
+              for (Map.Entry<String, Object> entry : keyRow.getRawValues().entrySet()) {
+                putKeyFieldIfAbsent(mergedHeaderMap, entry.getKey(), entry.getValue());
+              }
+            }
+          }
           return InputRowListPlusRawValues.of(buildInputRowsForMap(mergedHeaderMap), mergedHeaderMap);
         }
       }
@@ -345,6 +373,21 @@ public class KafkaInputReader implements InputEntityReader
                        .collect(Collectors.toCollection(LinkedHashSet::new));
       }
     };
+  }
+
+  /**
+   * Adds a key field to the merged header/key map as {@code keyColumnPrefix + field}. Headers and record metadata
+   * that are already present take precedence, matching the behavior for {@link #keyColumnName}.
+   */
+  private void putKeyFieldIfAbsent(Map<String, Object> mergedHeaderMap, String field, @Nullable Object value)
+  {
+    if (KafkaInputFormat.DEFAULT_AUTO_TIMESTAMP_STRING.equals(field)) {
+      return;
+    }
+    final String column = keyColumnPrefix + field;
+    if (!mergedHeaderMap.containsKey(column)) {
+      mergedHeaderMap.put(column, value);
+    }
   }
 
   /**
