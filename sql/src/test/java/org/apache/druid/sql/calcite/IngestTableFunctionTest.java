@@ -471,6 +471,84 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .verify();
   }
 
+  /**
+   * A BIGINT parameter accepts a dynamic parameter that is bound as an exact integer.
+   */
+  @Test
+  public void testHttpFnSkipHeaderRowsWithParameter()
+  {
+    final int skipHeaderRows = 3;
+
+    testIngestionQuery()
+        .sql("""
+            INSERT INTO dst SELECT * FROM TABLE(http(
+                userName => 'bob',
+                password => 'secret',
+                uris => ARRAY['http://foo.com/bar.csv'],
+                format => 'csv',
+                skipHeaderRows => ?
+            )) EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
+            PARTITIONED BY ALL TIME
+            """)
+        .parameters(Collections.singletonList(new SqlParameter(SqlType.BIGINT, (long) skipHeaderRows)))
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", httpDataSource.getSignature())
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(new ExternalDataSource(
+                    httpDataSource.getInputSource(),
+                    new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, skipHeaderRows, null),
+                    httpDataSource.getSignature()
+                ))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
+  /**
+   * A BIGINT parameter accepts only an exact integer that fits in 64 bits.
+   * {@code 1e2} is integral, but it is rejected because the exponent makes it an approximate DOUBLE.
+   */
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', quoteCharacter = '"', value = {
+      "1e2 | is of type [DOUBLE]",
+      "1.5 | is of type [DECIMAL]",
+      "'3' | is of type [VARCHAR]",
+      "TRUE | is of type [BOOLEAN]",
+      "9223372036854775808 | is out of range"
+  })
+  public void testHttpFnRejectsNonIntegerSkipHeaderRows(final String skipHeaderRows, final String actual)
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format(
+            """
+            INSERT INTO dst SELECT * FROM TABLE(http(
+                uris => ARRAY['http://foo.com/bar.csv'],
+                format => 'csv',
+                skipHeaderRows => %s
+            )) EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
+            PARTITIONED BY ALL TIME
+            """,
+            skipHeaderRows
+        ))
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(
+            DruidExceptionMatcher.invalidSqlInput().expectMessageIs(
+                StringUtils.format(
+                    "Argument [skipHeaderRows] of table function [http] must be a literal of type [BIGINT]"
+                    + " or a compatible type, but %s.",
+                    actual
+                )
+            )
+        )
+        .verify();
+  }
+
   @Test
   public void testHttpFn2()
   {

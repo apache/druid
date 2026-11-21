@@ -201,8 +201,7 @@ public class BaseUserDefinedTableMacro extends SqlUserDefinedTableMacro
    * <li>{@code 100} is an exact INTEGER: false.</li>
    * <li>{@code 100.0} and {@code 1.5} are exact DECIMALs: false.</li>
    * <li>{@code 1e2} and {@code 1.5E0} are written with an exponent, which makes them DOUBLEs: true.</li>
-   * <li>A dynamic parameter bound as FLOAT, REAL or DOUBLE: true.</li>
-   * <li>A dynamic parameter bound as INTEGER, BIGINT or DECIMAL: false.</li>
+   * <li>A dynamic parameter bound as BIGINT becomes an exact literal: false.</li>
    * </ul>
    * An approximate value is rejected for a BIGINT parameter even when it is integral, such as {@code 1e2}.
    * An exact value with a fraction, such as {@code 1.5}, is not handled here, {@link #convertLiteral} rejects it.
