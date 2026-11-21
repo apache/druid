@@ -38,19 +38,17 @@ import org.eclipse.jetty.compression.zstandard.ZstandardEncoderConfig;
 import org.eclipse.jetty.ee8.servlet.FilterHolder;
 import org.eclipse.jetty.ee8.servlet.FilterMapping;
 import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.rewrite.handler.HeaderPatternRule;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
 
-import javax.ws.rs.HttpMethod;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 public class JettyServerInitUtils
 {
-  private static final String[] DECOMPRESS_METHODS = {HttpMethod.POST, HttpMethod.PUT, HttpMethod.DELETE, "PATCH"};
-
   /**
    * Wraps the handler with a {@link CompressionHandler} that compresses responses to GET and POST requests and
    * decompresses request bodies.
@@ -75,12 +73,13 @@ public class JettyServerInitUtils
     final CompressionHandler compressionHandler = createCompressionHandler(compressionConfig);
 
     // defaults() compresses responses to GET and POST and skips already-compressed types. It decompresses only POST
-    // bodies, so add the other methods that may carry a body, as the old GzipHandler inflated requests of any method.
+    // bodies, and its method include list cannot be cleared, so include every method Jetty knows, as the old
+    // GzipHandler inflated request bodies of any method.
     final CompressionConfig.Builder config = CompressionConfig.builder()
                                                               .defaults()
                                                               .compressPreferredEncodings(compressionConfig.getCodecNames());
-    for (String method : DECOMPRESS_METHODS) {
-      config.decompressIncludeMethod(method);
+    for (HttpMethod method : HttpMethod.values()) {
+      config.decompressIncludeMethod(method.asString());
     }
     if (!compressionConfig.getCodecs().contains(CompressionCodec.GZIP)) {
       // gzip stays registered for request decompression, so exclude it from response compression.

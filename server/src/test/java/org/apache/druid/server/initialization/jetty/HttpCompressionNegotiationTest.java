@@ -252,16 +252,22 @@ public class HttpCompressionNegotiationTest
   }
 
   @Test
-  public void testRequestDecompressionOfPut() throws Exception
+  public void testRequestDecompressionOfAnyMethod() throws Exception
   {
+    // As with the old GzipHandler, request bodies are decompressed for every method, not only POST.
     final URL newServer = startServer(NEW_SERVER);
-    final HttpURLConnection connection = (HttpURLConnection) newServer.openConnection();
-    connection.setRequestMethod("PUT");
-    connection.setRequestProperty("Content-Encoding", "zstd");
-    connection.setDoOutput(true);
-    connection.getOutputStream().write(Zstd.compress(PAYLOAD, 3));
-    Assertions.assertEquals(200, connection.getResponseCode());
-    Assertions.assertArrayEquals(PAYLOAD, IOUtils.toByteArray(connection.getInputStream()));
+    final HttpClient client = makeClient(null);
+    for (String method : ImmutableList.of("GET", "PUT", "DELETE", "PATCH", "OPTIONS")) {
+      for (String encoding : ImmutableList.of("gzip", "zstd")) {
+        final byte[] body = "gzip".equals(encoding) ? gzip(PAYLOAD) : Zstd.compress(PAYLOAD, 3);
+        final Request request = new Request(HttpMethod.valueOf(method), newServer)
+            .setHeader("Content-Encoding", encoding)
+            .setContent("application/octet-stream", body);
+        final BytesFullResponseHolder holder = client.go(request, new BytesFullResponseHandler()).get();
+        Assertions.assertEquals(200, holder.getStatus().code(), method);
+        Assertions.assertArrayEquals(PAYLOAD, holder.getContent(), StringUtils.format("%s %s", method, encoding));
+      }
+    }
   }
 
   @Test
@@ -432,27 +438,16 @@ public class HttpCompressionNegotiationTest
   }
 
   /**
-   * Returns {@link #PAYLOAD} for GET, and echoes the request body for POST and PUT. Also echoes the request's
+   * Echoes the request body, or returns {@link #PAYLOAD} if the request has no body. Also echoes the request's
    * {@code Accept-Encoding} header, so tests can see what the client sent.
    */
   private static class PayloadServlet extends HttpServlet
   {
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException
+    protected void service(HttpServletRequest req, HttpServletResponse resp) throws IOException
     {
-      write(req, resp, PAYLOAD);
-    }
-
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException
-    {
-      write(req, resp, IOUtils.toByteArray(req.getInputStream()));
-    }
-
-    @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException
-    {
-      write(req, resp, IOUtils.toByteArray(req.getInputStream()));
+      final byte[] body = IOUtils.toByteArray(req.getInputStream());
+      write(req, resp, body.length == 0 ? PAYLOAD : body);
     }
 
     private static void write(HttpServletRequest req, HttpServletResponse resp, byte[] body) throws IOException
