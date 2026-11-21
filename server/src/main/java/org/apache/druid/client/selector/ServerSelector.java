@@ -20,18 +20,23 @@
 package org.apache.druid.client.selector;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
 import org.apache.druid.client.QueryableDruidServer;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -54,6 +59,13 @@ public class ServerSelector implements Overshadowable<ServerSelector>
 
   private final AtomicReference<DataSegment> segment;
 
+  /**
+   * First 128 bits of a SHA-1 of the segment's ID, computed once, so that result-level cache ETags can hash each
+   * segment without reading or formatting its ID. A selector's segment ID never changes.
+   */
+  private final long segmentIdDigestHigh;
+  private final long segmentIdDigestLow;
+
   private final HistoricalFilter filter;
 
   @VisibleForTesting
@@ -74,6 +86,9 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   )
   {
     this.segment = new AtomicReference<>(DataSegmentInterner.intern(segment));
+    final ByteBuffer digest = ByteBuffer.wrap(computeSegmentIdDigest(segment.getId()));
+    this.segmentIdDigestHigh = digest.getLong();
+    this.segmentIdDigestLow = digest.getLong();
     this.historicalTierStrategy = historicalTierStrategy;
     this.realtimeTierStrategy = realtimeTierStrategy;
     this.historicalServers = new Int2ObjectRBTreeMap<>(historicalTierStrategy.getComparator());
@@ -84,6 +99,35 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   public DataSegment getSegment()
   {
     return segment.get();
+  }
+
+  /**
+   * Adds a digest of this segment's ID to the hasher. Two selectors add the same bytes only if their segment IDs
+   * are equal, barring a 128-bit hash collision.
+   */
+  public void putSegmentIdDigest(final Hasher hasher)
+  {
+    hasher.putLong(segmentIdDigestHigh).putLong(segmentIdDigestLow);
+  }
+
+  /**
+   * Hashes the fields of the ID rather than {@link SegmentId#toString()}. Strings are prefixed with their length,
+   * so two different IDs never feed the hasher the same bytes.
+   */
+  private static byte[] computeSegmentIdDigest(final SegmentId id)
+  {
+    final Hasher hasher = Hashing.sha1().newHasher();
+    putString(hasher, id.getDataSource());
+    hasher.putLong(id.getInterval().getStartMillis()).putLong(id.getInterval().getEndMillis());
+    putString(hasher, id.getVersion());
+    hasher.putInt(id.getPartitionNum());
+    return hasher.hash().asBytes();
+  }
+
+  private static void putString(final Hasher hasher, final String s)
+  {
+    final byte[] bytes = StringUtils.toUtf8(s);
+    hasher.putInt(bytes.length).putBytes(bytes);
   }
 
   public void addServerAndUpdateSegment(QueryableDruidServer server, DataSegment segment)

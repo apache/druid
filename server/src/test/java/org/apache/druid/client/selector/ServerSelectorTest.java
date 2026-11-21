@@ -21,6 +21,9 @@ package org.apache.druid.client.selector;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
@@ -33,8 +36,10 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
+import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -205,6 +210,40 @@ public class ServerSelectorTest
     addServer(selector, "peon:8100", ServerType.INDEXER_EXECUTOR);
 
     Assertions.assertEquals(cloneSource, selector.pick(null, CloneQueryMode.EXCLUDECLONES));
+  }
+
+  @Test
+  public void testSegmentIdDigestChangesWithEveryIdField()
+  {
+    final Interval interval = Intervals.of("2024-01-01/2024-01-02");
+    final HashCode digest = segmentIdDigest(SegmentId.of("ds", interval, "v1", 0));
+    Assertions.assertEquals(digest, segmentIdDigest(SegmentId.of("ds", interval, "v1", 0)));
+
+    final List<SegmentId> others = List.of(
+        SegmentId.of("ds2", interval, "v1", 0),
+        SegmentId.of("ds", Intervals.of("2024-01-01T01/2024-01-02"), "v1", 0),
+        SegmentId.of("ds", Intervals.of("2024-01-01/2024-01-03"), "v1", 0),
+        SegmentId.of("ds", interval, "v2", 0),
+        SegmentId.of("ds", interval, "v1", 1),
+        // Moving characters between the datasource and the version doesn't produce the same bytes
+        SegmentId.of("ds_", interval, "v1", 0),
+        SegmentId.of("ds", interval, "_v1", 0)
+    );
+    for (SegmentId other : others) {
+      Assertions.assertNotEquals(digest, segmentIdDigest(other), other.toString());
+    }
+  }
+
+  private static HashCode segmentIdDigest(final SegmentId id)
+  {
+    final ServerSelector selector = new ServerSelector(
+        DataSegment.builder(id).shardSpec(new NumberedShardSpec(id.getPartitionNum(), 0)).build(),
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
+    );
+    final Hasher hasher = Hashing.sha1().newHasher();
+    selector.putSegmentIdDigest(hasher);
+    return hasher.hash();
   }
 
   /**
