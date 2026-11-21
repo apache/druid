@@ -37,7 +37,7 @@ public class RandomServerSelectorStrategy implements ServerSelectorStrategy
   @Override
   public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
-    return Iterators.get(servers.iterator(), ThreadLocalRandom.current().nextInt(servers.size()));
+    return pickOne(servers);
   }
 
   @Override
@@ -46,8 +46,18 @@ public class RandomServerSelectorStrategy implements ServerSelectorStrategy
     if (servers.size() <= numServersToPick) {
       return ImmutableList.copyOf(servers);
     }
+    if (numServersToPick == 1) {
+      // Tier strategies pick a single server through this method for every segment of every query, so choose it
+      // directly rather than copying and shuffling the set. Each server is equally likely either way.
+      return ImmutableList.of(pickOne(servers));
+    }
     List<QueryableDruidServer> list = Lists.newArrayList(servers);
     Collections.shuffle(list, ThreadLocalRandom.current());
     return ImmutableList.copyOf(list.subList(0, numServersToPick));
+  }
+
+  private static QueryableDruidServer pickOne(Set<QueryableDruidServer> servers)
+  {
+    return Iterators.get(servers.iterator(), ThreadLocalRandom.current().nextInt(servers.size()));
   }
 }
