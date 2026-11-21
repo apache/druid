@@ -88,6 +88,7 @@
   "task/waiting/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "gauge" },
 
   "task/action/run/time": { "dimensions" : ["dataSource", "taskActionType"], "type" : "timer" },
+  "task/status/persistFailed/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
   "task/status/queue/count": { "dimensions" : [], "type" : "gauge" },
   "task/status/updated/count": { "dimensions" : [], "type" :  "count" },
 
