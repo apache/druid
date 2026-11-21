@@ -317,6 +317,50 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_unnest_factory_prefetch_delegates_base_spec()
+  {
+    // prefetch must warm the base with exactly the spec the async build hands it (rewritten for the unnest input
+    // column), and the handle tracks the base's handle.
+    final DeferredCursorFactory base = new DeferredCursorFactory(INCREMENTAL_INDEX_CURSOR_FACTORY);
+    final UnnestCursorFactory unnest = new UnnestCursorFactory(
+        base,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + INPUT_COLUMN_NAME + "\"", null, ExprMacroTable.nil()),
+        null
+    );
+    final CursorBuildSpec spec = CursorBuildSpec.builder().setPhysicalColumns(Set.of(OUTPUT_COLUMN_NAME)).build();
+
+    unnest.makeCursorHolderAsync(spec).close();
+    final CursorPrefetch prefetch = unnest.prefetch(spec);
+    try {
+      Assertions.assertEquals(base.getPendingSpec(), base.getPrefetchSpec(), "prefetch spec must match the build spec");
+      Assertions.assertNotEquals(spec, base.getPrefetchSpec(), "the base sees the rewritten spec, not the caller's");
+      Assertions.assertFalse(prefetch.isReady(), "prefetch waits for the base");
+      base.completePrefetch();
+      Assertions.assertTrue(prefetch.isReady());
+    }
+    finally {
+      prefetch.close();
+    }
+    Assertions.assertFalse(base.prefetchCanceled.get());
+  }
+
+  @Test
+  public void test_unnest_factory_prefetch_close_before_ready_cancels_base()
+  {
+    final DeferredCursorFactory base = new DeferredCursorFactory(INCREMENTAL_INDEX_CURSOR_FACTORY);
+    final UnnestCursorFactory unnest = new UnnestCursorFactory(
+        base,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + INPUT_COLUMN_NAME + "\"", null, ExprMacroTable.nil()),
+        null
+    );
+
+    final CursorPrefetch prefetch = unnest.prefetch(CursorBuildSpec.FULL_SCAN);
+    Assertions.assertFalse(prefetch.isReady());
+    prefetch.close();
+    Assertions.assertTrue(base.prefetchCanceled.get(), "closing the prefetch before it's ready cancels the base");
+  }
+
+  @Test
   public void test_unnest_factory_async_close_before_ready_cancels_base()
   {
     final DeferredCursorFactory base = new DeferredCursorFactory(INCREMENTAL_INDEX_CURSOR_FACTORY);

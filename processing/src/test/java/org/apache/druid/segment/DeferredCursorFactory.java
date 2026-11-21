@@ -35,8 +35,11 @@ public class DeferredCursorFactory implements CursorFactory
 {
   private final CursorFactory delegate;
   public final AtomicBoolean canceled = new AtomicBoolean(false);
+  public final AtomicBoolean prefetchCanceled = new AtomicBoolean(false);
   private AsyncCursorHolder pending;
   private CursorBuildSpec pendingSpec;
+  private CursorPrefetch pendingPrefetch;
+  private CursorBuildSpec prefetchSpec;
 
   public DeferredCursorFactory(CursorFactory delegate)
   {
@@ -58,12 +61,48 @@ public class DeferredCursorFactory implements CursorFactory
   }
 
   /**
+   * Hands back an unfinished {@link CursorPrefetch}, recording the spec, so a test can assert a wrapping factory
+   * delegates the prefetch with the same spec as its async holder build; {@link #completePrefetch()} finishes it.
+   */
+  @Override
+  public CursorPrefetch prefetch(CursorBuildSpec spec)
+  {
+    prefetchSpec = spec;
+    pendingPrefetch = new CursorPrefetch(() -> prefetchCanceled.set(true));
+    return pendingPrefetch;
+  }
+
+  /**
    * Completes the most recent {@link #makeCursorHolderAsync} holder by building the delegate's holder for the spec it
    * was called with.
    */
   public void complete()
   {
     pending.set(delegate.makeCursorHolder(pendingSpec));
+  }
+
+  /**
+   * Completes the most recent {@link #prefetch} handle.
+   */
+  public void completePrefetch()
+  {
+    pendingPrefetch.set(CursorPrefetch.Stats.NONE, null);
+  }
+
+  /**
+   * The spec of the most recent {@link #makeCursorHolderAsync} call.
+   */
+  public CursorBuildSpec getPendingSpec()
+  {
+    return pendingSpec;
+  }
+
+  /**
+   * The spec of the most recent {@link #prefetch} call.
+   */
+  public CursorBuildSpec getPrefetchSpec()
+  {
+    return prefetchSpec;
   }
 
   @Override
