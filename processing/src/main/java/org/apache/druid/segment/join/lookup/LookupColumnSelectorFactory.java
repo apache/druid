@@ -20,8 +20,10 @@
 package org.apache.druid.segment.join.lookup;
 
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -41,18 +43,22 @@ public class LookupColumnSelectorFactory implements ColumnSelectorFactory
   public static final String VALUE_COLUMN = "v";
 
   private final Supplier<Pair<String, String>> currentEntry;
+  private final Closer closer;
 
   LookupColumnSelectorFactory(
-      final Supplier<Pair<String, String>> currentEntry
+      final Supplier<Pair<String, String>> currentEntry,
+      final Closer closer
   )
   {
     this.currentEntry = currentEntry;
+    this.closer = closer;
   }
 
   @Nonnull
   @Override
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
   {
+    final ExtractionFn extractionFn = dimensionSpec.getExtractionFn(closer);
     final Supplier<String> supplierToUse;
 
     if (KEY_COLUMN.equals(dimensionSpec.getDimension())) {
@@ -66,7 +72,7 @@ public class LookupColumnSelectorFactory implements ColumnSelectorFactory
         return entry != null ? entry.rhs : null;
       };
     } else {
-      return DimensionSelector.constant(null, dimensionSpec.getExtractionFn());
+      return DimensionSelector.constant(null, extractionFn);
     }
 
     return dimensionSpec.decorate(
@@ -76,8 +82,8 @@ public class LookupColumnSelectorFactory implements ColumnSelectorFactory
           @Override
           protected String getValue()
           {
-            if (dimensionSpec.getExtractionFn() != null) {
-              return dimensionSpec.getExtractionFn().apply(supplierToUse.get());
+            if (extractionFn != null) {
+              return extractionFn.apply(supplierToUse.get());
             } else {
               return supplierToUse.get();
             }
@@ -86,7 +92,7 @@ public class LookupColumnSelectorFactory implements ColumnSelectorFactory
           @Override
           public void inspectRuntimeShape(RuntimeShapeInspector inspector)
           {
-            inspector.visit("dimensionSpec", dimensionSpec);
+            inspector.visit("extractionFn", extractionFn);
             inspector.visit("supplier", supplierToUse);
           }
         }

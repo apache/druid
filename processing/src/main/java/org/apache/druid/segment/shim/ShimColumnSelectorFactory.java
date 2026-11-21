@@ -58,7 +58,7 @@ public class ShimColumnSelectorFactory implements ColumnSelectorFactory
     return dimensionSelectors.computeIfAbsent(
         dimensionSpec,
         spec -> {
-          if (spec.mustDecorate() || spec.getExtractionFn() != null) {
+          if (spec.mustDecorate() || spec.getExtractionFnForMetadata() != null) {
             throw DruidException.defensive("Only non-decorated dimensions can be vectorized.");
           }
 

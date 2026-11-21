@@ -26,16 +26,20 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.RetainedLookupExtractor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 
 public class LookupDimensionSpec implements DimensionSpec
 {
@@ -136,18 +140,60 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public ExtractionFn getExtractionFn()
   {
-    final LookupExtractor lookupExtractor;
+    final LookupExtractor lookupExtractor = getLookupExtractor(null);
+    return makeLookupExtractionFn(lookupExtractor);
+  }
 
+  @Override
+  public ExtractionFn getExtractionFn(final Closer closer)
+  {
+    return makeLookupExtractionFn(getLookupExtractor(closer));
+  }
+
+  @Override
+  public ExtractionFn getExtractionFnForMetadata()
+  {
+    return makeLookupExtractionFn(getLookupExtractorForMetadata());
+  }
+
+  private LookupExtractor getLookupExtractor(@Nullable final Closer closer)
+  {
     if (Strings.isNullOrEmpty(name)) {
-      lookupExtractor = this.lookup;
-    } else {
-      lookupExtractor = lookupExtractorFactoryContainerProvider
-          .get(name)
-          .orElseThrow(() -> new ISE("Lookup [%s] not found", name))
-          .getLookupExtractorFactory()
-          .get();
+      return this.lookup;
     }
 
+    final LookupExtractorFactory lookupExtractorFactory = getLookupExtractorFactory();
+
+    final Optional<RetainedLookupExtractor> retainedLookupExtractor =
+        lookupExtractorFactory.acquireRetainedLookupExtractor();
+
+    if (closer != null) {
+      retainedLookupExtractor.ifPresent(closer::register);
+    }
+
+    // Callers without a closer rely on the Cleaner when the owning extraction function becomes unreachable
+    return retainedLookupExtractor.<LookupExtractor>map(retained -> retained).orElseGet(lookupExtractorFactory);
+  }
+
+  private LookupExtractor getLookupExtractorForMetadata()
+  {
+    if (Strings.isNullOrEmpty(name)) {
+      return this.lookup;
+    }
+
+    return getLookupExtractorFactory().get();
+  }
+
+  private LookupExtractorFactory getLookupExtractorFactory()
+  {
+    return lookupExtractorFactoryContainerProvider
+        .get(name)
+        .orElseThrow(() -> new ISE("Lookup [%s] not found", name))
+        .getLookupExtractorFactory();
+  }
+
+  private LookupExtractionFn makeLookupExtractionFn(final LookupExtractor lookupExtractor)
+  {
     return new LookupExtractionFn(
         lookupExtractor,
         retainMissingValue,
@@ -201,7 +247,7 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public boolean preservesOrdering()
   {
-    return getExtractionFn().preservesOrdering();
+    return getExtractionFnForMetadata().preservesOrdering();
   }
 
   @Override
