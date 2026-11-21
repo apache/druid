@@ -19,11 +19,11 @@
 
 package org.apache.druid.segment.loading.external;
 
+import com.google.common.base.Throwables;
 import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.io.FilePopulator;
 import org.apache.druid.segment.loading.StorageLocation;
-import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
 import java.util.function.LongSupplier;
@@ -86,12 +86,17 @@ public interface VirtualStorageManager
 
   /**
    * Whether the given throwable indicates that a reservation failed because there was not enough space in the
-   * storage locations to hold a file.
+   * storage locations to hold a file. Checks every {@link DruidException} in the causal chain, since a capacity
+   * failure may surface wrapped in another {@link DruidException} describing the higher-level operation.
    */
   static boolean isInsufficientStorage(final Throwable e)
   {
-    final DruidException druidException = Throwables.getCauseOfType(e, DruidException.class);
-    return druidException != null
-           && druidException.getCategory() == DruidException.Category.CAPACITY_EXCEEDED;
+    for (final Throwable t : Throwables.getCausalChain(e)) {
+      if (t instanceof DruidException druidException
+          && druidException.getCategory() == DruidException.Category.CAPACITY_EXCEEDED) {
+        return true;
+      }
+    }
+    return false;
   }
 }

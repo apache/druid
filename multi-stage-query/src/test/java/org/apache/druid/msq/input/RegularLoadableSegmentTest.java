@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -91,6 +92,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Tests for {@link RegularLoadableSegment}.
@@ -719,6 +721,121 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(cacheDir, "info_dir").list()));
   }
 
+  /**
+   * Synchronous reservation failure in {@link RegularLoadableSegment#acquire}: the segment must not count as acquired,
+   * so it can be tried again once there is room, with no abandon needed (or allowed).
+   */
+  @Test
+  public void test_acquire_syncReservationFailureLeavesSegmentAcquirable()
+  {
+    final DataSegment segment = segments.get(0);
+    final AtomicInteger acquires = new AtomicInteger();
+    final SegmentManager flakyManager = new SegmentManager(null)
+    {
+      @Override
+      public Optional<VersionedIntervalTimeline<String, DataSegment>> getTimeline(TableDataSource dataSource)
+      {
+        // the local timeline has the segment, so acquire() goes straight to acquireSegment (the synchronous path)
+        final VersionedIntervalTimeline<String, DataSegment> timeline =
+            new VersionedIntervalTimeline<>(Ordering.natural());
+        timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+        return Optional.of(timeline);
+      }
+
+      @Override
+      public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
+      {
+        if (acquires.incrementAndGet() == 1) {
+          throw noRoom(dataSegment);
+        }
+        return AcquireSegmentAction.missingSegment();
+      }
+    };
+    final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+        flakyManager,
+        segment.getId(),
+        segment.toDescriptor(),
+        null,
+        null,
+        false
+    );
+
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> loadableSegment.acquire(AcquireMode.PARTIAL)
+    );
+    Assertions.assertEquals(DruidException.Category.CAPACITY_EXCEEDED, e.getCategory());
+
+    // nothing was acquired: abandoning is a programming error, and a plain retry goes through
+    Assertions.assertThrows(DruidException.class, loadableSegment::abandonFailedAcquisition);
+    final AcquireSegmentAction action = loadableSegment.acquire(AcquireMode.PARTIAL);
+    Assertions.assertTrue(action.isReady());
+    action.close();
+    Assertions.assertEquals(2, acquires.get());
+  }
+
+  /**
+   * Deferred chain, stage-2 failure then abandon: after the failed action is closed and the acquisition abandoned, the
+   * segment can be acquired again, and the retry reuses the memoized {@link DataSegment} rather than asking the
+   * Coordinator a second time.
+   */
+  @Test
+  public void test_abandonFailedAcquisition_reacquiresWithoutRefetchingDataSegment() throws Exception
+  {
+    final DataSegment segment = segments.get(0);
+    final AtomicInteger acquires = new AtomicInteger();
+    final SegmentManager flakyManager = new SegmentManager(null)
+    {
+      @Override
+      public Optional<VersionedIntervalTimeline<String, DataSegment>> getTimeline(TableDataSource dataSource)
+      {
+        // force the deferred (cachedDataSegment == null) path
+        return Optional.empty();
+      }
+
+      @Override
+      public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
+      {
+        if (acquires.incrementAndGet() == 1) {
+          throw noRoom(dataSegment);
+        }
+        return AcquireSegmentAction.missingSegment();
+      }
+    };
+    final TestCoordinatorClientImpl coordinatorClient = new TestCoordinatorClientImpl();
+    final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+        flakyManager,
+        segment.getId(),
+        segment.toDescriptor(),
+        null,
+        coordinatorClient,
+        false
+    );
+
+    final AcquireSegmentAction first = loadableSegment.acquire(AcquireMode.PARTIAL);
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> first.await(10_000L));
+    Assertions.assertEquals(DruidException.Category.CAPACITY_EXCEEDED, e.getCategory());
+    first.close();
+    Assertions.assertEquals(1, coordinatorClient.fetches.get());
+
+    // still acquired until abandoned
+    Assertions.assertThrows(DruidException.class, () -> loadableSegment.acquire(AcquireMode.PARTIAL));
+    loadableSegment.abandonFailedAcquisition();
+
+    final AcquireSegmentAction second = loadableSegment.acquire(AcquireMode.PARTIAL);
+    second.await(10_000L);
+    second.close();
+    Assertions.assertEquals(2, acquires.get());
+    Assertions.assertEquals(1, coordinatorClient.fetches.get(), "retry must reuse the memoized DataSegment");
+  }
+
+  private static DruidException noRoom(final DataSegment dataSegment)
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                         .build("no room for segment[%s]", dataSegment.getId());
+  }
+
   private static class GatedCoordinatorClient extends NoopCoordinatorClient
   {
     private final ListenableFuture<DataSegment> future;
@@ -751,9 +868,12 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
   private class TestCoordinatorClientImpl extends NoopCoordinatorClient
   {
+    final AtomicInteger fetches = new AtomicInteger();
+
     @Override
     public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
     {
+      fetches.incrementAndGet();
       for (final DataSegment segment : segments) {
         if (segment.getDataSource().equals(dataSource) && segment.getId().toString().equals(segmentId)) {
           return Futures.immediateFuture(segment);
