@@ -314,6 +314,33 @@ public class TierSelectorStrategyTest
     );
   }
 
+  @Test
+  public void testRandomServerSelectorStrategyPicksAnyOneServer()
+  {
+    final Set<QueryableDruidServer> servers = new HashSet<>();
+    for (int i = 0; i < 3; i++) {
+      servers.add(
+          new QueryableDruidServer(
+              new DruidServer("test" + i, "localhost:" + i, null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+              EasyMock.createMock(DirectDruidClient.class)
+          )
+      );
+    }
+    final RandomServerSelectorStrategy strategy = new RandomServerSelectorStrategy();
+    final DataSegment segment = EasyMock.createMock(DataSegment.class);
+
+    final Set<QueryableDruidServer> picked = new HashSet<>();
+    for (int i = 0; i < 300; i++) {
+      final List<QueryableDruidServer> pick = strategy.pick(servers, segment, 1);
+      Assertions.assertEquals(1, pick.size());
+      picked.add(pick.get(0));
+    }
+    // The chance that 300 picks miss one of three servers is about 3 * (2/3)^300, so effectively zero
+    Assertions.assertEquals(servers, picked);
+    Assertions.assertEquals(2, strategy.pick(servers, segment, 2).size());
+    Assertions.assertEquals(servers, Set.copyOf(strategy.pick(servers, segment, 3)));
+  }
+
   /**
    * Tests the PreferredTierSelectorStrategy with various configurations and expected selections.
    * It verifies
