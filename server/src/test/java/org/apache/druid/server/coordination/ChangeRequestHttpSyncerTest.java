@@ -36,15 +36,18 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import java.io.ByteArrayInputStream;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -135,7 +138,7 @@ public class ChangeRequestHttpSyncerTest
         jsonMapper,
         httpClient,
         Execs.scheduledSingleThreaded("ChangeRequestHttpSyncerTest"),
-        new URL("http://localhost:8080/"),
+        URI.create("http://localhost:8080/").toURL(),
         "/xx",
         typeRef,
         50000,
@@ -206,5 +209,39 @@ public class ChangeRequestHttpSyncerTest
         throw new RE(ex, "Interrupted.");
       }
     }
+  }
+  @Test
+  public void testRejectedCallbackExecutionIsSwallowedNotThrown() throws Exception
+  {
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    TypeReference<ChangeRequestsSnapshot<String>> typeRef = new TypeReference<>() {};
+
+    final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("ChangeRequestHttpSyncerRejectTest-%d");
+    // Simulate the shutdown-ordering race: the executor backing this syncer is already
+    // terminated by the time a pending HTTP callback tries to run on it.
+    exec.shutdownNow();
+
+    ChangeRequestHttpSyncer.Listener<String> listener = EasyMock.mock(ChangeRequestHttpSyncer.Listener.class);
+    EasyMock.replay(listener);
+
+    ChangeRequestHttpSyncer<String> syncer = new ChangeRequestHttpSyncer<>(
+        jsonMapper,
+        new TestHttpClient(ImmutableList.of()),
+        exec,
+        new URL("http://localhost:8080/"),
+        "/xx",
+        typeRef,
+        50000,
+        10000,
+        listener
+    );
+
+    Assertions.assertTrue(exec.isShutdown());
+    Assertions.assertDoesNotThrow(
+        () -> syncer.rejectionSafeCallbackExecutor().execute(() -> { }),
+        "a callback rejected by a terminated executor should be swallowed, not thrown"
+    );
+
+    EasyMock.verify(listener);
   }
 }

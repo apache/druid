@@ -43,11 +43,14 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.InputStream;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -347,7 +350,7 @@ public class ChangeRequestHttpSyncer<T>
               markServerUnstableAndAlert(t, logMsg);
             }
           },
-          executor
+          rejectionSafeCallbackExecutor()
       );
     }
     catch (Throwable th) {
@@ -449,6 +452,22 @@ public class ChangeRequestHttpSyncer<T>
   public boolean isExecutorShutdown()
   {
     return executor.isShutdown();
+  }
+
+  @VisibleForTesting
+  Executor rejectionSafeCallbackExecutor()
+  {
+    return command -> {
+      try {
+        executor.execute(command);
+      }
+      catch (RejectedExecutionException e) {
+        // The syncer's executor has already been terminated (shutdown race with stop()).
+        // The callback already no-ops via startStopLock.awaitStarted(...) when not started,
+        // so dropping it here is safe; just avoid Guava logging this at SEVERE.
+        log.debug("Not running sync callback for server[%s]; executor is shut down.", logIdentity);
+      }
+    };
   }
 
   /**

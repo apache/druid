@@ -93,6 +93,10 @@ public class MetadataSegmentView
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private final CountDownLatch cachePopulated = new CountDownLatch(1);
+  // Set in stop(), checked by getSegments() after the cache-populated wait unblocks (either
+  // because the first poll succeeded, or because stop() released it below), so a caller is
+  // never left blocked forever if this view is stopped before its first poll completes.
+  private volatile boolean stopped = false;
   private final ServiceEmitter emitter;
 
   @Inject
@@ -145,10 +149,21 @@ public class MetadataSegmentView
       throw new ISE("can't stop.");
     }
     log.info("MetadataSegmentView is stopping.");
+    stopped = true;
     if (isCacheEnabled) {
-      scheduledExec.shutdown();
+      // shutdownNow() interrupts any in-flight poll that may be blocked waiting on the
+      // coordinator client, rather than letting it run to completion and potentially fail
+      // with ServiceClosedException once the coordinator's DiscoveryServiceLocator has
+      // already stopped.
+      scheduledExec.shutdownNow();
       publishedSegments = null;
       segmentIdToReplicationFactor.invalidateAll();
+      // If shutdownNow() interrupted the very first poll before it ever reached
+      // cachePopulated.countDown(), that latch would otherwise never be released, leaving
+      // any getSegments() caller blocked in awaitUninterruptibly() forever. Release it here;
+      // getSegments() checks `stopped` after unblocking and fails clearly instead of reading
+      // a null/absent cache.
+      cachePopulated.countDown();
     }
     log.info("MetadataSegmentView is stopped.");
   }
@@ -214,6 +229,9 @@ public class MetadataSegmentView
     final CloseableIterator<SegmentStatusInCluster> base;
     if (isCacheEnabled) {
       Uninterruptibles.awaitUninterruptibly(cachePopulated);
+      if (stopped) {
+        throw new ISE("MetadataSegmentView is stopped.");
+      }
       base = CloseableIterators.withEmptyBaggage(publishedSegments.iterator());
     } else {
       // Cache disabled: the Coordinator returns all used segments; filter client-side to preserve semantics.
