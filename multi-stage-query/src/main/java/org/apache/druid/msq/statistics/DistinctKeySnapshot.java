@@ -29,6 +29,7 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.msq.statistics.serde.DistinctSnapshotSerializer;
 import org.apache.druid.msq.statistics.serde.KeyCollectorSnapshotSerializer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,5 +102,33 @@ public class DistinctKeySnapshot implements KeyCollectorSnapshot
   public KeyCollectorSnapshotSerializer getSerializer()
   {
     return new DistinctSnapshotSerializer();
+  }
+
+  @Override
+  public int spaceReductionFactorOrZero()
+  {
+    return spaceReductionFactor;
+  }
+
+  /**
+   * Keeps the keys that {@link DistinctKeyCollector} would keep when raising its factor: the first key, which is the
+   * smallest, always, and every other key whose hash has at least "spaceReductionFactor" trailing zeros.
+   */
+  @Override
+  public DistinctKeySnapshot downsampleTo(final int spaceReductionFactor)
+  {
+    if (spaceReductionFactor <= this.spaceReductionFactor) {
+      return this;
+    }
+
+    final List<SerializablePair<RowKey, Long>> downsampledKeys = new ArrayList<>();
+    for (int i = 0; i < keys.size(); i++) {
+      final SerializablePair<RowKey, Long> key = keys.get(i);
+      if (i == 0 || Long.numberOfTrailingZeros(key.lhs.longHashCode()) >= spaceReductionFactor) {
+        downsampledKeys.add(key);
+      }
+    }
+
+    return new DistinctKeySnapshot(downsampledKeys, spaceReductionFactor);
   }
 }

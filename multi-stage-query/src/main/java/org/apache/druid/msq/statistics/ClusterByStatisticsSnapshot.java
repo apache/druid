@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -79,10 +80,43 @@ public class ClusterByStatisticsSnapshot
   public PartialKeyStatisticsInformation partialKeyStatistics()
   {
     double bytesRetained = 0;
+    int spaceReductionFactor = 0;
     for (ClusterByStatisticsSnapshot.Bucket bucket : buckets.values()) {
       bytesRetained += bucket.bytesRetained;
+      spaceReductionFactor = Math.max(spaceReductionFactor, bucket.keyCollectorSnapshot.spaceReductionFactorOrZero());
     }
-    return new PartialKeyStatisticsInformation(buckets.keySet(), !getHasMultipleValues().isEmpty(), bytesRetained);
+    return new PartialKeyStatisticsInformation(
+        buckets.keySet(),
+        !getHasMultipleValues().isEmpty(),
+        bytesRetained,
+        spaceReductionFactor
+    );
+  }
+
+  /**
+   * Returns a snapshot whose buckets hold only the keys a collector at the given factor would retain. See
+   * {@link KeyCollectorSnapshot#downsampleTo}.
+   */
+  public ClusterByStatisticsSnapshot downsampleTo(final int spaceReductionFactor)
+  {
+    if (spaceReductionFactor <= 0) {
+      return this;
+    }
+
+    final Map<Long, Bucket> downsampledBuckets = new LinkedHashMap<>();
+    for (final Map.Entry<Long, Bucket> entry : buckets.entrySet()) {
+      final Bucket bucket = entry.getValue();
+      downsampledBuckets.put(
+          entry.getKey(),
+          new Bucket(
+              bucket.bucketKey,
+              bucket.keyCollectorSnapshot.downsampleTo(spaceReductionFactor),
+              bucket.bytesRetained
+          )
+      );
+    }
+
+    return new ClusterByStatisticsSnapshot(downsampledBuckets, hasMultipleValues);
   }
 
   @Override

@@ -59,4 +59,37 @@ public class PartialKeyStatisticsInformationSerdeTest
     Assertions.assertEquals(partialInformation.hasMultipleValues(), deserializedKeyStatistics.hasMultipleValues(), json);
     Assertions.assertEquals(partialInformation.getBytesRetained(), deserializedKeyStatistics.getBytesRetained(), 0, json);
   }
+
+  @Test
+  public void testSerdeWithSpaceReductionFactor() throws JsonProcessingException
+  {
+    final PartialKeyStatisticsInformation partialInformation = new PartialKeyStatisticsInformation(
+        ImmutableSet.of(2L),
+        false,
+        10.0,
+        4
+    );
+
+    final String json = objectMapper.writeValueAsString(partialInformation);
+    Assertions.assertEquals(
+        partialInformation,
+        objectMapper.readValue(json, PartialKeyStatisticsInformation.class),
+        json
+    );
+  }
+
+  @Test
+  public void testFactorIsOmittedWhenZeroAndReadAsZeroWhenMissing() throws JsonProcessingException
+  {
+    final String json = objectMapper.writeValueAsString(
+        new PartialKeyStatisticsInformation(ImmutableSet.of(2L), false, 10.0, 0)
+    );
+    Assertions.assertFalse(json.contains("spaceReductionFactor"), json);
+
+    // What a worker without the field sends.
+    Assertions.assertEquals(
+        0,
+        objectMapper.readValue(json, PartialKeyStatisticsInformation.class).getSpaceReductionFactor()
+    );
+  }
 }

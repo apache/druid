@@ -35,4 +35,25 @@ import org.apache.druid.msq.statistics.serde.KeyCollectorSnapshotSerializer;
 public interface KeyCollectorSnapshot
 {
   KeyCollectorSnapshotSerializer getSerializer();
+
+  /**
+   * Returns how many times the collector this snapshot was taken from had halved its set of retained keys, or 0 if
+   * this kind of snapshot is not downsampled by halving. See {@link DistinctKeyCollector}.
+   */
+  default int spaceReductionFactorOrZero()
+  {
+    return 0;
+  }
+
+  /**
+   * Returns a snapshot holding only the keys that a collector at the given factor would retain. A collector that
+   * merges the result ends up with the same retained keys as one that merged this snapshot, provided its own factor
+   * reaches at least "spaceReductionFactor". Returns this snapshot if it doesn't hold more keys than that.
+   *
+   * @param spaceReductionFactor factor to downsample to
+   */
+  default KeyCollectorSnapshot downsampleTo(final int spaceReductionFactor)
+  {
+    return this;
+  }
 }

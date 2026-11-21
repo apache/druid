@@ -120,11 +120,12 @@ public class MSQTestWorkerClient implements WorkerClient
       String workerTaskId,
       StageId stageId,
       long timeChunk,
-      SketchEncoding sketchEncoding
+      SketchEncoding sketchEncoding,
+      int spaceReductionFactor
   )
   {
     return Futures.immediateFuture(
-        getWorkerFor(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk)
+        getWorkerFor(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk, spaceReductionFactor)
     );
   }
 

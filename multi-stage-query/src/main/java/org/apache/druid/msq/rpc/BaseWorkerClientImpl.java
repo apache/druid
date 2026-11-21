@@ -115,15 +115,17 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
       String workerId,
       StageId stageId,
       long timeChunk,
-      SketchEncoding sketchEncoding
+      SketchEncoding sketchEncoding,
+      int spaceReductionFactor
   )
   {
     String path = StringUtils.format(
-        "/keyStatisticsForTimeChunk/%s/%d/%d?sketchEncoding=%s",
+        "/keyStatisticsForTimeChunk/%s/%d/%d?sketchEncoding=%s&spaceReductionFactor=%d",
         StringUtils.urlEncode(stageId.getQueryId()),
         stageId.getStageNumber(),
         timeChunk,
-        sketchEncoding
+        sketchEncoding,
+        spaceReductionFactor
     );
 
     return getClient(workerId).asyncRequest(

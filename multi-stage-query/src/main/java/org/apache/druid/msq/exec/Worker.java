@@ -63,8 +63,15 @@ public interface Worker
    * Returns the statistics snapshot for the given stageId which contains only the sketch for the specified timeChunk.
    * This is called from {@link WorkerSketchFetcher} under {@link ClusterStatisticsMergeMode#SEQUENTIAL} or
    * {@link ClusterStatisticsMergeMode#AUTO} modes.
+   *
+   * @param spaceReductionFactor drops the keys a collector at this factor would drop from the snapshot, if it holds
+   *                             more keys than that. 0 returns the snapshot as it is.
    */
-  ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk);
+  ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(
+      StageId stageId,
+      long timeChunk,
+      int spaceReductionFactor
+  );
 
   /**
    * Called when the worker chat handler recieves the result partition boundaries for a particular stageNumber
