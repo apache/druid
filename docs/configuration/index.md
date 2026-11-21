@@ -703,7 +703,7 @@ All Druid components can communicate with each other over HTTP.
 |--------|-----------|-------|
 |`druid.global.http.numConnections`|Size of connection pool per destination URL. If there are more HTTP requests than this number that all need to speak to the same URL, then they will queue up.|`20`|
 |`druid.global.http.eagerInitialization`|Indicates that http connections should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`false`|
-|`druid.global.http.compressionCodec`|Compression codec to communicate with others. May be "gzip" or "identity".|`gzip`|
+|`druid.global.http.compressionCodec`|Response encoding to ask other services for. May be `zstd`, `gzip`, or `identity`. If not set, Druid asks for `zstd` first and `gzip` second. See [HTTP compression](../operations/http-compression.md).|Not set|
 |`druid.global.http.readTimeout`|The timeout for data reads.|`PT15M`|
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
 |`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`(number of cores) * 3 / 2 + 1`|
@@ -1859,7 +1859,7 @@ client has the following configuration options.
 |--------|-----------|-------|
 |`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to Historical and real-time processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|20|
 |`druid.broker.http.eagerInitialization`|Indicates that http connections from Broker to Historical and Real-time processes should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
-|`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with Historical and real-time processes. May be "gzip" or "identity".|`gzip`|
+|`druid.broker.http.compressionCodec`|Response encoding the Broker asks Historical and real-time processes for. May be `zstd`, `gzip`, or `identity`. If not set, the Broker asks for `zstd` first and `gzip` second. See [HTTP compression](../operations/http-compression.md).|Not set|
 |`druid.broker.http.readTimeout`|The timeout for data reads from Historical servers and real-time tasks.|`PT15M`|
 |`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
 |`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) on channels to the data servers.<br /><br />Similar to `druid.server.http.maxScatterGatherBytes`, except that `maxQueuedBytes` triggers [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) instead of query failure. Set to zero to disable. You can override this setting by using the [`maxQueuedBytes` query context parameter](../querying/query-context-reference.md). Druid supports [human-readable](human-readable-byte.md) format. |25 MB or 2% of maximum Broker heap size, whichever is greater.|

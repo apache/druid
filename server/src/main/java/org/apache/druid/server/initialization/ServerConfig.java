@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.initialization;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -37,6 +38,7 @@ import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
 import org.eclipse.jetty.http.UriCompliance;
@@ -48,15 +50,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import java.util.zip.Deflater;
 
 /**
  *
  */
 public class ServerConfig
 {
-  public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
-
   /**
    * Default for {@link org.eclipse.jetty.server.HttpConfiguration#setHeaderCacheSize(int)}, which disables the cache.
    * Jetty's own default of 1024 costs about 100KB of heap for each persistent connection, which is far more than the
@@ -83,8 +82,7 @@ public class ServerConfig
       int maxRequestHeaderSize,
       @NotNull Period gracefulShutdownTimeout,
       @NotNull Period unannouncePropagationDelay,
-      int inflateBufferSize,
-      int compressionLevel,
+      @NotNull HttpServerCompression compression,
       boolean enableForwardedRequestCustomizer,
       @NotNull List<String> allowedHttpMethods,
       boolean showDetailedJettyErrors,
@@ -109,8 +107,7 @@ public class ServerConfig
         maxRequestHeaderSize,
         gracefulShutdownTimeout,
         unannouncePropagationDelay,
-        inflateBufferSize,
-        compressionLevel,
+        compression,
         enableForwardedRequestCustomizer,
         allowedHttpMethods,
         showDetailedJettyErrors,
@@ -139,8 +136,7 @@ public class ServerConfig
       int maxRequestHeaderSize,
       @NotNull Period gracefulShutdownTimeout,
       @NotNull Period unannouncePropagationDelay,
-      int inflateBufferSize,
-      int compressionLevel,
+      @NotNull HttpServerCompression compression,
       boolean enableForwardedRequestCustomizer,
       @NotNull List<String> allowedHttpMethods,
       boolean showDetailedJettyErrors,
@@ -167,8 +163,7 @@ public class ServerConfig
     this.maxRequestHeaderSize = maxRequestHeaderSize;
     this.gracefulShutdownTimeout = gracefulShutdownTimeout;
     this.unannouncePropagationDelay = unannouncePropagationDelay;
-    this.inflateBufferSize = inflateBufferSize;
-    this.compressionLevel = compressionLevel;
+    this.compression = compression;
     this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
     this.allowedHttpMethods = allowedHttpMethods;
     this.showDetailedJettyErrors = showDetailedJettyErrors;
@@ -248,14 +243,29 @@ public class ServerConfig
   @NotNull
   private Period unannouncePropagationDelay = Period.ZERO;
 
+  /**
+   * Deprecated alias of {@code druid.server.http.compression.gzip.inflateBufferSize}. Applies only if that property is
+   * not set.
+   */
+  @Deprecated(since = "40.0.0", forRemoval = true)
   @JsonProperty
+  @Nullable
   @Min(0)
-  private int inflateBufferSize = DEFAULT_GZIP_INFLATE_BUFFER_SIZE;
+  private Integer inflateBufferSize = null;
 
+  /**
+   * Deprecated alias of {@code druid.server.http.compression.gzip.level}. Applies only if that property is not set.
+   */
+  @Deprecated(since = "40.0.0", forRemoval = true)
   @JsonProperty
+  @Nullable
   @Min(-1)
   @Max(9)
-  private int compressionLevel = Deflater.DEFAULT_COMPRESSION;
+  private Integer compressionLevel = null;
+
+  @JsonProperty
+  @NotNull
+  private HttpServerCompression compression = HttpServerCompression.DEFAULT;
 
   @JsonProperty
   private boolean enableForwardedRequestCustomizer = false;
@@ -404,8 +414,7 @@ public class ServerConfig
         maxRequestHeaderSize,
         newGracefulShutdownTimeout,
         newUnannouncePropagationDelay,
-        inflateBufferSize,
-        compressionLevel,
+        getHttpServerCompression(),
         enableForwardedRequestCustomizer,
         allowedHttpMethods,
         showDetailedJettyErrors,
@@ -420,14 +429,56 @@ public class ServerConfig
     );
   }
 
-  public int getInflateBufferSize()
+  /**
+   * Sets the deprecated {@code compressionLevel} property when it is deserialized, and warns that it is deprecated.
+   */
+  @JsonProperty("compressionLevel")
+  @SuppressWarnings("unused")
+  private void setCompressionLevel(@Nullable final Integer compressionLevel)
   {
-    return inflateBufferSize;
+    if (compressionLevel != null) {
+      new Logger(ServerConfig.class).warn(
+          "Property[druid.server.http.compressionLevel] is deprecated and will be removed in a future release."
+          + " Use [druid.server.http.compression.gzip.level] instead."
+      );
+    }
+    this.compressionLevel = compressionLevel;
   }
 
-  public int getCompressionLevel()
+  /**
+   * Sets the deprecated {@code inflateBufferSize} property when it is deserialized, and warns that it is deprecated.
+   */
+  @JsonProperty("inflateBufferSize")
+  @SuppressWarnings("unused")
+  private void setInflateBufferSize(@Nullable final Integer inflateBufferSize)
   {
-    return compressionLevel;
+    if (inflateBufferSize != null) {
+      new Logger(ServerConfig.class).warn(
+          "Property[druid.server.http.inflateBufferSize] is deprecated and will be removed in a future release."
+          + " Use [druid.server.http.compression.gzip.inflateBufferSize] instead."
+      );
+    }
+    this.inflateBufferSize = inflateBufferSize;
+  }
+
+  /**
+   * Response compression settings, with the deprecated {@code compressionLevel} and {@code inflateBufferSize}
+   * properties applied to the gzip settings that {@code compression.gzip} does not set.
+   */
+  @JsonIgnore
+  public HttpServerCompression getHttpServerCompression()
+  {
+    final HttpServerCompression.Gzip gzip = compression.getGzip();
+    final Integer level = gzip.level() == null ? compressionLevel : gzip.level();
+    final Integer inflate = gzip.inflateBufferSize() == null ? inflateBufferSize : gzip.inflateBufferSize();
+    if (Objects.equals(level, gzip.level()) && Objects.equals(inflate, gzip.inflateBufferSize())) {
+      return compression;
+    }
+    return new HttpServerCompression(
+        compression.getCodecNames(),
+        compression.getZstd(),
+        new HttpServerCompression.Gzip(level, inflate)
+    );
   }
 
   public boolean isEnableForwardedRequestCustomizer()
@@ -505,8 +556,9 @@ public class ServerConfig
            useNestedForUnknownTypeInSubquery == that.useNestedForUnknownTypeInSubquery &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
-           inflateBufferSize == that.inflateBufferSize &&
-           compressionLevel == that.compressionLevel &&
+           Objects.equals(inflateBufferSize, that.inflateBufferSize) &&
+           Objects.equals(compressionLevel, that.compressionLevel) &&
+           compression.equals(that.compression) &&
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
            showDetailedJettyErrors == that.showDetailedJettyErrors &&
            maxIdleTime.equals(that.maxIdleTime) &&
@@ -543,6 +595,7 @@ public class ServerConfig
         unannouncePropagationDelay,
         inflateBufferSize,
         compressionLevel,
+        compression,
         enableForwardedRequestCustomizer,
         allowedHttpMethods,
         errorResponseTransformStrategy,
@@ -576,6 +629,7 @@ public class ServerConfig
            ", unannouncePropagationDelay=" + unannouncePropagationDelay +
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
+           ", compression=" + compression +
            ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
            ", allowedHttpMethods=" + allowedHttpMethods +
            ", errorResponseTransformStrategy=" + errorResponseTransformStrategy +

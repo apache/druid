@@ -24,39 +24,107 @@ import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.http.client.HttpClientConfig.CompressionCodec;
+import org.apache.druid.server.initialization.HttpServerCompression;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AllowHttpMethodsResourceFilter;
+import org.eclipse.jetty.compression.gzip.GzipCompression;
+import org.eclipse.jetty.compression.gzip.GzipDecoderConfig;
+import org.eclipse.jetty.compression.gzip.GzipEncoderConfig;
+import org.eclipse.jetty.compression.server.CompressionConfig;
+import org.eclipse.jetty.compression.server.CompressionHandler;
+import org.eclipse.jetty.compression.zstandard.ZstandardCompression;
+import org.eclipse.jetty.compression.zstandard.ZstandardEncoderConfig;
 import org.eclipse.jetty.ee8.servlet.FilterHolder;
 import org.eclipse.jetty.ee8.servlet.FilterMapping;
 import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.rewrite.handler.HeaderPatternRule;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.handler.gzip.GzipHandler;
-import org.eclipse.jetty.util.compression.CompressionPool;
-import org.eclipse.jetty.util.compression.DeflaterPool;
-import org.eclipse.jetty.util.compression.InflaterPool;
 
-import javax.ws.rs.HttpMethod;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 public class JettyServerInitUtils
 {
-  private static final String[] GZIP_METHODS = new String[]{HttpMethod.GET, HttpMethod.POST};
-
-  public static GzipHandler wrapWithDefaultGzipHandler(final ServletContextHandler handler, int inflateBufferSize, int compressionLevel)
+  /**
+   * Wraps the handler with a {@link CompressionHandler} that compresses responses to GET and POST requests and
+   * decompresses request bodies.
+   *
+   * The response encoding is picked from the request's {@code Accept-Encoding} header: among the encodings the client
+   * accepts, the first one in {@link HttpServerCompression#getCodecs()} is used. If the client accepts none of them,
+   * the response is not compressed. {@link NormalizeAcceptEncodingHandler} works around two Jetty negotiation bugs, so
+   * that encoding names match ignoring case and a {@code *} entry never picks an encoding the client declined.
+   *
+   * Request bodies may be gzip-compressed, or zstd-compressed if zstd is enabled in
+   * {@link HttpServerCompression#getCodecs()}. zstd is not registered at all when it is disabled, so that disabling it
+   * also avoids loading its native library.
+   *
+   * {@link HttpServerCompression.Gzip#inflateBufferSizeOrDefault()} sets the buffer size of the gzip request
+   * decoder. If it is 0, request bodies are not decompressed, for any codec, as with the old {@code GzipHandler}.
+   */
+  public static Handler wrapWithCompressionHandler(
+      final ServletContextHandler handler,
+      final HttpServerCompression compressionConfig
+  )
   {
-    GzipHandler gzipHandler = new GzipHandler();
-    gzipHandler.setMinGzipSize(0);
-    gzipHandler.setIncludedMethods(GZIP_METHODS);
-    gzipHandler.setInflateBufferSize(inflateBufferSize);
-    gzipHandler.setDeflaterPool(new DeflaterPool(CompressionPool.DEFAULT_CAPACITY, compressionLevel, true));
-    gzipHandler.setInflaterPool(new InflaterPool(CompressionPool.DEFAULT_CAPACITY, true));
+    final CompressionHandler compressionHandler = createCompressionHandler(compressionConfig);
 
-    gzipHandler.setHandler(handler);
-    return gzipHandler;
+    // defaults() compresses responses to GET and POST and skips already-compressed types. It decompresses only POST
+    // bodies, and its method include list cannot be cleared, so include every method Jetty knows, as the old
+    // GzipHandler inflated request bodies of any method.
+    final CompressionConfig.Builder config = CompressionConfig.builder()
+                                                              .defaults()
+                                                              .compressPreferredEncodings(compressionConfig.getCodecNames());
+    for (HttpMethod method : HttpMethod.values()) {
+      config.decompressIncludeMethod(method.asString());
+    }
+    if (!compressionConfig.getCodecs().contains(CompressionCodec.GZIP)) {
+      // gzip stays registered for request decompression, so exclude it from response compression.
+      config.compressExcludeEncoding(CompressionCodec.GZIP.getEncodingString());
+    }
+    if (compressionConfig.getGzip().inflateBufferSizeOrDefault() == 0) {
+      // The old GzipHandler did not inflate request bodies when inflateBufferSize was 0.
+      config.decompressExcludePath("/*");
+    }
+    compressionHandler.putConfiguration("/", config.build());
+
+    return NormalizeAcceptEncodingHandler.wrap(compressionHandler, handler.get(), compressionConfig.getCodecNames());
+  }
+
+  private static CompressionHandler createCompressionHandler(final HttpServerCompression compressionConfig)
+  {
+    final CompressionHandler compressionHandler = new CompressionHandler();
+
+    // gzip is always registered, even if it is not in the codecs list, so that gzip-compressed request bodies are
+    // still decompressed, as with the old GzipHandler. The codecs list only controls response compression, which
+    // wrapWithCompressionHandler turns off for gzip if it is not listed.
+    final GzipCompression gzip = new GzipCompression();
+    final GzipEncoderConfig gzipEncoderConfig = new GzipEncoderConfig();
+    gzipEncoderConfig.setCompressionLevel(compressionConfig.getGzip().levelOrDefault());
+    gzip.setDefaultEncoderConfig(gzipEncoderConfig);
+
+    final int inflateBufferSize = compressionConfig.getGzip().inflateBufferSizeOrDefault();
+    if (inflateBufferSize > 0) {
+      final GzipDecoderConfig gzipDecoderConfig = new GzipDecoderConfig();
+      gzipDecoderConfig.setBufferSize(inflateBufferSize);
+      gzip.setDefaultDecoderConfig(gzipDecoderConfig);
+    }
+    gzip.setMinCompressSize(0);
+    compressionHandler.putCompression(gzip);
+
+    if (compressionConfig.getCodecs().contains(CompressionCodec.ZSTD)) {
+      final ZstandardCompression zstd = new ZstandardCompression();
+      final ZstandardEncoderConfig zstdEncoderConfig = new ZstandardEncoderConfig();
+      zstdEncoderConfig.setCompressionLevel(compressionConfig.getZstd().level());
+      zstd.setDefaultEncoderConfig(zstdEncoderConfig);
+      zstd.setMinCompressSize(0);
+      compressionHandler.putCompression(zstd);
+    }
+
+    return compressionHandler;
   }
 
   /**

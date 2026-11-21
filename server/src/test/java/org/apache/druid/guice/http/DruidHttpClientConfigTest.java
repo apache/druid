@@ -23,6 +23,7 @@ import jakarta.validation.Validation;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.http.client.HttpClientConfig.CompressionCodec;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -30,8 +31,9 @@ import org.junit.jupiter.api.Test;
 import java.util.Properties;
 
 /**
- * Covers reading the connection pool knobs out of runtime.properties, which is how an operator moves off the default
- * pooling implementation or turns strict connection validation on.
+ * Covers reading the connection pool knobs and the response compression codec out of runtime.properties, which is how
+ * an operator moves off the default pooling implementation, turns strict connection validation on, or pins the
+ * client to a single response encoding.
  */
 public class DruidHttpClientConfigTest
 {
@@ -74,6 +76,47 @@ public class DruidHttpClientConfigTest
     properties.setProperty(PROPERTY_BASE + ".poolImplementation", "invalid");
 
     Assertions.assertThrows(RuntimeException.class, () -> configure(properties));
+  }
+
+  @Test
+  public void testCompressionCodecDefaultsToNull()
+  {
+    Assertions.assertNull(configure(new Properties()).getCompressionCodec());
+  }
+
+  @Test
+  public void testCompressionCodec()
+  {
+    for (CompressionCodec codec : new CompressionCodec[]{CompressionCodec.IDENTITY, CompressionCodec.GZIP, CompressionCodec.ZSTD}) {
+      final Properties properties = new Properties();
+      properties.setProperty(PROPERTY_BASE + ".compressionCodec", codec.getEncodingString());
+      Assertions.assertEquals(codec, configure(properties).getCompressionCodec());
+    }
+  }
+
+  @Test
+  public void testCompressionCodecIsNotCaseSensitive()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".compressionCodec", "ZStd");
+
+    Assertions.assertEquals(CompressionCodec.ZSTD, configure(properties).getCompressionCodec());
+  }
+
+  /**
+   * A misspelled codec fails the service at startup with a message that lists the supported codecs.
+   */
+  @Test
+  public void testUnknownCompressionCodecIsRejected()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".compressionCodec", "zst");
+
+    final RuntimeException e = Assertions.assertThrows(RuntimeException.class, () -> configure(properties));
+    Assertions.assertTrue(
+        e.getMessage().contains("Invalid compression codec[zst]. Supported codecs are: [identity, gzip, zstd]."),
+        e.getMessage()
+    );
   }
 
   private static DruidHttpClientConfig configure(Properties properties)

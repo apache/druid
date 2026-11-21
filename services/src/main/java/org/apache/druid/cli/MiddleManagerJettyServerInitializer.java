@@ -98,10 +98,9 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     final Handler.Sequence handlerList = new Handler.Sequence();
     JettyServerInitUtils.maybeAddHSTSRewriteHandler(serverConfig, handlerList);
 
-    handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(
+    handlerList.addHandler(JettyServerInitUtils.wrapWithCompressionHandler(
         root,
-        serverConfig.getInflateBufferSize(),
-        serverConfig.getCompressionLevel()
+        serverConfig.getHttpServerCompression()
     ));
 
     handlerList.addHandler(new DefaultHandler());

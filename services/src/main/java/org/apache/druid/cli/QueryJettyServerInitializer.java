@@ -160,11 +160,10 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
     JettyServerInitUtils.maybeAddHSTSRewriteHandler(serverConfig, handlerList);
 
-    // Add Gzip handler at the very end
-    handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(
+    // Add compression handler at the very end
+    handlerList.addHandler(JettyServerInitUtils.wrapWithCompressionHandler(
         root,
-        serverConfig.getInflateBufferSize(),
-        serverConfig.getCompressionLevel()
+        serverConfig.getHttpServerCompression()
     ));
 
     final StatisticsHandler statisticsHandler = new StatisticsHandler();

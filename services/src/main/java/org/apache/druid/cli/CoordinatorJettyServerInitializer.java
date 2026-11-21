@@ -137,10 +137,9 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     Handler.Sequence handlerList = new Handler.Sequence(
         rewriteHandler,
-        JettyServerInitUtils.wrapWithDefaultGzipHandler(
+        JettyServerInitUtils.wrapWithCompressionHandler(
             root,
-            serverConfig.getInflateBufferSize(),
-            serverConfig.getCompressionLevel()
+            serverConfig.getHttpServerCompression()
         )
     );
 

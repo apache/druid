@@ -135,10 +135,8 @@ public class HttpClientModule implements Module
           .withConnectTimeout(config.getConnectTimeout())
           .withByteBufAllocator(resolveAllocator(config.getAllocator()))
           .withWorkerCount(config.getNumMaxThreads())
-          .withCompressionCodec(
-              HttpClientConfig.CompressionCodec.valueOf(StringUtils.toUpperCase(config.getCompressionCodec()))
-          )
-          .withUnusedConnectionTimeoutDuration(config.getUnusedConnectionTimeout());
+          .withUnusedConnectionTimeoutDuration(config.getUnusedConnectionTimeout())
+          .withCompressionCodec(config.getCompressionCodec());
 
       final Binding<SSLContext> sslContextBinding = getSslContextBinding();
 

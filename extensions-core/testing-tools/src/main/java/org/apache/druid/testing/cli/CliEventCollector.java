@@ -155,12 +155,11 @@ public class CliEventCollector extends ServerRunnable
         handlerList.addHandler(handler);
       }
 
-      // Add Gzip handler at the very end
+      // Add compression handler at the very end
       handlerList.addHandler(
-          JettyServerInitUtils.wrapWithDefaultGzipHandler(
+          JettyServerInitUtils.wrapWithCompressionHandler(
               root,
-              serverConfig.getInflateBufferSize(),
-              serverConfig.getCompressionLevel()
+              serverConfig.getHttpServerCompression()
           )
       );
 
