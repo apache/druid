@@ -20,7 +20,11 @@
 package org.apache.druid.client;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.hash.Hasher;
 import com.google.common.primitives.Bytes;
+import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.HistoricalFilter;
+import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.CloneQueryMode;
@@ -33,6 +37,7 @@ import org.apache.druid.segment.join.NoopDataSource;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
@@ -303,6 +308,17 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
     expect(serverSelector.pick(query, CloneQueryMode.EXCLUDECLONES)).andReturn(queryableDruidServer).anyTimes();
     expect(queryableDruidServer.getServer()).andReturn(server).anyTimes();
     expect(serverSelector.getSegment()).andReturn(segment).anyTimes();
+    // The mock adds the digest a real selector for this segment would add
+    final ServerSelector realSelector = new ServerSelector(
+        segment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
+    );
+    serverSelector.putSegmentIdDigest(EasyMock.anyObject(Hasher.class));
+    EasyMock.expectLastCall().andAnswer(() -> {
+      realSelector.putSegmentIdDigest((Hasher) EasyMock.getCurrentArguments()[0]);
+      return null;
+    }).anyTimes();
     replay(serverSelector, queryableDruidServer, server);
     return new SegmentServerSelector(serverSelector, segmentId.toDescriptor());
   }
