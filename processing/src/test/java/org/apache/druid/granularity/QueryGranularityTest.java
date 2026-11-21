@@ -972,6 +972,48 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testImplicitOneHourOffsetTransitions()
+  {
+    // Each row lists a timezone followed by consecutive expected bucket boundaries in UTC.
+    for (final String[] sample : new String[][]{
+        {"Australia/Lord_Howe", "2026-10-03T14:30Z", "2026-10-03T15:30Z", "2026-10-03T16:00Z", "2026-10-03T17:00Z"},
+        {"Australia/Lord_Howe", "2026-04-04T14:00Z", "2026-04-04T15:00Z", "2026-04-04T15:30Z", "2026-04-04T16:30Z"},
+        {"America/New_York", "2026-03-08T06:00Z", "2026-03-08T07:00Z", "2026-03-08T08:00Z"},
+        {"America/New_York", "2026-11-01T05:00Z", "2026-11-01T06:00Z", "2026-11-01T07:00Z"},
+        {"America/Los_Angeles", "2026-03-08T09:00Z", "2026-03-08T10:00Z", "2026-03-08T11:00Z"},
+        {"America/Los_Angeles", "2026-11-01T08:00Z", "2026-11-01T09:00Z", "2026-11-01T10:00Z"},
+        {"Asia/Kathmandu", "1985-12-31T17:30Z", "1985-12-31T18:30Z", "1985-12-31T19:15Z", "1985-12-31T20:15Z"},
+        {"Africa/Nairobi", "1936-12-31T20:30Z", "1936-12-31T21:29:59.999Z", "1936-12-31T22:15Z"},
+        {"Asia/Kuala_Lumpur", "2026-11-19T16:00Z", "2026-11-19T17:00Z", "2026-11-19T18:00Z"},
+        {"UTC", "2026-11-19T16:00Z", "2026-11-19T17:00Z", "2026-11-19T18:00Z"},
+        // The 23:00Z transition changes only the timezone name, so it must not split the hour.
+        {"America/Goose_Bay", "1945-08-14T22:30Z", "1945-08-14T23:30Z", "1945-08-15T00:30Z"},
+        {"Pacific/Honolulu", "1945-08-14T22:30Z", "1945-08-14T23:30Z", "1945-08-15T00:30Z"}
+    }) {
+      final DateTimeZone timeZone = DateTimes.inferTzFromString(sample[0]);
+      final PeriodGranularity granularity = new PeriodGranularity(Period.hours(1), null, timeZone);
+      final Iterator<Interval> buckets = granularity.getIterable(
+          new Interval(DateTimes.of(sample[1]), DateTimes.of(sample[sample.length - 1]))
+      ).iterator();
+      for (int i = 1; i < sample.length - 1; i++) {
+        final long start = DateTimes.of(sample[i]).getMillis();
+        final long end = DateTimes.of(sample[i + 1]).getMillis();
+        final String message = StringUtils.format("Timezone [%s], bucket [%s/%s]", sample[0], sample[i], sample[i + 1]);
+        for (final long timestamp : new long[]{start, start + 1, start + (end - start) / 2, end - 1}) {
+          Assertions.assertEquals(start, granularity.bucketStart(timestamp), message);
+          Assertions.assertEquals(end, granularity.bucketEnd(DateTimes.utc(timestamp)).getMillis(), message);
+        }
+        Assertions.assertEquals(end, granularity.increment(start), message);
+        Assertions.assertEquals(end, granularity.bucketStart(end), message);
+        Assertions.assertEquals(new Interval(start, end, timeZone), buckets.next(), message);
+        // Non-boundary timestamps still advance by an ordinary elapsed hour.
+        Assertions.assertEquals(start + 1 + 3_600_000L, granularity.increment(start + 1), message);
+      }
+      Assertions.assertFalse(buckets.hasNext(), sample[0]);
+    }
+  }
+
+  @Test
   public void testTruncateKathmandu()
   {
     final DateTimeZone tz = DateTimeZone.forTimeZone(TimeZone.getTimeZone("Asia/Kathmandu"));

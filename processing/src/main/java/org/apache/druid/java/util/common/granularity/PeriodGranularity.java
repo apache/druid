@@ -128,6 +128,21 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   @Override
   public long increment(long t)
   {
+    if (!hasOrigin && !isCompound && period.getHours() == 1 && truncateImplicitHour(t) == t) {
+      final long nextHour = truncateImplicitHour(chronology.hours().add(t, 1));
+      final DateTimeZone zone = chronology.getZone();
+      long cursor = t;
+      long nextTransition = zone.nextTransition(cursor);
+      while (nextTransition > cursor && nextTransition < nextHour) {
+        // Offset changes start a partial local hour. Name changes alone do not split a bucket.
+        if (zone.getOffset(nextTransition - 1) != zone.getOffset(nextTransition)) {
+          return nextTransition;
+        }
+        cursor = nextTransition;
+        nextTransition = zone.nextTransition(cursor);
+      }
+      return nextHour;
+    }
     return chronology.add(period, t, 1);
   }
 
@@ -508,7 +523,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         }
         return t;
       } else {
-        return chronology.hourOfDay().roundFloor(t);
+        return truncateImplicitHour(t);
       }
     }
 
@@ -569,6 +584,31 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     }
 
     return t;
+  }
+
+  /**
+   * Round down using the input's UTC offset so repeated local hours remain distinct.
+   * An offset transition within that hour starts a partial bucket.
+   */
+  private long truncateImplicitHour(final long timestamp)
+  {
+    final DateTimeZone zone = chronology.getZone();
+    final long localHour = ISOChronology.getInstanceUTC().hourOfDay().roundFloor(zone.convertUTCToLocal(timestamp));
+    final long boundary = localHour - zone.getOffset(timestamp);
+    long cursor = timestamp;
+    while (cursor > boundary) {
+      // Joda returns the millisecond before a transition, or the input if there is no earlier transition.
+      final long previous = zone.previousTransition(cursor);
+      if (previous >= cursor || previous < boundary) {
+        break;
+      }
+      // Timezone name changes alone must not split the hour.
+      if (zone.getOffset(previous) != zone.getOffset(previous + 1)) {
+        return previous + 1;
+      }
+      cursor = previous;
+    }
+    return boundary;
   }
 
   private long truncateCompoundPeriod(long t)
