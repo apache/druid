@@ -86,7 +86,7 @@ public class MetadataSegmentViewTest
         .withNumPartitions(10)
         .eachOfSizeInMb(100)
         .stream()
-        .map(s -> new SegmentStatusInCluster(s, false, 1, 100L, false))
+        .map(s -> new SegmentStatusInCluster(s, false, 1, 100L, false, true))
         .toList();
 
     Mockito.when(
