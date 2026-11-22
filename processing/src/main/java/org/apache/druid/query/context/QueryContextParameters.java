@@ -1268,6 +1268,14 @@ public final class QueryContextParameters
           .queryType(QueryType.GROUP_BY)
           .build();
 
+  public static final QueryContextParameter<Boolean> ENABLE_FILTER_DICTIONARY_COMPACTION =
+      booleanParameter("enableFilterDictionaryCompaction")
+          .since("40.0.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .description("Overrides the value of `druid.query.groupBy.enableFilterDictionaryCompaction`.")
+          .defaultValue(DefaultValue.fromProperty("druid.query.groupBy.enableFilterDictionaryCompaction"))
+          .queryType(QueryType.GROUP_BY)
+          .build();
+
   public static final QueryContextParameter<Integer> INTERMEDIATE_COMBINE_DEGREE =
       integerParameter("intermediateCombineDegree")
           .since("0.12.0").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)

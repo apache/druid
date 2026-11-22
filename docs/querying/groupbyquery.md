@@ -288,6 +288,12 @@ Historicals and ingestion tasks need one merge buffer for each groupBy query, un
 
 ### Performance tuning for groupBy
 
+#### Filter-aware dictionary compaction
+
+When `enableFilterDictionaryCompaction` is enabled, groupBy can compact dictionary IDs for each default grouping dimension on a single-valued, dictionary-encoded string column using a positive string `IN` or equality filter on that column, including a conjunct of an `AND` filter. Each grouping dimension is considered independently; dimensions without an eligible filter retain their existing selectors. Scalar and vector execution use the compact dictionaries for aggregation, including when choosing array aggregation. The original row filter is retained.
+
+Compaction requires fewer filter values than dictionary entries. Null-containing lists, virtual or extracted grouping dimensions, multi-value columns, and unsupported filters retain their existing behavior. Array aggregation still requires sufficient processing-buffer space, and `forceHashAggregation` disables compaction.
+
 #### Limit pushdown optimization
 
 Druid pushes down the `limit` spec in groupBy queries to the segments on Historicals wherever possible to early prune unnecessary intermediate results and minimize the amount of data transferred to Brokers. By default, this technique is applied only when all fields in the `orderBy` spec is a subset of the grouping keys. This is because the `limitPushDown` doesn't guarantee the exact results if the `orderBy` spec includes any fields that are not in the grouping keys. However, you can enable this technique even in such cases if you can sacrifice some accuracy for fast query processing like in topN queries. See `forceLimitPushDown` in [advanced configurations](#advanced-configurations).
@@ -373,6 +379,7 @@ Supported runtime properties:
 |`druid.query.groupBy.bufferGrouperInitialBuckets`|Initial number of buckets in the off-heap hash table used for grouping results. Set to 0 to use a reasonable default (1024).|0|
 |`druid.query.groupBy.bufferGrouperMaxLoadFactor`|Maximum load factor of the off-heap hash table used for grouping results. When the load factor exceeds this size, the table will be grown or spilled to disk. Set to 0 to use a reasonable default (0.7).|0|
 |`druid.query.groupBy.forceHashAggregation`|Force to use hash-based aggregation.|false|
+|`druid.query.groupBy.enableFilterDictionaryCompaction`|Compact grouping dictionary IDs using eligible filters.|false|
 |`druid.query.groupBy.intermediateCombineDegree`|Number of intermediate nodes combined together in the combining tree. Higher degrees will need less threads which might be helpful to improve the query performance by reducing the overhead of too many threads if the server has sufficiently powerful cpu cores.|8|
 |`druid.query.groupBy.numParallelCombineThreads`|Hint for the number of parallel combining threads. This should be larger than 1 to turn on the parallel combining feature. The actual number of threads used for parallel combining is min(`druid.query.groupBy.numParallelCombineThreads`, `druid.processing.numThreads`).|1 (disabled)|
 |`druid.query.groupBy.applyLimitPushDownToSegment`|If Broker pushes limit down to queryable data server (historicals, peons) then limit results during segment scan. If typically there are a large number of segments taking part in a query on a data server, this setting may counterintuitively reduce performance if enabled.|false (disabled)|
@@ -411,6 +418,7 @@ The following query context parameters apply to GroupBy queries:
 |[`bufferGrouperInitialBuckets`](query-context-reference.md#buffergrouperinitialbuckets)|Overrides the value of `druid.query.groupBy.bufferGrouperInitialBuckets` for this query.|`druid.query.groupBy.bufferGrouperInitialBuckets`|
 |[`bufferGrouperMaxLoadFactor`](query-context-reference.md#buffergroupermaxloadfactor)|Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.|`druid.query.groupBy.bufferGrouperMaxLoadFactor`|
 |[`deferExpressionDimensions`](query-context-reference.md#deferexpressiondimensions)|When an entry in `dimensions` references an `expression` virtual column, this property influences whether expression evaluation is deferred from cursor processing to the merge step.|`druid.query.groupBy.deferExpressionDimensions`|
+|[`enableFilterDictionaryCompaction`](query-context-reference.md#enablefilterdictionarycompaction)|Overrides the value of `druid.query.groupBy.enableFilterDictionaryCompaction`.|`druid.query.groupBy.enableFilterDictionaryCompaction`|
 |[`forceHashAggregation`](query-context-reference.md#forcehashaggregation)|Overrides the value of `druid.query.groupBy.forceHashAggregation`.|`druid.query.groupBy.forceHashAggregation`|
 |[`forceLimitPushDown`](query-context-reference.md#forcelimitpushdown)|When all fields in the orderby are part of the grouping key, the Broker will push limit application down to the Historical processes.|`druid.query.groupBy.forcePushDownLimit`|
 |[`groupByEnableMultiValueUnnesting`](query-context-reference.md#groupbyenablemultivalueunnesting)|Safety flag to enable/disable the implicit unnesting on multi value column's as part of the grouping key.|`druid.query.groupBy.enableMultiValueUnnesting`|

@@ -35,6 +35,7 @@ public class GroupByQueryConfigTest
 
   private final ImmutableMap<String, String> CONFIG_MAP = ImmutableMap
       .<String, String>builder()
+      .put("enableFilterDictionaryCompaction", "true")
       .put("singleThreaded", "true")
       .put("bufferGrouperInitialBuckets", "1")
       .put("defaultOnDiskStorage", "1M")
@@ -50,6 +51,8 @@ public class GroupByQueryConfigTest
   {
     final GroupByQueryConfig config = MAPPER.convertValue(CONFIG_MAP, GroupByQueryConfig.class);
 
+    Assertions.assertFalse(new GroupByQueryConfig().isEnableFilterDictionaryCompaction());
+    Assertions.assertTrue(config.isEnableFilterDictionaryCompaction());
     Assertions.assertEquals(true, config.isSingleThreaded());
     Assertions.assertEquals(1, config.getBufferGrouperInitialBuckets());
     Assertions.assertEquals(4_000_000, config.getMaxOnDiskStorage().getBytes());
@@ -73,6 +76,7 @@ public class GroupByQueryConfigTest
                     .build()
     );
 
+    Assertions.assertTrue(config2.isEnableFilterDictionaryCompaction());
     Assertions.assertEquals(true, config2.isSingleThreaded());
     Assertions.assertEquals(1, config2.getBufferGrouperInitialBuckets());
     Assertions.assertEquals(1_000_000, config2.getMaxOnDiskStorage().getBytes());
@@ -97,6 +101,7 @@ public class GroupByQueryConfigTest
                         QueryContext.builder()
                                     .putRaw(QueryContextParameters.MAX_ON_DISK_STORAGE.getName(), "3M")
                                     .putRaw("maxResults", 2)
+                                    .put(QueryContextParameters.ENABLE_FILTER_DICTIONARY_COMPACTION, false)
                                     .put(QueryContextParameters.MAX_SELECTOR_DICTIONARY_SIZE, 3L)
                                     .put(QueryContextParameters.MAX_MERGING_DICTIONARY_SIZE, 4L)
                                     .put(QueryContextParameters.MAX_SPILL_FILE_COUNT, 333)
@@ -112,6 +117,7 @@ public class GroupByQueryConfigTest
 
     Assertions.assertEquals(true, config2.isSingleThreaded());
     Assertions.assertEquals(1, config2.getBufferGrouperInitialBuckets());
+    Assertions.assertFalse(config2.isEnableFilterDictionaryCompaction());
     Assertions.assertEquals(3_000_000, config2.getMaxOnDiskStorage().getBytes());
     Assertions.assertEquals(333, config2.getMaxSpillFileCount());
     Assertions.assertEquals(3, config2.getConfiguredMaxSelectorDictionarySize());

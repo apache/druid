@@ -37,6 +37,7 @@ import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -67,6 +68,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -126,6 +128,31 @@ public class GroupByQueryEngine
             query.getDimensions(),
             columnSelectorFactory
         );
+    for (int i = 0; i < selectorPlus.length; i++) {
+      final ColumnSelectorPlus<GroupByColumnSelectorStrategy> base = selectorPlus[i];
+      if (base.getSelector() instanceof DimensionSelector selector) {
+        final Set<String> values = GroupingEngine.getFilteredDimensionValues(
+            query,
+            querySpecificConfig,
+            query.getDimensions().get(i),
+            columnSelectorFactory,
+            selector
+        );
+        if (values != null) {
+          final DimensionSelector filtered = ListFilteredDimensionSpec.filterAllowList(values, selector);
+          selectorPlus[i] = new ColumnSelectorPlus<>(
+              base.getName(),
+              base.getOutputName(),
+              STRATEGY_FACTORY.makeColumnSelectorStrategy(
+                  columnSelectorFactory.getColumnCapabilities(base.getName()),
+                  filtered,
+                  base.getName()
+              ),
+              filtered
+          );
+        }
+      }
+    }
     final GroupByColumnSelectorPlus[] dims = new GroupByColumnSelectorPlus[selectorPlus.length];
     int curPos = 0;
     for (int i = 0; i < dims.length; i++) {

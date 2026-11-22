@@ -64,6 +64,12 @@ import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
@@ -80,6 +86,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.VirtualColumns;
@@ -103,6 +110,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
@@ -951,6 +959,99 @@ public class GroupingEngine
     );
   }
 
+
+  /**
+   * Finds a set of grouping values smaller than the dictionary from a positive filter conjunct. The row filter
+   * is retained; filtering the grouping values is only equivalent for single-valued columns.
+   */
+  @Nullable
+  public static Set<String> getFilteredDimensionValues(
+      final GroupByQuery query,
+      final GroupByQueryConfig config,
+      final DimensionSpec dimension,
+      final ColumnInspector inspector,
+      final DimensionDictionarySelector selector
+  )
+  {
+    final ColumnCapabilities capabilities = inspector.getColumnCapabilities(dimension.getDimension());
+    if (!config.isEnableFilterDictionaryCompaction()
+        || config.isForceHashAggregation()
+        || dimension.getClass() != DefaultDimensionSpec.class
+        || !ColumnType.STRING.equals(dimension.getOutputType())
+        || query.getVirtualColumns().exists(dimension.getDimension())
+        || !Types.is(capabilities, ValueType.STRING)
+        || !capabilities.isDictionaryEncoded().isTrue()
+        || !capabilities.areDictionaryValuesUnique().isTrue()
+        || !capabilities.hasMultipleValues().isFalse()
+        || selector.getValueCardinality() <= 0
+        || !selector.nameLookupPossibleInAdvance()
+        || selector.idLookup() == null) {
+      return null;
+    }
+
+    final Set<String> values = getFilterValues(query.getFilter(), dimension.getDimension(), selector.getValueCardinality());
+    if (values == null) {
+      return null;
+    }
+    // Preserve lexicographic dictionary order for grouping strategies that compare ids directly.
+    return new TreeSet<>(values);
+  }
+
+  @Nullable
+  private static Set<String> getFilterValues(
+      @Nullable final DimFilter filter,
+      final String column,
+      final int dictionaryCardinality
+  )
+  {
+    if (filter instanceof AndDimFilter andFilter) {
+      Set<String> smallest = null;
+      for (final DimFilter child : andFilter.getFields()) {
+        final Set<String> values = getFilterValues(child, column, dictionaryCardinality);
+        if (values != null && (smallest == null || values.size() < smallest.size())) {
+          smallest = values;
+        }
+      }
+      return smallest;
+    }
+
+    final Set<String> values;
+    if (filter instanceof InDimFilter in
+        && column.equals(in.getDimension())
+        && in.getExtractionFn() == null) {
+      values = in.getValues();
+    } else if (filter instanceof TypedInFilter in
+               && column.equals(in.getColumn())
+               && ColumnType.STRING.equals(in.getMatchValueType())
+               && in.getSortedValues().size() < dictionaryCardinality) {
+      values = new HashSet<>();
+      for (final Object value : in.getSortedValues()) {
+        if (!(value instanceof String)) {
+          return null;
+        }
+        values.add((String) value);
+      }
+    } else if (filter instanceof SelectorDimFilter selector
+               && column.equals(selector.getDimension())
+               && selector.getExtractionFn() == null
+               && selector.getValue() != null) {
+      values = Set.of(selector.getValue());
+    } else if (filter instanceof EqualityFilter equality
+               && column.equals(equality.getColumn())
+               && ColumnType.STRING.equals(equality.getMatchValueType())
+               && equality.getMatchValue() instanceof String) {
+      values = Set.of((String) equality.getMatchValue());
+    } else {
+      // Do not infer a domain from OR, NOT, expressions, extraction functions, or filters on another column.
+      return null;
+    }
+    // Only build a mapping when the filter domain is smaller than the dictionary. Null-containing
+    // lists retain the original selectors, including their missing-value behavior.
+    if (values.isEmpty() || values.size() >= dictionaryCardinality) {
+      return null;
+    }
+    return values.stream().anyMatch(value -> value == null) ? null : values;
+  }
 
   /**
    * Returns the cardinality of array needed to do array-based aggregation, or -1 if array-based aggregation
