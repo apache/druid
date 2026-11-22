@@ -81,6 +81,8 @@ Druid uses explicit acknowledgements and sets `share.acquire.mode=record_limit` 
 
 Share group tasks use time-chunk `APPEND` locks. Submit and restart tasks through the Overlord task API.
 
+Set `tuningConfig.streamingPartitionsSpec.partitionDimensions` to record distinct string dimension values in each published segment. The Broker uses those values to skip segments that cannot match a query filter. See [Streaming partitions spec](./kafka-ingestion.md#streaming-partitions-spec) for tuning options.
+
 ## Delivery semantics
 
 A task parses one poll, pushes its segments to deep storage, and commits segment metadata before acknowledging the records. Records that yield zero rows under the configured parsing and filtering rules can be acknowledged without publishing a segment.

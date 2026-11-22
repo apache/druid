@@ -138,7 +138,7 @@ public class ShareGroupIndexTaskRunnerTest
   @Test
   public void testDoesNotAcknowledgeFailedPublication()
   {
-    Mockito.when(driver.publish(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(
+    Mockito.when(driver.publish(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(
         Futures.immediateFailedFuture(new IOException("Publish failed"))
     );
 
@@ -165,7 +165,7 @@ public class ShareGroupIndexTaskRunnerTest
            .when(consumer).commitSync(Mockito.any());
 
     Assertions.assertThrows(ISE.class, () -> runner.runLoop(consumer, reader, driver, 300_000));
-    Mockito.verify(driver).publish(Mockito.any(), Mockito.any(), Mockito.any());
+    Mockito.verify(driver).publish(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     Mockito.verify(driver).registerHandoff(Mockito.any());
     Mockito.verify(consumer).poll(Mockito.any());
   }
@@ -177,7 +177,7 @@ public class ShareGroupIndexTaskRunnerTest
 
     runner.runLoop(consumer, reader, driver, 300_000);
 
-    Mockito.verify(driver, Mockito.never()).publish(Mockito.any(), Mockito.any(), Mockito.any());
+    Mockito.verify(driver, Mockito.never()).publish(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     Mockito.verify(consumer).acknowledge(RECORD, AcknowledgeType.ACCEPT);
     Mockito.verify(consumer).commitSync(Mockito.any());
   }
@@ -242,7 +242,7 @@ public class ShareGroupIndexTaskRunnerTest
   private void preparePublishResult(SegmentPublishResult result) throws IOException
   {
     Mockito.when(actionClient.submit(Mockito.any(SegmentTransactionalAppendAction.class))).thenReturn(result);
-    Mockito.when(driver.publish(Mockito.any(), Mockito.any(), Mockito.any())).thenAnswer(invocation -> {
+    Mockito.when(driver.publish(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any())).thenAnswer(invocation -> {
       final TransactionalSegmentPublisher publisher = invocation.getArgument(0);
       publisher.publishAnnotatedSegments(null, Set.of(SEGMENT), null, null);
       return Futures.immediateFuture(new SegmentsAndCommitMetadata(List.of(SEGMENT), null).withWasPublished(true));

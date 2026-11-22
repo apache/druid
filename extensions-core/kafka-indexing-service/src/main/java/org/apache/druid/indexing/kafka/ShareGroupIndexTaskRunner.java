@@ -35,6 +35,8 @@ import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.StreamChunkReader;
+import org.apache.druid.indexing.seekablestream.StreamingPartitionsSpec;
+import org.apache.druid.indexing.seekablestream.StreamingShardSpecCollector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -71,6 +73,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -82,6 +85,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 final class ShareGroupIndexTaskRunner
 {
@@ -206,7 +211,17 @@ final class ShareGroupIndexTaskRunner
     final ShareGroupIndexTaskIOConfig ioConfig = task.getIOConfig();
     final Duration pollTimeout = Duration.ofMillis(ioConfig.getPollTimeout());
     final Deque<ListenableFuture<SegmentsAndCommitMetadata>> handoffs = new ArrayDeque<>();
-    final long handoffWarningMs = task.getTuningConfig().getHandoffConditionTimeout();
+    final KafkaIndexTaskTuningConfig tuningConfig = task.getTuningConfig();
+    final long handoffWarningMs = tuningConfig.getHandoffConditionTimeout();
+    final StreamingPartitionsSpec streamingPartitionsSpec = tuningConfig.getStreamingPartitionsSpec();
+    final StreamingShardSpecCollector shardSpecCollector =
+        streamingPartitionsSpec == null ? null : streamingPartitionsSpec.createCollector();
+    final UnaryOperator<Set<DataSegment>> annotateSegments =
+        shardSpecCollector == null
+        ? UnaryOperator.identity()
+        : segments -> segments.stream()
+                             .map(shardSpecCollector::annotate)
+                             .collect(Collectors.toCollection(LinkedHashSet::new));
     final TransactionalSegmentPublisher publisher = new TransactionalSegmentPublisher()
     {
       @Override
@@ -252,18 +267,27 @@ final class ShareGroupIndexTaskRunner
           if (!addResult.isOk()) {
             throw new ISE("Could not allocate a segment for Kafka share group [%s].", ioConfig.getGroupId());
           }
+          if (shardSpecCollector != null) {
+            shardSpecCollector.collect(addResult.getSegmentIdentifier().asSegmentId(), row);
+          }
           addedRows = true;
         }
       }
       if (addedRows) {
         remainingMillis(batchTime, publishBudgetMs);
-        final SegmentsAndCommitMetadata published = driver.publish(publisher, Committers.nil(), List.of(sequenceName))
-                                                          .get(
-                                                              remainingMillis(batchTime, publishBudgetMs),
-                                                              TimeUnit.MILLISECONDS
-                                                          );
+        final SegmentsAndCommitMetadata published = driver.publish(
+            publisher,
+            Committers.nil(),
+            List.of(sequenceName),
+            annotateSegments
+        ).get(remainingMillis(batchTime, publishBudgetMs), TimeUnit.MILLISECONDS);
         if (published == null || !published.wasPublished() || published.getSegments().isEmpty()) {
           throw new ISE("Publication was not confirmed for Kafka share group [%s].", ioConfig.getGroupId());
+        }
+        if (shardSpecCollector != null) {
+          for (final DataSegment segment : published.getSegments()) {
+            shardSpecCollector.onSegmentPublished(segment.getId());
+          }
         }
         handoffs.addLast(driver.registerHandoff(published));
       }

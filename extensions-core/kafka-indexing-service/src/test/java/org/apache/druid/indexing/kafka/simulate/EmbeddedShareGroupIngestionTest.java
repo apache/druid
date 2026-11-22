@@ -31,7 +31,9 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTask;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTaskIOConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaTuningConfigBuilder;
 import org.apache.druid.indexing.overlord.TaskRunner;
+import org.apache.druid.indexing.seekablestream.DimensionValueSetPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -46,6 +48,8 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.DimensionValueSetShardSpec;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -58,8 +62,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /** End-to-end IT for Kafka share-group ingestion; requires Docker. */
 public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
@@ -128,6 +134,69 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     assertRowCountEventually(numRecords);
 
+    cancelAndAwaitTermination(taskId);
+  }
+
+  @Test
+  public void test_shareGroupIngestion_prunesPublishedSegments()
+  {
+    final String topic = dataSource + "_topic";
+    kafkaServer.createTopicWithPartitions(topic, 1);
+    final Map<String, Object> consumerProperties = new HashMap<>(kafkaServer.consumerProperties());
+    consumerProperties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
+    final KafkaIndexTaskTuningConfig tuningConfig = new KafkaTuningConfigBuilder()
+        .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(COL_ITEM)))
+        .build()
+        .convertToTaskTuningConfig();
+    final String taskId = submitShareGroupTask(
+        topic,
+        dataSource + "_group",
+        consumerProperties,
+        DEFAULT_CSV_FORMAT,
+        tuningConfig
+    );
+
+    kafkaServer.publishRecordsToTopic(
+        topic,
+        List.of(
+            StringUtils.toUtf8("2025-06-01T00:00:01Z,acme,1"),
+            StringUtils.toUtf8("2025-06-01T00:00:02Z,gamma,2")
+        )
+    );
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/kafka/shareGroup/acknowledged").hasDimension(DruidMetrics.TASK_ID, taskId),
+        agg -> agg.hasSumAtLeast(2)
+    );
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/handoff/count").hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(2)
+    );
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    final Set<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord);
+    Assertions.assertEquals(2, segments.size());
+    final Map<List<String>, String> segmentIdByItem = new HashMap<>();
+    for (final DataSegment segment : segments) {
+      final DimensionValueSetShardSpec shardSpec = Assertions.assertInstanceOf(
+          DimensionValueSetShardSpec.class,
+          segment.getShardSpec()
+      );
+      segmentIdByItem.put(shardSpec.getPartitionDimensionValues().get(COL_ITEM), segment.getId().toString());
+    }
+    Assertions.assertEquals(Set.of(List.of("acme"), List.of("gamma")), segmentIdByItem.keySet());
+
+    Assertions.assertEquals("1", cluster.runSql("SELECT COUNT(*) FROM %s WHERE %s = 'acme'", dataSource, COL_ITEM));
+    final String queryId = (String) historical.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("query/time")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.TYPE, "timeseries")
+    ).getUserDims().get(DruidMetrics.ID);
+    Assertions.assertNotNull(queryId);
+    final Set<String> scannedSegments = historical.latchableEmitter().getMetricEvents("query/segment/time").stream()
+        .filter(event -> queryId.equals(event.getUserDims().get(DruidMetrics.ID)))
+        .map(event -> (String) event.getUserDims().get("segment"))
+        .collect(Collectors.toSet());
+    Assertions.assertEquals(Set.of(segmentIdByItem.get(List.of("acme"))), scannedSegments);
     cancelAndAwaitTermination(taskId);
   }
 
