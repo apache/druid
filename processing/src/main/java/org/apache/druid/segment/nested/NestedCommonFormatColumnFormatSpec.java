@@ -21,6 +21,7 @@ package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.IndexSpec;
@@ -46,6 +47,25 @@ public class NestedCommonFormatColumnFormatSpec
                .setLongFieldBitmapIndexType(BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE)
                .setDoubleFieldBitmapIndexType(BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE)
                .build();
+
+  private static void validateObjectStorageCompressionLevel(
+      @Nullable CompressionStrategy strategy,
+      @Nullable Integer level
+  )
+  {
+    if (level == null) {
+      return;
+    }
+    if (strategy == null) {
+      throw new IllegalArgumentException("objectStorageCompressionLevel requires objectStorageCompression");
+    }
+    if (strategy == CompressionStrategy.LZ4 && (level < 0 || level > 17)) {
+      throw new IllegalArgumentException("LZ4 objectStorageCompressionLevel must be between 0 and 17");
+    }
+    if (strategy == CompressionStrategy.ZSTD && (level < 0 || level > 22)) {
+      throw new IllegalArgumentException("Zstd objectStorageCompressionLevel must be between 0 and 22");
+    }
+  }
 
   public static Builder builder()
   {
@@ -132,6 +152,16 @@ public class NestedCommonFormatColumnFormatSpec
       }
     }
 
+    // A column can inherit a level only from a default using the same codec.
+    if (builder.objectStorageCompressionLevel == null
+        && builder.objectStorageCompression == defaultSpec.getObjectStorageCompression()) {
+      builder.setObjectStorageCompressionLevel(defaultSpec.getObjectStorageCompressionLevel());
+    }
+    if (builder.objectStorageCompression != CompressionStrategy.LZ4
+        && builder.objectStorageCompression != CompressionStrategy.ZSTD) {
+      builder.setObjectStorageCompressionLevel(null);
+    }
+
     if (builder.stringDictionaryEncoding == null) {
       if (defaultSpec.getStringDictionaryEncoding() != null) {
         builder.setStringDictionaryEncoding(defaultSpec.getStringDictionaryEncoding());
@@ -143,9 +173,15 @@ public class NestedCommonFormatColumnFormatSpec
     if (builder.dictionaryEncodedColumnCompression == null) {
       if (defaultSpec.getDictionaryEncodedColumnCompression() != null) {
         builder.setDictionaryEncodedColumnCompression(defaultSpec.getDictionaryEncodedColumnCompression());
+        builder.inheritedDictionaryCompressionLevel = defaultSpec.getInheritedDictionaryCompressionLevel();
       } else {
         builder.setDictionaryEncodedColumnCompression(indexSpec.getDimensionCompression());
+        builder.inheritedDictionaryCompressionLevel = indexSpec.getDimensionCompressionLevel();
       }
+    }
+    if (builder.dictionaryEncodedColumnCompression != CompressionStrategy.LZ4
+        && builder.dictionaryEncodedColumnCompression != CompressionStrategy.ZSTD) {
+      builder.inheritedDictionaryCompressionLevel = null;
     }
 
     if (builder.longColumnEncoding == null) {
@@ -159,17 +195,29 @@ public class NestedCommonFormatColumnFormatSpec
     if (builder.longColumnCompression == null) {
       if (defaultSpec.getLongColumnCompression() != null) {
         builder.setLongColumnCompression(defaultSpec.getLongColumnCompression());
+        builder.inheritedLongCompressionLevel = defaultSpec.getInheritedLongCompressionLevel();
       } else {
         builder.setLongColumnCompression(indexSpec.getMetricCompression());
+        builder.inheritedLongCompressionLevel = indexSpec.getMetricCompressionLevel();
       }
+    }
+    if (builder.longColumnCompression != CompressionStrategy.LZ4
+        && builder.longColumnCompression != CompressionStrategy.ZSTD) {
+      builder.inheritedLongCompressionLevel = null;
     }
 
     if (builder.doubleColumnCompression == null) {
       if (defaultSpec.getDoubleColumnCompression() != null) {
         builder.setDoubleColumnCompression(defaultSpec.getDoubleColumnCompression());
+        builder.inheritedDoubleCompressionLevel = defaultSpec.getInheritedDoubleCompressionLevel();
       } else {
         builder.setDoubleColumnCompression(indexSpec.getMetricCompression());
+        builder.inheritedDoubleCompressionLevel = indexSpec.getMetricCompressionLevel();
       }
+    }
+    if (builder.doubleColumnCompression != CompressionStrategy.LZ4
+        && builder.doubleColumnCompression != CompressionStrategy.ZSTD) {
+      builder.inheritedDoubleCompressionLevel = null;
     }
 
     return builder.build();
@@ -182,6 +230,8 @@ public class NestedCommonFormatColumnFormatSpec
   @Nullable
   private final CompressionStrategy objectStorageCompression;
   @Nullable
+  private final Integer objectStorageCompressionLevel;
+  @Nullable
   private final StringEncodingStrategy stringDictionaryEncoding;
   @Nullable
   private final CompressionStrategy dictionaryEncodedColumnCompression;
@@ -192,11 +242,45 @@ public class NestedCommonFormatColumnFormatSpec
   @Nullable
   private final CompressionStrategy doubleColumnCompression;
   @Nullable
+  private final Integer inheritedDictionaryCompressionLevel;
+  @Nullable
+  private final Integer inheritedLongCompressionLevel;
+  @Nullable
+  private final Integer inheritedDoubleCompressionLevel;
+  @Nullable
   private final BitmapSerdeFactory bitmapEncoding;
   @Nullable
   private final BitmapIndexType longFieldBitmapIndexType;
   @Nullable
   private final BitmapIndexType doubleFieldBitmapIndexType;
+
+  public NestedCommonFormatColumnFormatSpec(
+      @Nullable StringEncodingStrategy objectFieldsDictionaryEncoding,
+      @Nullable BitmapIndexType longFieldBitmapIndexType,
+      @Nullable BitmapIndexType doubleFieldBitmapIndexType,
+      @Nullable ObjectStorageEncoding objectStorageEncoding,
+      @Nullable CompressionStrategy objectStorageCompression,
+      @Nullable StringEncodingStrategy stringDictionaryEncoding,
+      @Nullable CompressionStrategy dictionaryEncodedColumnCompression,
+      @Nullable CompressionFactory.LongEncodingStrategy longColumnEncoding,
+      @Nullable CompressionStrategy longColumnCompression,
+      @Nullable CompressionStrategy doubleColumnCompression
+  )
+  {
+    this(
+        objectFieldsDictionaryEncoding,
+        longFieldBitmapIndexType,
+        doubleFieldBitmapIndexType,
+        objectStorageEncoding,
+        objectStorageCompression,
+        null,
+        stringDictionaryEncoding,
+        dictionaryEncodedColumnCompression,
+        longColumnEncoding,
+        longColumnCompression,
+        doubleColumnCompression
+    );
+  }
 
   @JsonCreator
   public NestedCommonFormatColumnFormatSpec(
@@ -205,6 +289,7 @@ public class NestedCommonFormatColumnFormatSpec
       @JsonProperty("doubleFieldBitmapIndexType") @Nullable BitmapIndexType doubleFieldBitmapIndexType,
       @JsonProperty("objectStorageEncoding") @Nullable ObjectStorageEncoding objectStorageEncoding,
       @JsonProperty("objectStorageCompression") @Nullable CompressionStrategy objectStorageCompression,
+      @JsonProperty("objectStorageCompressionLevel") @Nullable Integer objectStorageCompressionLevel,
       @JsonProperty("stringDictionaryEncoding") @Nullable StringEncodingStrategy stringDictionaryEncoding,
       @JsonProperty("dictionaryEncodedColumnCompression") @Nullable
       CompressionStrategy dictionaryEncodedColumnCompression,
@@ -217,6 +302,7 @@ public class NestedCommonFormatColumnFormatSpec
         objectFieldsDictionaryEncoding,
         objectStorageEncoding,
         objectStorageCompression,
+        objectStorageCompressionLevel,
         stringDictionaryEncoding,
         dictionaryEncodedColumnCompression,
         longColumnEncoding,
@@ -247,14 +333,87 @@ public class NestedCommonFormatColumnFormatSpec
       @Nullable BitmapIndexType doubleFieldBitmapIndexType
   )
   {
+    this(
+        objectFieldsDictionaryEncoding,
+        objectStorageEncoding,
+        objectStorageCompression,
+        null,
+        stringDictionaryEncoding,
+        dictionaryEncodedColumnCompression,
+        longColumnEncoding,
+        longColumnCompression,
+        doubleColumnCompression,
+        bitmapEncoding,
+        longFieldBitmapIndexType,
+        doubleFieldBitmapIndexType
+    );
+  }
+
+  protected NestedCommonFormatColumnFormatSpec(
+      @Nullable StringEncodingStrategy objectFieldsDictionaryEncoding,
+      @Nullable ObjectStorageEncoding objectStorageEncoding,
+      @Nullable CompressionStrategy objectStorageCompression,
+      @Nullable Integer objectStorageCompressionLevel,
+      @Nullable StringEncodingStrategy stringDictionaryEncoding,
+      @Nullable CompressionStrategy dictionaryEncodedColumnCompression,
+      @Nullable CompressionFactory.LongEncodingStrategy longColumnEncoding,
+      @Nullable CompressionStrategy longColumnCompression,
+      @Nullable CompressionStrategy doubleColumnCompression,
+      @Nullable BitmapSerdeFactory bitmapEncoding,
+      @Nullable BitmapIndexType longFieldBitmapIndexType,
+      @Nullable BitmapIndexType doubleFieldBitmapIndexType
+  )
+  {
+    this(
+        objectFieldsDictionaryEncoding,
+        objectStorageEncoding,
+        objectStorageCompression,
+        objectStorageCompressionLevel,
+        stringDictionaryEncoding,
+        dictionaryEncodedColumnCompression,
+        longColumnEncoding,
+        longColumnCompression,
+        doubleColumnCompression,
+        bitmapEncoding,
+        longFieldBitmapIndexType,
+        doubleFieldBitmapIndexType,
+        null,
+        null,
+        null
+    );
+  }
+
+  private NestedCommonFormatColumnFormatSpec(
+      @Nullable StringEncodingStrategy objectFieldsDictionaryEncoding,
+      @Nullable ObjectStorageEncoding objectStorageEncoding,
+      @Nullable CompressionStrategy objectStorageCompression,
+      @Nullable Integer objectStorageCompressionLevel,
+      @Nullable StringEncodingStrategy stringDictionaryEncoding,
+      @Nullable CompressionStrategy dictionaryEncodedColumnCompression,
+      @Nullable CompressionFactory.LongEncodingStrategy longColumnEncoding,
+      @Nullable CompressionStrategy longColumnCompression,
+      @Nullable CompressionStrategy doubleColumnCompression,
+      @Nullable BitmapSerdeFactory bitmapEncoding,
+      @Nullable BitmapIndexType longFieldBitmapIndexType,
+      @Nullable BitmapIndexType doubleFieldBitmapIndexType,
+      @Nullable Integer inheritedDictionaryCompressionLevel,
+      @Nullable Integer inheritedLongCompressionLevel,
+      @Nullable Integer inheritedDoubleCompressionLevel
+  )
+  {
     this.objectFieldsDictionaryEncoding = objectFieldsDictionaryEncoding;
     this.objectStorageEncoding = objectStorageEncoding;
     this.objectStorageCompression = objectStorageCompression;
+    validateObjectStorageCompressionLevel(objectStorageCompression, objectStorageCompressionLevel);
+    this.objectStorageCompressionLevel = objectStorageCompressionLevel;
     this.stringDictionaryEncoding = stringDictionaryEncoding;
     this.dictionaryEncodedColumnCompression = dictionaryEncodedColumnCompression;
     this.longColumnEncoding = longColumnEncoding;
     this.longColumnCompression = longColumnCompression;
     this.doubleColumnCompression = doubleColumnCompression;
+    this.inheritedDictionaryCompressionLevel = inheritedDictionaryCompressionLevel;
+    this.inheritedLongCompressionLevel = inheritedLongCompressionLevel;
+    this.inheritedDoubleCompressionLevel = inheritedDoubleCompressionLevel;
     this.bitmapEncoding = bitmapEncoding;
     this.longFieldBitmapIndexType = longFieldBitmapIndexType;
     this.doubleFieldBitmapIndexType = doubleFieldBitmapIndexType;
@@ -283,16 +442,34 @@ public class NestedCommonFormatColumnFormatSpec
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Integer getObjectStorageCompressionLevel()
+  {
+    return objectStorageCompressionLevel;
+  }
+
+  @Nullable
+  @JsonProperty
   public StringEncodingStrategy getStringDictionaryEncoding()
   {
     return stringDictionaryEncoding;
   }
 
   @Nullable
-  @JsonProperty
+  @JsonIgnore
   public CompressionStrategy getDictionaryEncodedColumnCompression()
   {
     return dictionaryEncodedColumnCompression;
+  }
+
+  // Keep derived codecs out of serialized effective specs when their levels come from IndexSpec.
+  // Otherwise a JSON round trip makes an inherited codec look like an explicit column override.
+  @Nullable
+  @JsonProperty("dictionaryEncodedColumnCompression")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public CompressionStrategy getSerializableDictionaryEncodedColumnCompression()
+  {
+    return inheritedDictionaryCompressionLevel == null ? dictionaryEncodedColumnCompression : null;
   }
 
   @Nullable
@@ -303,17 +480,58 @@ public class NestedCommonFormatColumnFormatSpec
   }
 
   @Nullable
-  @JsonProperty
+  @JsonIgnore
   public CompressionStrategy getLongColumnCompression()
   {
     return longColumnCompression;
   }
 
+  // Keep derived codecs out of serialized effective specs when their levels come from IndexSpec.
+  // Otherwise a JSON round trip makes an inherited codec look like an explicit column override.
   @Nullable
-  @JsonProperty
+  @JsonProperty("longColumnCompression")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public CompressionStrategy getSerializableLongColumnCompression()
+  {
+    return inheritedLongCompressionLevel == null ? longColumnCompression : null;
+  }
+
+  @Nullable
+  @JsonIgnore
   public CompressionStrategy getDoubleColumnCompression()
   {
     return doubleColumnCompression;
+  }
+
+  // Keep derived codecs out of serialized effective specs when their levels come from IndexSpec.
+  // Otherwise a JSON round trip makes an inherited codec look like an explicit column override.
+  @Nullable
+  @JsonProperty("doubleColumnCompression")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public CompressionStrategy getSerializableDoubleColumnCompression()
+  {
+    return inheritedDoubleCompressionLevel == null ? doubleColumnCompression : null;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public Integer getInheritedDictionaryCompressionLevel()
+  {
+    return inheritedDictionaryCompressionLevel;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public Integer getInheritedLongCompressionLevel()
+  {
+    return inheritedLongCompressionLevel;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public Integer getInheritedDoubleCompressionLevel()
+  {
+    return inheritedDoubleCompressionLevel;
   }
 
   @Nullable
@@ -347,11 +565,15 @@ public class NestedCommonFormatColumnFormatSpec
     return Objects.equals(objectFieldsDictionaryEncoding, that.objectFieldsDictionaryEncoding)
            && objectStorageEncoding == that.objectStorageEncoding
            && objectStorageCompression == that.objectStorageCompression
+           && Objects.equals(objectStorageCompressionLevel, that.objectStorageCompressionLevel)
            && Objects.equals(stringDictionaryEncoding, that.stringDictionaryEncoding)
            && dictionaryEncodedColumnCompression == that.dictionaryEncodedColumnCompression
            && longColumnEncoding == that.longColumnEncoding
            && longColumnCompression == that.longColumnCompression
            && doubleColumnCompression == that.doubleColumnCompression
+           && Objects.equals(inheritedDictionaryCompressionLevel, that.inheritedDictionaryCompressionLevel)
+           && Objects.equals(inheritedLongCompressionLevel, that.inheritedLongCompressionLevel)
+           && Objects.equals(inheritedDoubleCompressionLevel, that.inheritedDoubleCompressionLevel)
            && Objects.equals(bitmapEncoding, that.bitmapEncoding)
            && Objects.equals(longFieldBitmapIndexType, that.longFieldBitmapIndexType)
            && Objects.equals(doubleFieldBitmapIndexType, that.doubleFieldBitmapIndexType);
@@ -364,11 +586,15 @@ public class NestedCommonFormatColumnFormatSpec
         objectFieldsDictionaryEncoding,
         objectStorageEncoding,
         objectStorageCompression,
+        objectStorageCompressionLevel,
         stringDictionaryEncoding,
         dictionaryEncodedColumnCompression,
         longColumnEncoding,
         longColumnCompression,
         doubleColumnCompression,
+        inheritedDictionaryCompressionLevel,
+        inheritedLongCompressionLevel,
+        inheritedDoubleCompressionLevel,
         bitmapEncoding,
         longFieldBitmapIndexType,
         doubleFieldBitmapIndexType
@@ -382,6 +608,7 @@ public class NestedCommonFormatColumnFormatSpec
            "objectFieldsDictionaryEncoding=" + objectFieldsDictionaryEncoding +
            ", objectStorageEncoding=" + objectStorageEncoding +
            ", objectStorageCompression=" + objectStorageCompression +
+           ", objectStorageCompressionLevel=" + objectStorageCompressionLevel +
            ", stringDictionaryEncoding=" + stringDictionaryEncoding +
            ", dictionaryEncodedColumnCompression=" + dictionaryEncodedColumnCompression +
            ", longColumnEncoding=" + longColumnEncoding +
@@ -402,6 +629,8 @@ public class NestedCommonFormatColumnFormatSpec
     @Nullable
     private CompressionStrategy objectStorageCompression;
     @Nullable
+    private Integer objectStorageCompressionLevel;
+    @Nullable
     private StringEncodingStrategy stringDictionaryEncoding;
     @Nullable
     private CompressionStrategy dictionaryEncodedColumnCompression;
@@ -411,6 +640,12 @@ public class NestedCommonFormatColumnFormatSpec
     private CompressionStrategy longColumnCompression;
     @Nullable
     private CompressionStrategy doubleColumnCompression;
+    @Nullable
+    private Integer inheritedDictionaryCompressionLevel;
+    @Nullable
+    private Integer inheritedLongCompressionLevel;
+    @Nullable
+    private Integer inheritedDoubleCompressionLevel;
     @Nullable
     private BitmapIndexType longFieldBitmapIndexType;
     @Nullable
@@ -428,11 +663,15 @@ public class NestedCommonFormatColumnFormatSpec
       this.objectFieldsDictionaryEncoding = spec.objectFieldsDictionaryEncoding;
       this.objectStorageEncoding = spec.objectStorageEncoding;
       this.objectStorageCompression = spec.objectStorageCompression;
+      this.objectStorageCompressionLevel = spec.objectStorageCompressionLevel;
       this.stringDictionaryEncoding = spec.stringDictionaryEncoding;
       this.dictionaryEncodedColumnCompression = spec.dictionaryEncodedColumnCompression;
       this.longColumnEncoding = spec.longColumnEncoding;
       this.longColumnCompression = spec.longColumnCompression;
       this.doubleColumnCompression = spec.doubleColumnCompression;
+      this.inheritedDictionaryCompressionLevel = spec.inheritedDictionaryCompressionLevel;
+      this.inheritedLongCompressionLevel = spec.inheritedLongCompressionLevel;
+      this.inheritedDoubleCompressionLevel = spec.inheritedDoubleCompressionLevel;
       this.bitmapEncoding = spec.bitmapEncoding;
       this.longFieldBitmapIndexType = spec.longFieldBitmapIndexType;
       this.doubleFieldBitmapIndexType = spec.doubleFieldBitmapIndexType;
@@ -453,6 +692,12 @@ public class NestedCommonFormatColumnFormatSpec
     public Builder setObjectStorageCompression(@Nullable CompressionStrategy objectStorageCompression)
     {
       this.objectStorageCompression = objectStorageCompression;
+      return this;
+    }
+
+    public Builder setObjectStorageCompressionLevel(@Nullable Integer objectStorageCompressionLevel)
+    {
+      this.objectStorageCompressionLevel = objectStorageCompressionLevel;
       return this;
     }
 
@@ -512,6 +757,7 @@ public class NestedCommonFormatColumnFormatSpec
           objectFieldsDictionaryEncoding,
           objectStorageEncoding,
           objectStorageCompression,
+          objectStorageCompressionLevel,
           stringDictionaryEncoding,
           dictionaryEncodedColumnCompression,
           longColumnEncoding,
@@ -519,7 +765,10 @@ public class NestedCommonFormatColumnFormatSpec
           doubleColumnCompression,
           bitmapEncoding,
           longFieldBitmapIndexType,
-          doubleFieldBitmapIndexType
+          doubleFieldBitmapIndexType,
+          inheritedDictionaryCompressionLevel,
+          inheritedLongCompressionLevel,
+          inheritedDoubleCompressionLevel
       );
     }
   }

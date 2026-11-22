@@ -462,6 +462,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
             filenameBase,
             cardinality,
             compressionStrategy,
+            indexSpec.getDimensionCompressionLevel(),
             GenericIndexedWriter.MAX_FILE_SIZE
         );
       } else {
@@ -476,6 +477,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
             filenameBase,
             cardinality,
             compressionStrategy,
+            indexSpec.getDimensionCompressionLevel(),
             segmentWriteOutMedium.getCloser()
         );
       } else {

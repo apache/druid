@@ -310,6 +310,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
           columnName,
           maxId,
           columnFormatSpec.getDictionaryEncodedColumnCompression(),
+          columnFormatSpec.getInheritedDictionaryCompressionLevel(),
           fieldResourceCloser
       );
     } else {

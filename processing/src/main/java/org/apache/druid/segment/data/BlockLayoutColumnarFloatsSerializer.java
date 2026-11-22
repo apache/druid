@@ -61,17 +61,41 @@ public class BlockLayoutColumnarFloatsSerializer implements ColumnarFloatsSerial
       Closer closer
   )
   {
+    this(
+        columnName,
+        segmentWriteOutMedium,
+        filenameBase,
+        byteOrder,
+        compression,
+        fileSizeLimit,
+        closer,
+        null
+    );
+  }
+
+  BlockLayoutColumnarFloatsSerializer(
+      String columnName,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String filenameBase,
+      ByteOrder byteOrder,
+      CompressionStrategy compression,
+      int fileSizeLimit,
+      Closer closer,
+      @Nullable Integer compressionLevel
+  )
+  {
     this.columnName = columnName;
     this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(
         segmentWriteOutMedium,
         filenameBase,
         compression,
+        compressionLevel,
         CompressedPools.BUFFER_SIZE,
         fileSizeLimit,
         closer
     );
     this.compression = compression;
-    CompressionStrategy.Compressor compressor = compression.getCompressor();
+    CompressionStrategy.Compressor compressor = compression.getCompressor(compressionLevel);
     this.endBuffer = compressor.allocateInBuffer(CompressedPools.BUFFER_SIZE, closer).order(byteOrder);
   }
 

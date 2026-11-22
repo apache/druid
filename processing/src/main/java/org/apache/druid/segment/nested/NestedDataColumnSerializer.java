@@ -249,7 +249,8 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
       rawWriter = new CompressedVariableSizedBlobColumnSerializer(
           ColumnSerializerUtils.getInternalFileName(name, RAW_FILE_NAME),
           segmentWriteOutMedium,
-          columnFormatSpec.getObjectStorageCompression()
+          columnFormatSpec.getObjectStorageCompression(),
+          columnFormatSpec.getObjectStorageCompressionLevel()
       );
       rawWriter.open();
     } else {

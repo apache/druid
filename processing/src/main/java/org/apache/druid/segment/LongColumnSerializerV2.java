@@ -32,6 +32,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
@@ -53,6 +54,27 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
       BitmapSerdeFactory bitmapSerdeFactory
   )
   {
+    return create(
+        columnName,
+        segmentWriteOutMedium,
+        filenameBase,
+        compression,
+        encoding,
+        bitmapSerdeFactory,
+        null
+    );
+  }
+
+  public static LongColumnSerializerV2 create(
+      String columnName,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String filenameBase,
+      CompressionStrategy compression,
+      CompressionFactory.LongEncodingStrategy encoding,
+      BitmapSerdeFactory bitmapSerdeFactory,
+      @Nullable Integer compressionLevel
+  )
+  {
     return new LongColumnSerializerV2(
         columnName,
         segmentWriteOutMedium,
@@ -60,7 +82,8 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
         IndexIO.BYTE_ORDER,
         compression,
         encoding,
-        bitmapSerdeFactory
+        bitmapSerdeFactory,
+        compressionLevel
     );
   }
 
@@ -69,6 +92,8 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
   private final String filenameBase;
   private final ByteOrder byteOrder;
   private final CompressionStrategy compression;
+  @Nullable
+  private final Integer compressionLevel;
   private final CompressionFactory.LongEncodingStrategy encoding;
   private final BitmapSerdeFactory bitmapSerdeFactory;
 
@@ -84,7 +109,8 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
       ByteOrder byteOrder,
       CompressionStrategy compression,
       CompressionFactory.LongEncodingStrategy encoding,
-      BitmapSerdeFactory bitmapSerdeFactory
+      BitmapSerdeFactory bitmapSerdeFactory,
+      @Nullable Integer compressionLevel
   )
   {
     this.columnName = columnName;
@@ -93,6 +119,7 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
     this.byteOrder = byteOrder;
     this.compression = compression;
     this.encoding = encoding;
+    this.compressionLevel = compressionLevel;
     this.bitmapSerdeFactory = bitmapSerdeFactory;
   }
 
@@ -106,7 +133,8 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
         byteOrder,
         encoding,
         compression,
-        segmentWriteOutMedium.getCloser()
+        segmentWriteOutMedium.getCloser(),
+        compressionLevel
     );
     writer.open();
     nullValueBitmapWriter = new ByteBufferWriter<>(

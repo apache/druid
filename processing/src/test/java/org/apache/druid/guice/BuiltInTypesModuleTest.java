@@ -116,6 +116,11 @@ public class BuiltInTypesModuleTest
     // ensure that this cannot be set
     props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.bitmapEncoding", "roaring");
     props.setProperty("druid.indexing.formats.indexSpec.metricCompression", CompressionStrategy.ZSTD.toString());
+    props.setProperty("druid.indexing.formats.indexSpec.metricCompressionLevel", "3");
+    props.setProperty("druid.indexing.formats.indexSpec.dimensionCompression", CompressionStrategy.LZ4.toString());
+    props.setProperty("druid.indexing.formats.indexSpec.dimensionCompressionLevel", "0");
+    props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.objectStorageCompression", "zstd");
+    props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.objectStorageCompressionLevel", "3");
     props.setProperty("druid.indexing.formats.indexSpec.bitmap", "{\"type\":\"concise\"}");
     Injector gadget = makeInjector(props);
 
@@ -137,12 +142,25 @@ public class BuiltInTypesModuleTest
             .setStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(16, (byte) 1))
             .setLongFieldBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
             .setDoubleFieldBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
+            .setObjectStorageCompression(CompressionStrategy.ZSTD)
+            .setObjectStorageCompressionLevel(3)
             .build(),
         IndexSpec.getDefault().getAutoColumnFormatSpec()
     );
 
     Assertions.assertNull(IndexSpec.getDefault().getAutoColumnFormatSpec().getBitmapEncoding());
     Assertions.assertEquals(CompressionStrategy.ZSTD, IndexSpec.getDefault().getMetricCompression());
+    Assertions.assertEquals(Integer.valueOf(3), IndexSpec.getDefault().getMetricCompressionLevel());
+    Assertions.assertEquals(CompressionStrategy.LZ4, IndexSpec.getDefault().getDimensionCompression());
+    Assertions.assertEquals(Integer.valueOf(0), IndexSpec.getDefault().getDimensionCompressionLevel());
+    Assertions.assertEquals(
+        Integer.valueOf(3),
+        IndexSpec.getDefault().getAutoColumnFormatSpec().getObjectStorageCompressionLevel()
+    );
+    Assertions.assertNull(
+        IndexSpec.builder().withMetricCompression(CompressionStrategy.LZ4).build()
+                 .getEffectiveSpec().getMetricCompressionLevel()
+    );
     Assertions.assertEquals(new ConciseBitmapSerdeFactory(), IndexSpec.getDefault().getBitmapSerdeFactory());
   }
 

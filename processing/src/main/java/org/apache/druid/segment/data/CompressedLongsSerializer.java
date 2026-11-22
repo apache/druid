@@ -25,6 +25,7 @@ import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -41,9 +42,20 @@ public class CompressedLongsSerializer implements Serializer
       Closer closer
   )
   {
+    this(segmentWriteOutMedium, compression, null, closer);
+  }
+
+  public CompressedLongsSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      CompressionStrategy compression,
+      @Nullable Integer compressionLevel,
+      Closer closer
+  )
+  {
     this.blockSerializer = new CompressedBlockSerializer(
         segmentWriteOutMedium,
         compression,
+        compressionLevel,
         CompressedPools.BUFFER_SIZE,
         closer
     );

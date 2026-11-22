@@ -78,7 +78,8 @@ public final class ScalarDoubleFieldColumnWriter extends GlobalDictionaryEncoded
         StringUtils.format("%s.double_column", fieldName),
         ByteOrder.nativeOrder(),
         columnFormatSpec.getDoubleColumnCompression(),
-        fieldResourceCloser
+        fieldResourceCloser,
+        columnFormatSpec.getInheritedDoubleCompressionLevel()
     );
     doublesSerializer.open();
   }

@@ -324,6 +324,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
           filenameBase,
           cardinality,
           compressionToUse,
+          compressionToUse == compression ? columnFormatSpec.getInheritedDictionaryCompressionLevel() : null,
           segmentWriteOutMedium.getCloser()
       );
       encodedValueSerializer.open();

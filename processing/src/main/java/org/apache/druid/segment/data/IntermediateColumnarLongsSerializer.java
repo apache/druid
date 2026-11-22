@@ -45,6 +45,8 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
   private final String filenameBase;
   private final ByteOrder order;
   private final CompressionStrategy compression;
+  @Nullable
+  private final Integer compressionLevel;
   private final Closer closer;
 
   private int numInserted = 0;
@@ -69,11 +71,25 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
       Closer closer
   )
   {
+    this(columnName, segmentWriteOutMedium, filenameBase, order, compression, closer, null);
+  }
+
+  IntermediateColumnarLongsSerializer(
+      String columnName,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String filenameBase,
+      ByteOrder order,
+      CompressionStrategy compression,
+      Closer closer,
+      @Nullable Integer compressionLevel
+  )
+  {
     this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.filenameBase = filenameBase;
     this.order = order;
     this.compression = compression;
+    this.compressionLevel = compressionLevel;
     this.closer = closer;
   }
 
@@ -146,7 +162,8 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
           writer,
           compression,
           GenericIndexedWriter.MAX_FILE_SIZE,
-          closer
+          closer,
+          compressionLevel
       );
     }
 

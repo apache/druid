@@ -1145,7 +1145,8 @@ public abstract class IndexMergerBase implements IndexMerger
         columnName,
         indexSpec.getMetricCompression(),
         indexSpec.getLongEncoding(),
-        indexSpec.getBitmapSerdeFactory()
+        indexSpec.getBitmapSerdeFactory(),
+        indexSpec.getMetricCompressionLevel()
     );
   }
 
@@ -1160,7 +1161,8 @@ public abstract class IndexMergerBase implements IndexMerger
         segmentWriteOutMedium,
         columnName,
         indexSpec.getMetricCompression(),
-        indexSpec.getBitmapSerdeFactory()
+        indexSpec.getBitmapSerdeFactory(),
+        indexSpec.getMetricCompressionLevel()
     );
   }
 
@@ -1175,7 +1177,8 @@ public abstract class IndexMergerBase implements IndexMerger
         segmentWriteOutMedium,
         columnName,
         indexSpec.getMetricCompression(),
-        indexSpec.getBitmapSerdeFactory()
+        indexSpec.getBitmapSerdeFactory(),
+        indexSpec.getMetricCompressionLevel()
     );
   }
 

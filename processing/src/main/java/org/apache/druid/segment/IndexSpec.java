@@ -62,13 +62,19 @@ public class IndexSpec
   @Nullable
   private final CompressionStrategy dimensionCompression;
   @Nullable
+  private final Integer dimensionCompressionLevel;
+  @Nullable
   private final StringEncodingStrategy stringDictionaryEncoding;
   @Nullable
   private final CompressionStrategy metricCompression;
   @Nullable
+  private final Integer metricCompressionLevel;
+  @Nullable
   private final CompressionFactory.LongEncodingStrategy longEncoding;
   @Nullable
   private final CompressionStrategy complexMetricCompression;
+  @Nullable
+  private final Integer complexMetricCompressionLevel;
   @Nullable
   private final CompressionStrategy jsonCompression;
   @Nullable
@@ -79,6 +85,38 @@ public class IndexSpec
   private final StringColumnFormatSpec stringColumnFormatSpec;
   @Nullable
   private final CompressionStrategy metadataCompression;
+
+  public IndexSpec(
+      @Nullable BitmapSerdeFactory bitmapSerdeFactory,
+      @Nullable CompressionStrategy metadataCompression,
+      @Nullable CompressionStrategy dimensionCompression,
+      @Nullable StringEncodingStrategy stringDictionaryEncoding,
+      @Nullable CompressionStrategy metricCompression,
+      @Nullable CompressionFactory.LongEncodingStrategy longEncoding,
+      @Nullable CompressionStrategy complexMetricCompression,
+      @Nullable CompressionStrategy jsonCompression,
+      @Nullable SegmentizerFactory segmentLoader,
+      @Nullable NestedCommonFormatColumnFormatSpec autoColumnFormatSpec,
+      @Nullable StringColumnFormatSpec stringColumnFormatSpec
+  )
+  {
+    this(
+        bitmapSerdeFactory,
+        metadataCompression,
+        dimensionCompression,
+        null,
+        stringDictionaryEncoding,
+        metricCompression,
+        null,
+        longEncoding,
+        complexMetricCompression,
+        null,
+        jsonCompression,
+        segmentLoader,
+        autoColumnFormatSpec,
+        stringColumnFormatSpec
+    );
+  }
 
   /**
    * Creates an IndexSpec with the given storage format settings.
@@ -120,22 +158,46 @@ public class IndexSpec
       @JsonProperty("bitmap") @Nullable BitmapSerdeFactory bitmapSerdeFactory,
       @JsonProperty("metadataCompression") @Nullable CompressionStrategy metadataCompression,
       @JsonProperty("dimensionCompression") @Nullable CompressionStrategy dimensionCompression,
+       @JsonProperty("dimensionCompressionLevel") @Nullable Integer dimensionCompressionLevel,
       @JsonProperty("stringDictionaryEncoding") @Nullable StringEncodingStrategy stringDictionaryEncoding,
       @JsonProperty("metricCompression") @Nullable CompressionStrategy metricCompression,
+       @JsonProperty("metricCompressionLevel") @Nullable Integer metricCompressionLevel,
       @JsonProperty("longEncoding") @Nullable CompressionFactory.LongEncodingStrategy longEncoding,
       @JsonProperty("complexMetricCompression") @Nullable CompressionStrategy complexMetricCompression,
+       @JsonProperty("complexMetricCompressionLevel") @Nullable Integer complexMetricCompressionLevel,
       @Deprecated @JsonProperty("jsonCompression") @Nullable CompressionStrategy jsonCompression,
       @JsonProperty("segmentLoader") @Nullable SegmentizerFactory segmentLoader,
       @JsonProperty("autoColumnFormatSpec") @Nullable NestedCommonFormatColumnFormatSpec autoColumnFormatSpec,
       @JsonProperty("stringColumnFormatSpec") @Nullable StringColumnFormatSpec stringColumnFormatSpec
   )
   {
+    validateCompressionLevel(
+        dimensionCompression,
+        dimensionCompressionLevel,
+        "dimensionCompression",
+        "dimensionCompressionLevel"
+    );
+    validateCompressionLevel(
+        metricCompression,
+        metricCompressionLevel,
+        "metricCompression",
+        "metricCompressionLevel"
+    );
+    validateCompressionLevel(
+        complexMetricCompression,
+        complexMetricCompressionLevel,
+        "complexMetricCompression",
+        "complexMetricCompressionLevel"
+    );
     this.bitmapSerdeFactory = bitmapSerdeFactory;
     this.metadataCompression = metadataCompression;
     this.dimensionCompression = dimensionCompression;
+    this.dimensionCompressionLevel = dimensionCompressionLevel;
     this.stringDictionaryEncoding = stringDictionaryEncoding;
     this.metricCompression = metricCompression;
+    this.metricCompressionLevel = metricCompressionLevel;
     this.complexMetricCompression = complexMetricCompression;
+    this.complexMetricCompressionLevel = complexMetricCompressionLevel;
     this.longEncoding = longEncoding;
     this.jsonCompression = jsonCompression;
     this.segmentLoader = segmentLoader;
@@ -166,6 +228,14 @@ public class IndexSpec
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public Integer getDimensionCompressionLevel()
+  {
+    return dimensionCompressionLevel;
+  }
+
+  @JsonProperty
   @Nullable
   public StringEncodingStrategy getStringDictionaryEncoding()
   {
@@ -177,6 +247,14 @@ public class IndexSpec
   public CompressionStrategy getMetricCompression()
   {
     return metricCompression;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public Integer getMetricCompressionLevel()
+  {
+    return metricCompressionLevel;
   }
 
   @JsonProperty
@@ -192,6 +270,14 @@ public class IndexSpec
   public CompressionStrategy getComplexMetricCompression()
   {
     return complexMetricCompression;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public Integer getComplexMetricCompressionLevel()
+  {
+    return complexMetricCompressionLevel;
   }
 
   @JsonProperty
@@ -261,6 +347,15 @@ public class IndexSpec
       bob.withDimensionCompression(CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY);
     }
 
+    bob.withDimensionCompressionLevel(
+        resolveCompressionLevel(
+            bob.dimensionCompression,
+            dimensionCompressionLevel,
+            defaultSpec.dimensionCompression,
+            defaultSpec.dimensionCompressionLevel
+        )
+    );
+
     if (stringDictionaryEncoding != null) {
       bob.withStringDictionaryEncoding(stringDictionaryEncoding);
     } else if (defaultSpec.stringDictionaryEncoding != null) {
@@ -277,6 +372,15 @@ public class IndexSpec
       bob.withMetricCompression(CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY);
     }
 
+    bob.withMetricCompressionLevel(
+        resolveCompressionLevel(
+            bob.metricCompression,
+            metricCompressionLevel,
+            defaultSpec.metricCompression,
+            defaultSpec.metricCompressionLevel
+        )
+    );
+
     if (longEncoding != null) {
       bob.withLongEncoding(longEncoding);
     } else if (defaultSpec.longEncoding != null) {
@@ -290,6 +394,15 @@ public class IndexSpec
     } else if (defaultSpec.complexMetricCompression != null) {
       bob.withComplexMetricCompression(defaultSpec.complexMetricCompression);
     }
+
+    bob.withComplexMetricCompressionLevel(
+        resolveCompressionLevel(
+            bob.complexMetricCompression,
+            complexMetricCompressionLevel,
+            defaultSpec.complexMetricCompression,
+            defaultSpec.complexMetricCompressionLevel
+        )
+    );
 
     if (jsonCompression != null) {
       bob.withJsonCompression(jsonCompression);
@@ -326,6 +439,45 @@ public class IndexSpec
     return bob.build();
   }
 
+  private static void validateCompressionLevel(
+      @Nullable CompressionStrategy strategy,
+      @Nullable Integer level,
+      String strategyProperty,
+      String levelProperty
+  )
+  {
+    if (level == null) {
+      return;
+    }
+
+    if (strategy == null) {
+      throw new IllegalArgumentException(levelProperty + " requires " + strategyProperty + " in the same spec");
+    }
+
+    if (strategy == CompressionStrategy.LZ4 && (level < 0 || level > 17)) {
+      throw new IllegalArgumentException(levelProperty + " must be between 0 and 17");
+    }
+
+    if (strategy == CompressionStrategy.ZSTD && (level < 0 || level > 22)) {
+      throw new IllegalArgumentException(levelProperty + " must be between 0 and 22");
+    }
+  }
+
+  @Nullable
+  private static Integer resolveCompressionLevel(
+      @Nullable CompressionStrategy effectiveStrategy,
+      @Nullable Integer explicitLevel,
+      @Nullable CompressionStrategy defaultStrategy,
+      @Nullable Integer defaultLevel
+  )
+  {
+    if (effectiveStrategy != CompressionStrategy.LZ4 && effectiveStrategy != CompressionStrategy.ZSTD) {
+      return null;
+    }
+
+    return explicitLevel != null ? explicitLevel : effectiveStrategy == defaultStrategy ? defaultLevel : null;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -339,10 +491,13 @@ public class IndexSpec
     return Objects.equals(bitmapSerdeFactory, indexSpec.bitmapSerdeFactory) &&
            metadataCompression == indexSpec.metadataCompression &&
            dimensionCompression == indexSpec.dimensionCompression &&
+           Objects.equals(dimensionCompressionLevel, indexSpec.dimensionCompressionLevel) &&
            Objects.equals(stringDictionaryEncoding, indexSpec.stringDictionaryEncoding) &&
            metricCompression == indexSpec.metricCompression &&
+           Objects.equals(metricCompressionLevel, indexSpec.metricCompressionLevel) &&
            longEncoding == indexSpec.longEncoding &&
            Objects.equals(complexMetricCompression, indexSpec.complexMetricCompression) &&
+           Objects.equals(complexMetricCompressionLevel, indexSpec.complexMetricCompressionLevel) &&
            Objects.equals(jsonCompression, indexSpec.jsonCompression) &&
            Objects.equals(segmentLoader, indexSpec.segmentLoader) &&
            Objects.equals(autoColumnFormatSpec, indexSpec.autoColumnFormatSpec) &&
@@ -356,10 +511,13 @@ public class IndexSpec
         bitmapSerdeFactory,
         metadataCompression,
         dimensionCompression,
+        dimensionCompressionLevel,
         stringDictionaryEncoding,
         metricCompression,
+        metricCompressionLevel,
         longEncoding,
         complexMetricCompression,
+        complexMetricCompressionLevel,
         jsonCompression,
         segmentLoader,
         autoColumnFormatSpec,
@@ -374,10 +532,13 @@ public class IndexSpec
            "bitmapSerdeFactory=" + bitmapSerdeFactory +
            ", metadataCompression=" + metadataCompression +
            ", dimensionCompression=" + dimensionCompression +
+           ", dimensionCompressionLevel=" + dimensionCompressionLevel +
            ", stringDictionaryEncoding=" + stringDictionaryEncoding +
            ", metricCompression=" + metricCompression +
+           ", metricCompressionLevel=" + metricCompressionLevel +
            ", longEncoding=" + longEncoding +
            ", complexMetricCompression=" + complexMetricCompression +
+           ", complexMetricCompressionLevel=" + complexMetricCompressionLevel +
            ", autoColumnFormatSpec=" + autoColumnFormatSpec +
            ", stringColumnFormatSpec=" + stringColumnFormatSpec +
            ", jsonCompression=" + jsonCompression +
@@ -394,13 +555,19 @@ public class IndexSpec
     @Nullable
     private CompressionStrategy dimensionCompression;
     @Nullable
+    private Integer dimensionCompressionLevel;
+    @Nullable
     private StringEncodingStrategy stringDictionaryEncoding;
     @Nullable
     private CompressionStrategy metricCompression;
     @Nullable
+    private Integer metricCompressionLevel;
+    @Nullable
     private CompressionFactory.LongEncodingStrategy longEncoding;
     @Nullable
     private CompressionStrategy complexMetricCompression;
+    @Nullable
+    private Integer complexMetricCompressionLevel;
     @Nullable
     private CompressionStrategy jsonCompression;
     @Nullable
@@ -428,6 +595,12 @@ public class IndexSpec
       return this;
     }
 
+    public Builder withDimensionCompressionLevel(@Nullable Integer level)
+    {
+      this.dimensionCompressionLevel = level;
+      return this;
+    }
+
     public Builder withStringDictionaryEncoding(@Nullable StringEncodingStrategy stringDictionaryEncoding)
     {
       this.stringDictionaryEncoding = stringDictionaryEncoding;
@@ -440,9 +613,21 @@ public class IndexSpec
       return this;
     }
 
+    public Builder withMetricCompressionLevel(@Nullable Integer level)
+    {
+      this.metricCompressionLevel = level;
+      return this;
+    }
+
     public Builder withComplexMetricCompression(@Nullable CompressionStrategy complexMetricCompression)
     {
       this.complexMetricCompression = complexMetricCompression;
+      return this;
+    }
+
+    public Builder withComplexMetricCompressionLevel(@Nullable Integer level)
+    {
+      this.complexMetricCompressionLevel = level;
       return this;
     }
 
@@ -483,10 +668,13 @@ public class IndexSpec
           bitmapSerdeFactory,
           metadataCompression,
           dimensionCompression,
+          dimensionCompressionLevel,
           stringDictionaryEncoding,
           metricCompression,
+          metricCompressionLevel,
           longEncoding,
           complexMetricCompression,
+          complexMetricCompressionLevel,
           jsonCompression,
           segmentLoader,
           autoColumnFormatSpec,

@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.CompressedPools;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -139,6 +140,30 @@ public enum CompressionStrategy
   }
 
   public abstract Compressor getCompressor();
+
+  /**
+   * Returns a compressor for the requested level without changing the default compressor.
+   * A null level retains the existing behavior. Strategies without configurable levels ignore the value.
+   */
+  public Compressor getCompressor(@Nullable Integer level)
+  {
+    if (level == null || (this != LZ4 && this != ZSTD)) {
+      return getCompressor();
+    }
+
+    if (this == LZ4) {
+      if (level < 0 || level > 17) {
+        throw new IllegalArgumentException("LZ4 compression level must be between 0 and 17");
+      }
+      final LZ4Factory factory = LZ4Factory.fastestInstance();
+      return new LZ4Compressor(level == 0 ? factory.fastCompressor() : factory.highCompressor(level));
+    }
+
+    if (level < 0 || level > 22) {
+      throw new IllegalArgumentException("Zstd compression level must be between 0 and 22");
+    }
+    return new ZstdCompressor(level);
+  }
 
   public abstract Decompressor getDecompressor();
 
@@ -338,8 +363,15 @@ public enum CompressionStrategy
 
   public static class LZ4Compressor extends Compressor
   {
-    private static final LZ4Compressor DEFAULT_COMPRESSOR = new LZ4Compressor();
     private static final net.jpountz.lz4.LZ4Compressor LZ4_HIGH = LZ4Factory.fastestInstance().highCompressor();
+    private static final LZ4Compressor DEFAULT_COMPRESSOR = new LZ4Compressor(LZ4_HIGH);
+
+    private final net.jpountz.lz4.LZ4Compressor compressor;
+
+    private LZ4Compressor(net.jpountz.lz4.LZ4Compressor compressor)
+    {
+      this.compressor = compressor;
+    }
 
     static {
       logLZ4State();
@@ -356,7 +388,7 @@ public enum CompressionStrategy
     @Override
     public ByteBuffer allocateOutBuffer(int inputSize, Closer closer)
     {
-      ByteBuffer outBuffer = ByteBuffer.allocateDirect(LZ4_HIGH.maxCompressedLength(inputSize));
+      ByteBuffer outBuffer = ByteBuffer.allocateDirect(compressor.maxCompressedLength(inputSize));
       closer.register(() -> ByteBufferUtils.free(outBuffer));
       return outBuffer;
     }
@@ -366,7 +398,7 @@ public enum CompressionStrategy
     {
       out.clear();
       int position = in.position();
-      LZ4_HIGH.compress(in, out);
+      compressor.compress(in, out);
       in.position(position);
       out.flip();
       return out;
@@ -375,7 +407,14 @@ public enum CompressionStrategy
 
   public static class ZstdCompressor extends Compressor
   {
-    private static final ZstdCompressor DEFAULT_COMPRESSOR = new ZstdCompressor();
+    private static final ZstdCompressor DEFAULT_COMPRESSOR = new ZstdCompressor(Zstd.maxCompressionLevel());
+
+    private final int level;
+
+    private ZstdCompressor(int level)
+    {
+      this.level = level;
+    }
 
     @Override
     public ByteBuffer allocateInBuffer(int inputSize, Closer closer)
@@ -402,7 +441,7 @@ public enum CompressionStrategy
       if (out.remaining() < sizeNeeded) {
         throw new RuntimeException("Output buffer too small, please allocate more space. " + sizeNeeded + " required.");
       }
-      Zstd.compress(out, in, Zstd.maxCompressionLevel());
+      Zstd.compress(out, in, level);
       in.position(position);
       out.flip();
       return out;

@@ -24,6 +24,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
@@ -55,6 +56,19 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
       final int fileSizeLimit
   )
   {
+    return create(columnName, segmentWriteOutMedium, filenameBase, maxValue, compression, null, fileSizeLimit);
+  }
+
+  public static V3CompressedVSizeColumnarMultiIntsSerializer create(
+      final String columnName,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
+      final String filenameBase,
+      final int maxValue,
+      final CompressionStrategy compression,
+      @Nullable final Integer compressionLevel,
+      final int fileSizeLimit
+  )
+  {
     return new V3CompressedVSizeColumnarMultiIntsSerializer(
         columnName,
         new CompressedColumnarIntsSerializer(
@@ -64,6 +78,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
             CompressedColumnarIntsSupplier.MAX_INTS_IN_BUFFER,
             IndexIO.BYTE_ORDER,
             compression,
+            compressionLevel,
             fileSizeLimit,
             segmentWriteOutMedium.getCloser()
         ),
@@ -75,6 +90,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
             CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForValue(maxValue),
             IndexIO.BYTE_ORDER,
             compression,
+            compressionLevel,
             fileSizeLimit,
             segmentWriteOutMedium.getCloser()
         )

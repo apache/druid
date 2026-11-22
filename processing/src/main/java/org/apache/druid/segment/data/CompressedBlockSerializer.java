@@ -66,9 +66,20 @@ public class CompressedBlockSerializer implements Serializer
       Closer closer
   )
   {
+    this(segmentWriteOutMedium, compression, null, blockSize, closer);
+  }
+
+  public CompressedBlockSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      CompressionStrategy compression,
+      @Nullable Integer compressionLevel,
+      int blockSize,
+      Closer closer
+  )
+  {
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.compression = compression;
-    this.compressor = compression.getCompressor();
+    this.compressor = compression.getCompressor(compressionLevel);
     this.uncompressedDataBuffer = compressor.allocateInBuffer(blockSize, closer).order(ByteOrder.nativeOrder());
     this.compressedDataBuffer = compressor.allocateOutBuffer(blockSize, closer).order(ByteOrder.nativeOrder());
   }
