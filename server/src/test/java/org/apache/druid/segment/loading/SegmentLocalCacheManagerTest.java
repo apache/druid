@@ -168,6 +168,49 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testInfoFileUsesInjectedLocationWhenConfigHasNoLocations() throws IOException
+  {
+    final ImmutableList<StorageLocation> locations = ImmutableList.of(
+        new StorageLocation(localSegmentCacheDir, 10000000000L, null)
+    );
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder().build();
+    final SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
+        locations,
+        loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
+        new LeastBytesUsedStorageLocationSelectorStrategy(locations),
+        TestIndex.INDEX_IO,
+        jsonMapper
+    );
+    final DataSegment segment = TestSegmentUtils.makeSegment(
+        "test_segment_loader", "v0", Intervals.of("2014-10-20T00:00:00Z/P1D")
+    );
+
+    manager.storeInfoFile(segment);
+
+    Assertions.assertTrue(new File(new File(localSegmentCacheDir, "info_dir"), segment.getId().toString()).exists());
+  }
+
+  @Test
+  public void testInfoFileThrowsWithoutConfigOrInjectedLocations()
+  {
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder().build();
+    final SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
+        ImmutableList.of(),
+        loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
+        new LeastBytesUsedStorageLocationSelectorStrategy(ImmutableList.of()),
+        TestIndex.INDEX_IO,
+        jsonMapper
+    );
+    final DataSegment segment = TestSegmentUtils.makeSegment(
+        "test_segment_loader", "v0", Intervals.of("2014-10-20T00:00:00Z/P1D")
+    );
+
+    Assertions.assertThrows(DruidException.class, () -> manager.storeInfoFile(segment));
+  }
+
+  @Test
   public void testGetCachedSegmentsWhenCanHandleSegmentsIsFalse()
   {
     final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder().build();

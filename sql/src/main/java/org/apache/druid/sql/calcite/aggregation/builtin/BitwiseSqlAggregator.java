@@ -90,7 +90,7 @@ public class BitwiseSqlAggregator implements SqlAggregator
 
     abstract SqlAggFunction getCalciteFunction();
     abstract String getDruidFunction();
-  };
+  }
 
   private final Op op;
 
