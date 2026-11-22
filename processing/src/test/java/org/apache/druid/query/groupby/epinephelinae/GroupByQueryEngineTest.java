@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -31,7 +32,6 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -173,7 +173,7 @@ public class GroupByQueryEngineTest
   {
     final GroupByQuery query = GroupByQuery.builder()
         .setDataSource("test")
-        .setInterval(new Interval(0, 1000))
+        .setInterval(Intervals.utc(0, 1000))
         .setGranularity(Granularities.ALL)
         .setDimensions(new DefaultDimensionSpec("d0", "d0"), new DefaultDimensionSpec("d1", "d1"))
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
