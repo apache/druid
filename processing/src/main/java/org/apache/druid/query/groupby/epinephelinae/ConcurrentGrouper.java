@@ -52,6 +52,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -70,6 +72,8 @@ import java.util.stream.Collectors;
 public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 {
   private final List<SpillingGrouper<KeyType>> groupers;
+  // Preserve each worker's buffer assignment across tasks, without keeping query state on idle pooled workers.
+  private final ConcurrentMap<Thread, SpillingGrouper<KeyType>> threadGroupers = new ConcurrentHashMap<>();
   private final ThreadLocal<SpillingGrouper<KeyType>> threadLocalGrouper;
   private final AtomicInteger threadNumber = new AtomicInteger();
   private volatile boolean spilling = false;
@@ -183,7 +187,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     );
 
     this.groupers = new ArrayList<>(concurrencyHint);
-    this.threadLocalGrouper = ThreadLocal.withInitial(() -> groupers.get(threadNumber.getAndIncrement()));
+    this.threadLocalGrouper = ThreadLocal.withInitial(this::getThreadGrouper);
 
     this.bufferSupplier = bufferSupplier;
     this.columnSelectorFactory = columnSelectorFactory;
@@ -325,6 +329,22 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         return tlGrouper.aggregate(key, keyHash);
       }
     }
+  }
+
+  @Override
+  public void clearThreadLocalState()
+  {
+    threadLocalGrouper.remove();
+  }
+
+  private SpillingGrouper<KeyType> getThreadGrouper()
+  {
+    final Thread thread = Thread.currentThread();
+    final SpillingGrouper<KeyType> grouper = threadGroupers.get(thread);
+    if (grouper != null) {
+      return grouper;
+    }
+    return threadGroupers.computeIfAbsent(thread, ignored -> groupers.get(threadNumber.getAndIncrement()));
   }
 
   @Override
@@ -504,7 +524,12 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   {
     if (!closed) {
       closed = true;
-      groupers.forEach(SpillingGrouper::close);
+      try {
+        groupers.forEach(SpillingGrouper::close);
+      }
+      finally {
+        threadGroupers.clear();
+      }
     }
   }
 
