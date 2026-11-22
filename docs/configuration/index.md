@@ -699,6 +699,15 @@ Support for 64-bit floating point columns was released in Druid 0.11.0, so if yo
 
 All Druid components can communicate with each other over HTTP.
 
+HTTP client duration properties (`readTimeout`, `unusedConnectionTimeout`, `connectTimeout`,
+and `clientConnectTimeout`) accept a non-negative integer number of milliseconds, such as `500`;
+a number with a lowercase unit suffix (`ns`, `us`, `ms`, `s`, `m`, `h`, `d`),
+such as `30s` or `5m`; or a fixed-length ISO-8601 duration, such as `PT15M`.
+Existing millisecond numbers and ISO-8601 duration values retain their meaning.
+Sub-millisecond values are rounded up to whole milliseconds when used by HTTP clients.
+The `clientConnectTimeout` property also retains the full legacy signed-long range for bare
+non-negative millisecond values; suffixed durations remain limited by the nanosecond range.
+
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.global.http.numConnections`|Size of connection pool per destination URL. If there are more HTTP requests than this number that all need to speak to the same URL, then they will queue up.|`20`|
@@ -1508,10 +1517,10 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.queueSize`|Size of the worker queue used by Jetty server to temporarily store incoming client connections. If this value is set and a request is rejected by jetty because queue is full then client would observe request failure with TCP connection being closed immediately with a completely empty response from server.|Unbounded|
 |`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|`PT5M`|
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
-|`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
+|`druid.server.http.defaultQueryTimeout`|Query timeout beyond which unfinished queries are cancelled. Accepts milliseconds (legacy), a suffix such as `5m` or an ISO-8601 duration such as `PT5M`. Sub-millisecond values round up to the next millisecond.|300000|
 |`druid.server.http.gracefulShutdownTimeout`|How long Jetty waits on shutdown for in-flight requests, such as queries, to finish before closing the remaining connections. Idle connections are closed after about one second. This wait starts after `druid.server.http.unannouncePropagationDelay` elapses. `PT0S` disables the wait.|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
-|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context-reference.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |`Long.MAX_VALUE`|
+|`druid.server.http.maxQueryTimeout`|Maximum permitted query timeout. Accepts legacy milliseconds, suffixed durations (for example `5m`), and ISO-8601 durations. The default `Long.MAX_VALUE` milliseconds is preserved. Queries with a greater `timeout` are rejected. See [query-context](../querying/query-context-reference.md).|`Long.MAX_VALUE`|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
 |`druid.server.http.headerCacheSize`|Size of the cache Jetty keeps on each client connection to avoid re-parsing request headers that repeat across requests on that connection. Disabled (0) by default because the parsing it saves is negligible compared to the work of serving a Druid request, and each connection that uses the cache holds extra heap for as long as it stays open. Most deployments should leave this at 0.|0|
 |`druid.server.http.enableForwardedRequestCustomizer`|If enabled, adds Jetty ForwardedRequestCustomizer which reads X-Forwarded-* request headers to manipulate servlet request object when Druid is used behind a proxy.|false|

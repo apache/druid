@@ -37,6 +37,7 @@ import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
+import org.apache.druid.java.util.common.HumanReadableDurationMillisDeserializer;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
 import org.eclipse.jetty.http.UriCompliance;
@@ -215,6 +216,7 @@ public class ServerConfig
   private Period maxIdleTime = new Period("PT5m");
 
   @JsonProperty
+  @JsonDeserialize(using = HumanReadableDurationMillisDeserializer.class)
   @Min(0)
   private long defaultQueryTimeout = TimeUnit.MINUTES.toMillis(5);
 
@@ -234,6 +236,7 @@ public class ServerConfig
   private boolean useNestedForUnknownTypeInSubquery = false;
 
   @JsonProperty
+  @JsonDeserialize(using = HumanReadableDurationMillisDeserializer.class)
   @Min(1)
   private long maxQueryTimeout = Long.MAX_VALUE;
 

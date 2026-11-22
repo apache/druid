@@ -20,15 +20,15 @@
 package org.apache.druid.guice.http;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.Min;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.HumanReadableDuration;
+import org.apache.druid.java.util.common.HumanReadableDurationMillisDeserializer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
-import org.joda.time.Period;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -45,7 +45,7 @@ public class DruidHttpClientConfig
   private int numConnections = 20;
 
   @JsonProperty
-  private Period readTimeout = new Period("PT15M");
+  private HumanReadableDuration readTimeout = HumanReadableDuration.parse("PT15M");
 
   @JsonProperty
   @Min(1)
@@ -62,7 +62,7 @@ public class DruidHttpClientConfig
   private int requestBuffersize = 8 * 1024;
 
   @JsonProperty
-  private Period unusedConnectionTimeout = new Period("PT4M");
+  private HumanReadableDuration unusedConnectionTimeout = HumanReadableDuration.parse("PT4M");
 
   /**
    * Maximum number of bytes queued per query before exerting backpressure. Not always used; currently, it's only
@@ -78,7 +78,9 @@ public class DruidHttpClientConfig
   private ResourcePool.Implementation poolImplementation = ResourcePool.Implementation.RETAINING;
 
   @JsonProperty
-  private long clientConnectTimeout = TimeUnit.MILLISECONDS.toMillis(500);
+  @JsonDeserialize(using = HumanReadableDurationMillisDeserializer.class)
+  @Min(0)
+  private long clientConnectTimeout = 500;
 
   /**
    * Connect timeout for the HTTP client used for direct RPC between Druid services (broker → historical
@@ -88,7 +90,7 @@ public class DruidHttpClientConfig
    * request-forwarding servlets (Router query proxying, management API forwarding).
    */
   @JsonProperty
-  private Period connectTimeout = new Period("PT10S");
+  private HumanReadableDuration connectTimeout = HumanReadableDuration.parse("PT10S");
 
   /**
    * Netty ByteBufAllocator to use for the direct-RPC HTTP client. One of "adaptive" (default, matches Netty's own
@@ -104,7 +106,7 @@ public class DruidHttpClientConfig
 
   public Duration getReadTimeout()
   {
-    return readTimeout == null ? null : readTimeout.toStandardDuration();
+    return readTimeout == null ? null : new Duration(readTimeout.getMillis());
   }
 
   public int getNumMaxThreads()
@@ -130,7 +132,7 @@ public class DruidHttpClientConfig
   public Duration getUnusedConnectionTimeout()
   {
     if (unusedConnectionTimeout != null && readTimeout != null
-        && unusedConnectionTimeout.toStandardDuration().compareTo(readTimeout.toStandardDuration()) >= 0) {
+        && unusedConnectionTimeout.getMillis() >= readTimeout.getMillis()) {
       LOG.warn(
           "Ohh no! UnusedConnectionTimeout[%s] is longer than readTimeout[%s], please correct"
           + " the configuration, this might not be supported in future.",
@@ -138,7 +140,7 @@ public class DruidHttpClientConfig
           readTimeout
       );
     }
-    return unusedConnectionTimeout == null ? null : unusedConnectionTimeout.toStandardDuration();
+    return unusedConnectionTimeout == null ? null : new Duration(unusedConnectionTimeout.getMillis());
   }
 
   public long getMaxQueuedBytes()
@@ -166,7 +168,7 @@ public class DruidHttpClientConfig
 
   public Duration getConnectTimeout()
   {
-    return connectTimeout == null ? null : connectTimeout.toStandardDuration();
+    return connectTimeout == null ? null : new Duration(connectTimeout.getMillis());
   }
 
   public String getAllocator()

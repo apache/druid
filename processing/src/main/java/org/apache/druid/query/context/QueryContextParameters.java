@@ -24,6 +24,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.HumanReadableDuration;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -53,6 +54,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 /**
  * Central catalog of query context parameter descriptors.
@@ -84,6 +86,8 @@ import java.util.function.Supplier;
  */
 public final class QueryContextParameters
 {
+  private static final Pattern DURATION_SUFFIX_PATTERN = Pattern.compile("[0-9]+(ns|us|ms|s|m|h|d)");
+
   // region General query parameters
   //
   // Parameters that apply across query types. Public ones are documented in query-context-reference.md.
@@ -132,11 +136,13 @@ public final class QueryContextParameters
       )
       .build();
 
-  public static final QueryContextParameter<Long> TIMEOUT = longParameter("timeout")
+  public static final QueryContextParameter<Long> TIMEOUT = durationParameter("timeout")
       .since("0.6.122").query(Query.JSON, Query.SQL).engine(Engine.NATIVE)
       .description(
           """
-          Query timeout in millis, beyond which unfinished queries will be cancelled.
+          Query timeout in milliseconds, beyond which unfinished queries will be cancelled.
+          Accepts an integer number of milliseconds, a suffixed duration such as `30s`, or a fixed-length
+          ISO-8601 duration such as `PT30S`. Sub-millisecond durations round up to the next millisecond.
           0 timeout means `no timeout` (up to the server-side maximum query timeout, `druid.server.http.maxQueryTimeout`).
           To set the default timeout and maximum timeout, see [Broker configuration](../configuration/index.md#broker).
           """
@@ -2648,6 +2654,30 @@ public final class QueryContextParameters
             Long.MAX_VALUE,
             BigDecimal::longValueExact
         )
+    );
+  }
+
+  /** Parse duration strings as milliseconds while retaining the existing numeric-long behavior. */
+  static QueryContextParameter.Builder<Long> durationParameter(final String name)
+  {
+    return QueryContextParameter.builder(
+        name,
+        Long.class,
+        value -> {
+          if (value instanceof String text) {
+            final String trimmed = text.trim();
+            if (trimmed.startsWith("P") || DURATION_SUFFIX_PATTERN.matcher(trimmed).matches()) {
+              try {
+                return HumanReadableDuration.parse(trimmed).getMillis();
+              }
+              catch (IAE e) {
+                throw invalidValueException(name, "a valid non-negative duration", value);
+              }
+            }
+          }
+          // Keep the full legacy Long range, including values larger than the nanosecond range.
+          return QueryContexts.getAsLong(name, value);
+        }
     );
   }
 
