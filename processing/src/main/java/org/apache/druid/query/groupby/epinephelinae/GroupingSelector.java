@@ -21,6 +21,8 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import org.apache.druid.segment.DimensionDictionarySelector;
 
+import javax.annotation.Nullable;
+
 public interface GroupingSelector
 {
   /**
@@ -31,5 +33,15 @@ public interface GroupingSelector
   default int getValueCardinality()
   {
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+  }
+
+  /**
+   * Resolves a dictionary id for array aggregation. Dictionary-backed selectors used for multidimensional array
+   * aggregation must implement this method.
+   */
+  @Nullable
+  default String lookupName(final int id)
+  {
+    throw new UnsupportedOperationException("Dictionary lookup is not supported");
   }
 }

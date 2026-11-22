@@ -104,6 +104,10 @@ public class GroupByQueryConfig
   private int bufferGrouperMaxSize = Integer.MAX_VALUE;
 
   @JsonProperty
+  // Bound empty-slot iteration for array aggregation over multiple grouping dimensions. Zero disables this path.
+  private int maxMultiDimensionArrayCardinality = 4096;
+
+  @JsonProperty
   private float bufferGrouperMaxLoadFactor = 0;
 
   @JsonProperty
@@ -186,6 +190,11 @@ public class GroupByQueryConfig
   public int getBufferGrouperMaxSize()
   {
     return bufferGrouperMaxSize;
+  }
+
+  public int getMaxMultiDimensionArrayCardinality()
+  {
+    return maxMultiDimensionArrayCardinality;
   }
 
   public float getBufferGrouperMaxLoadFactor()
@@ -369,6 +378,7 @@ public class GroupByQueryConfig
         queryContext.getOrDefault(QueryContextParameters.BUFFER_GROUPER_MAX_SIZE, getBufferGrouperMaxSize()),
         getBufferGrouperMaxSize()
     );
+    newConfig.maxMultiDimensionArrayCardinality = getMaxMultiDimensionArrayCardinality();
     newConfig.bufferGrouperMaxLoadFactor = queryContext.getOrDefault(
         QueryContextParameters.BUFFER_GROUPER_MAX_LOAD_FACTOR,
         getBufferGrouperMaxLoadFactor()

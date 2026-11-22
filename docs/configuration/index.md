@@ -2352,6 +2352,7 @@ Supported runtime properties:
 |`druid.query.groupBy.bufferGrouperInitialBuckets`|Initial number of buckets in the off-heap hash table used for grouping results. Set to 0 to use a reasonable default (1024).|0|
 |`druid.query.groupBy.bufferGrouperMaxLoadFactor`|Maximum load factor of the off-heap hash table used for grouping results. When the load factor exceeds this size, the table will be grown or spilled to disk. Set to 0 to use a reasonable default (0.7).|0|
 |`druid.query.groupBy.forceHashAggregation`|Force to use hash-based aggregation.|false|
+|`druid.query.groupBy.maxMultiDimensionArrayCardinality`|Maximum product of dictionary sizes, including one missing-value slot per dimension, for array aggregation with multiple grouping dimensions. Larger products use hash aggregation. Set to 0 to disable this path. The processing buffer must also have sufficient space.|4096|
 |`druid.query.groupBy.intermediateCombineDegree`|Number of intermediate processes combined together in the combining tree. Higher degrees will need less threads which might be helpful to improve the query performance by reducing the overhead of too many threads if the server has sufficiently powerful CPU cores.|8|
 |`druid.query.groupBy.numParallelCombineThreads`|Hint for the number of parallel combining threads. This should be larger than 1 to turn on the parallel combining feature. The actual number of threads used for parallel combining is min(`druid.query.groupBy.numParallelCombineThreads`, `druid.processing.numThreads`).|1 (disabled)|
 

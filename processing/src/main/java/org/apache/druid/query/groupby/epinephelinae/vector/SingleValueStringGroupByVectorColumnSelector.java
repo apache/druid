@@ -24,6 +24,8 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
+import javax.annotation.Nullable;
+
 public class SingleValueStringGroupByVectorColumnSelector implements GroupByVectorColumnSelector
 {
   private final SingleValueDimensionVectorSelector selector;
@@ -37,6 +39,13 @@ public class SingleValueStringGroupByVectorColumnSelector implements GroupByVect
   public int getGroupingKeySize()
   {
     return Integer.BYTES;
+  }
+
+  @Nullable
+  @Override
+  public String lookupName(final int id)
+  {
+    return selector.lookupName(id);
   }
 
   @Override

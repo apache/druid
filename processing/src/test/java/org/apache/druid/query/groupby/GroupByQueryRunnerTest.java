@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -92,6 +93,7 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
 import org.apache.druid.query.dimension.RegexFilteredDimensionSpec;
@@ -496,6 +498,64 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   public void resetExpressionProcessing()
   {
     ExpressionProcessing.initializeForTests();
+  }
+
+  @Test
+  public void testGroupByMultipleStringDimensionsArrayAggregation()
+  {
+    assumeTimeOrdered();
+    final List<DimFilter> filters = Arrays.asList(
+        null,
+        new InDimFilter("market", ImmutableSet.of("spot", "upfront")),
+        new InDimFilter("placement", ImmutableSet.of("preferred")),
+        new InDimFilter("placementish", ImmutableSet.of("a")),
+        new SelectorDimFilter("partial_null_column", null, null),
+        new BoundDimFilter("index", "100", "200", false, false, null, null, StringComparators.NUMERIC),
+        new OrDimFilter(List.of(
+            new SelectorDimFilter("market", "upfront", null),
+            new SelectorDimFilter("quality", "automotive", null)
+        )),
+        new NotDimFilter(new SelectorDimFilter("market", "upfront", null)),
+        new AndDimFilter(List.of(
+            new SelectorDimFilter("quality", "automotive", null),
+            new SelectorDimFilter("placementish", "a", null)
+        )),
+        new InDimFilter("quality", ImmutableSet.of("absent"))
+    );
+    for (final int dimensionCount : new int[]{2, 3, 4}) {
+      for (final Granularity granularity : List.of(Granularities.ALL, Granularities.DAY)) {
+        for (final DimFilter filter : filters) {
+          final List<DimensionSpec> dimensions = List.of(
+              new DefaultDimensionSpec("market", "marketAlias"),
+              new DefaultDimensionSpec("quality", "qualityAlias"),
+              new DefaultDimensionSpec("partial_null_column", "nullableAlias"),
+              new DefaultDimensionSpec("placement", "placementAlias")
+          );
+          final GroupByQuery query = makeQueryBuilder()
+              .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+              .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+              .setDimensions(dimensions.subList(0, dimensionCount))
+              .setDimFilter(filter)
+              .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+              .setGranularity(granularity)
+              .overrideContext(Map.of(
+                  "vectorSize", 7,
+                  "maxOnDiskStorage", 10_000_000L,
+                  "maxMergingDictionarySize", 1_000_000L
+              ))
+              .build();
+          TestHelper.assertExpectedObjects(
+              GroupByQueryRunnerTestHelper.runQuery(
+                  factory,
+                  runner,
+                  query.withOverriddenContext(Map.of("forceHashAggregation", true))
+              ),
+              GroupByQueryRunnerTestHelper.runQuery(factory, runner, query),
+              "multiple string dimensions, filter: " + filter
+          );
+        }
+      }
+    }
   }
 
   @Test

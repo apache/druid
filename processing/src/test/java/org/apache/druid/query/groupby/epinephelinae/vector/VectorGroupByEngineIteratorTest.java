@@ -24,10 +24,12 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
+import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine.VectorGroupByEngineIterator;
 import org.apache.druid.segment.ColumnProcessors;
@@ -39,7 +41,9 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -49,8 +53,9 @@ import java.util.stream.Collectors;
 
 public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
 {
-  @Test
-  public void testCreateOneGrouperAndCloseItWhenClose() throws IOException
+  @ParameterizedTest
+  @ValueSource(ints = {1, 2, 3, 4})
+  public void testCreateOneGrouperAndCloseItWhenClose(final int dimensionCount) throws IOException
   {
     final Interval interval = TestIndex.DATA_INTERVAL;
     final AggregatorFactory factory = new DoubleSumAggregatorFactory("index", "index");
@@ -59,7 +64,12 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setInterval(interval)
-        .setDimensions(new DefaultDimensionSpec("market", null, null))
+        .setDimensions(List.<DimensionSpec>of(
+            new DefaultDimensionSpec("market", "market"),
+            new DefaultDimensionSpec("quality", "quality"),
+            new DefaultDimensionSpec("partial_null_column", "partial_null_column"),
+            new DefaultDimensionSpec("placement", "placement")
+        ).subList(0, dimensionCount))
         .setAggregatorSpecs(factory)
         .build();
     final CursorFactory cursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
@@ -99,6 +109,7 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
         return grouperCaptor.getValue();
       }
     };
+    Assertions.assertInstanceOf(BufferArrayGrouper.class, grouperCaptor.getValue());
     iterator.close();
     Mockito.verify(grouperCaptor.getValue()).close();
     cursorHolder.close();

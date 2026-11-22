@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -707,6 +706,7 @@ public class GroupByQueryEngine
   private static class ArrayAggregateIterator extends GroupByEngineIterator<IntKey>
   {
     private final int cardinality;
+    private final List<GroupByColumnSelectorPlus> groupingSelectors;
 
     @Nullable
     private final GroupByColumnSelectorPlus dim;
@@ -730,13 +730,8 @@ public class GroupByQueryEngine
     {
       super(query, querySpecificConfig, processingConfig, cursor, granularizer, buffer, fudgeTimestamp, dims, allSingleValueDims);
       this.cardinality = cardinality;
-      if (dims.length == 1) {
-        this.dim = dims[0];
-      } else if (dims.length == 0) {
-        this.dim = null;
-      } else {
-        throw new IAE("Group key should be a single dimension");
-      }
+      this.groupingSelectors = Arrays.asList(dims);
+      this.dim = dims.length == 0 ? null : dims[0];
     }
 
     @Override
@@ -768,7 +763,14 @@ public class GroupByQueryEngine
 
       while (!cursor.isDone()) {
         final int key;
-        if (dim != null) {
+        if (dims.length > 1) {
+          int combinedKey = 0;
+          for (final GroupByColumnSelectorPlus dimension : dims) {
+            final IndexedInts row = ((DimensionSelector) dimension.getSelector()).getRow();
+            combinedKey = combinedKey * (dimension.getValueCardinality() + 1) + getSingleValue(row) + 1;
+          }
+          key = combinedKey;
+        } else if (dim != null) {
           // dim is always an indexed string dimension
           final IndexedInts indexedInts = ((DimensionSelector) dim.getSelector()).getRow();
           key = getSingleValue(indexedInts);
@@ -833,7 +835,14 @@ public class GroupByQueryEngine
     protected void putToRow(IntKey key, ResultRow resultRow)
     {
       final int intKey = key.intValue();
-      if (dim != null) {
+      if (dims.length > 1) {
+        GroupingEngine.writeArrayAggregationKeyToResultRow(
+            intKey,
+            groupingSelectors,
+            resultRow,
+            query.getResultRowDimensionStart()
+        );
+      } else if (dim != null) {
         if (intKey != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
           resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(intKey));
         } else {
