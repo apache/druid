@@ -532,13 +532,14 @@ public class IndexSpec
            "bitmapSerdeFactory=" + bitmapSerdeFactory +
            ", metadataCompression=" + metadataCompression +
            ", dimensionCompression=" + dimensionCompression +
-           ", dimensionCompressionLevel=" + dimensionCompressionLevel +
+           (dimensionCompressionLevel == null ? "" : ", dimensionCompressionLevel=" + dimensionCompressionLevel) +
            ", stringDictionaryEncoding=" + stringDictionaryEncoding +
            ", metricCompression=" + metricCompression +
-           ", metricCompressionLevel=" + metricCompressionLevel +
+           (metricCompressionLevel == null ? "" : ", metricCompressionLevel=" + metricCompressionLevel) +
            ", longEncoding=" + longEncoding +
            ", complexMetricCompression=" + complexMetricCompression +
-           ", complexMetricCompressionLevel=" + complexMetricCompressionLevel +
+           (complexMetricCompressionLevel == null ? "" :
+            ", complexMetricCompressionLevel=" + complexMetricCompressionLevel) +
            ", autoColumnFormatSpec=" + autoColumnFormatSpec +
            ", stringColumnFormatSpec=" + stringColumnFormatSpec +
            ", jsonCompression=" + jsonCompression +

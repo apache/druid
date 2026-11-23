@@ -147,6 +147,28 @@ public class IndexSpecTest
   }
 
   @Test
+  public void testToStringOmitsUnsetLevelsAndDisplaysConfiguredLevels()
+  {
+    final String unset = IndexSpec.builder().build().toString();
+    Assertions.assertFalse(unset.contains("dimensionCompressionLevel="));
+    Assertions.assertFalse(unset.contains("metricCompressionLevel="));
+    Assertions.assertFalse(unset.contains("complexMetricCompressionLevel="));
+
+    final String configured = IndexSpec.builder()
+                                       .withDimensionCompression(CompressionStrategy.LZ4)
+                                       .withDimensionCompressionLevel(0)
+                                       .withMetricCompression(CompressionStrategy.ZSTD)
+                                       .withMetricCompressionLevel(3)
+                                       .withComplexMetricCompression(CompressionStrategy.ZSTD)
+                                       .withComplexMetricCompressionLevel(5)
+                                       .build()
+                                       .toString();
+    Assertions.assertTrue(configured.contains("dimensionCompressionLevel=0"));
+    Assertions.assertTrue(configured.contains("metricCompressionLevel=3"));
+    Assertions.assertTrue(configured.contains("complexMetricCompressionLevel=5"));
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(IndexSpec.class)
