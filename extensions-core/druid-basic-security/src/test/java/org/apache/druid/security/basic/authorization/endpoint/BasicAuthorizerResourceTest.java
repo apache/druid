@@ -287,14 +287,14 @@ public class BasicAuthorizerResourceTest
   @Test
   public void getRolePermissionsShouldReturnExpectedResult()
   {
-    Assertions.assertNotNull(target.getRolePermissions(req, AUTHORIZER_NAME, ROLE_NAME));
+    Assertions.assertNotNull(target.getRolePermissions(req, AUTHORIZER_NAME, ROLE_NAME, null));
   }
 
   @Test
   public void getRolePermissionsWithInvalidAuthorizerNameShouldThrowException()
   {
     assertThrows(IllegalArgumentException.class, () ->
-      target.getRolePermissions(req, INVALID_AUTHORIZER_NAME, ROLE_NAME));
+      target.getRolePermissions(req, INVALID_AUTHORIZER_NAME, ROLE_NAME, null));
   }
 
   @Test

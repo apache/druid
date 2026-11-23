@@ -665,6 +665,82 @@ public class CoordinatorBasicAuthorizerResourceTest
   }
 
   @Test
+  public void testGetRolePermissionsReturnsWrappedFormatByDefault()
+  {
+    resource.createRole(req, AUTHORIZER_NAME, "druidRole");
+    final List<ResourceAction> perms = ImmutableList.of(
+        new ResourceAction(new Resource("A", ResourceType.DATASOURCE), Action.READ),
+        new ResourceAction(new Resource("C", ResourceType.CONFIG), Action.WRITE)
+    );
+    resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", perms);
+
+    final Response response = resource.getRolePermissions(req, AUTHORIZER_NAME, "druidRole", null);
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(BasicAuthorizerPermission.makePermissionList(perms), response.getEntity());
+  }
+
+  @Test
+  public void testGetRolePermissionsReturnsFlatFormatWhenSimplified()
+  {
+    resource.createRole(req, AUTHORIZER_NAME, "druidRole");
+    final List<ResourceAction> perms = ImmutableList.of(
+        new ResourceAction(new Resource("A", ResourceType.DATASOURCE), Action.READ),
+        new ResourceAction(new Resource("C", ResourceType.CONFIG), Action.WRITE)
+    );
+    resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", perms);
+
+    final Response response = resource.getRolePermissions(req, AUTHORIZER_NAME, "druidRole", "");
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(perms, response.getEntity());
+  }
+
+  @Test
+  public void testSetRolePermissionsReturns400OnMalformedEntries()
+  {
+    resource.createRole(req, AUTHORIZER_NAME, "druidRole");
+
+    final List<ResourceAction> nullResource = new ArrayList<>();
+    nullResource.add(new ResourceAction(new Resource("A", ResourceType.DATASOURCE), Action.READ));
+    nullResource.add(new ResourceAction(null, Action.READ));
+    Response response = resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", nullResource);
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
+        errorMapWithMsg("Permission at index [1] is missing a resource."),
+        response.getEntity()
+    );
+
+    final List<ResourceAction> nullAction = ImmutableList.of(
+        new ResourceAction(new Resource("A", ResourceType.DATASOURCE), null)
+    );
+    response = resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", nullAction);
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
+        errorMapWithMsg("Permission at index [0] is missing an action."),
+        response.getEntity()
+    );
+
+    final List<ResourceAction> nullType = ImmutableList.of(
+        new ResourceAction(new Resource("A", null), Action.READ)
+    );
+    response = resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", nullType);
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
+        errorMapWithMsg("Permission at index [0] is missing a resource type."),
+        response.getEntity()
+    );
+
+    final List<ResourceAction> nullName = ImmutableList.of(
+        new ResourceAction(new Resource(null, ResourceType.DATASOURCE), Action.READ)
+    );
+    response = resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", nullName);
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
+        errorMapWithMsg("Permission at index [0] is missing a resource name."),
+        response.getEntity()
+    );
+  }
+
+  @Test
   public void testUsersGroupMappingsRolesAndPerms()
   {
     Response response = resource.createUser(req, AUTHORIZER_NAME, "druid");

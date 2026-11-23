@@ -411,14 +411,14 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
   }
 
   @Override
-  public Response getRolePermissions(String authorizerName, String roleName)
+  public Response getRolePermissions(String authorizerName, String roleName, boolean simplifyPermissions)
   {
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
     if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
     }
 
-    return getPermissions(authorizerName, roleName);
+    return getPermissions(authorizerName, roleName, simplifyPermissions);
   }
 
   @Override
@@ -635,7 +635,7 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
     }
   }
 
-  private Response getPermissions(String authorizerName, String roleName)
+  private Response getPermissions(String authorizerName, String roleName, boolean simplifyPermissions)
   {
     Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
         objectMapper,
@@ -646,6 +646,9 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
       BasicAuthorizerRole role = roleMap.get(roleName);
       if (role == null) {
         throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
+      }
+      if (simplifyPermissions) {
+        return Response.ok(convertPermissions(role.getPermissions())).build();
       }
       return Response.ok(role.getPermissions()).build();
     }
