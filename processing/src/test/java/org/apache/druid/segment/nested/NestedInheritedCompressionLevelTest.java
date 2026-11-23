@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -142,5 +143,151 @@ public class NestedInheritedCompressionLevelTest
     Assertions.assertNull(effective.getInheritedDictionaryCompressionLevel());
     Assertions.assertNull(effective.getInheritedLongCompressionLevel());
     Assertions.assertEquals(Integer.valueOf(3), effective.getInheritedDoubleCompressionLevel());
+  }
+
+  @Test
+  public void testPersistedSerdePreservesCompressionLevelInheritance() throws Exception
+  {
+    final IndexSpec source = IndexSpec.builder()
+        .withDimensionCompression(CompressionStrategy.LZ4)
+        .withDimensionCompressionLevel(5)
+        .withMetricCompression(CompressionStrategy.ZSTD)
+        .withMetricCompressionLevel(7)
+        .withAutoColumnFormatSpec(
+            NestedCommonFormatColumnFormatSpec.builder()
+                .setObjectStorageCompression(CompressionStrategy.ZSTD)
+                .setObjectStorageCompressionLevel(3)
+                .build()
+        )
+        .build()
+        .getEffectiveSpec();
+
+    final NestedCommonFormatColumnFormatSpec effective =
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, source);
+
+    final NestedCommonFormatColumnPartSerde.FormatSpec serde =
+        NestedCommonFormatColumnPartSerde.FormatSpec.forSerde(effective);
+
+    Assertions.assertNotNull(serde);
+    Assertions.assertEquals(Integer.valueOf(3), serde.getObjectStorageCompressionLevel());
+    Assertions.assertEquals(Integer.valueOf(5), serde.getInheritedDictionaryCompressionLevel());
+    Assertions.assertEquals(Integer.valueOf(7), serde.getInheritedLongCompressionLevel());
+    Assertions.assertEquals(Integer.valueOf(7), serde.getInheritedDoubleCompressionLevel());
+
+    final String json = TestHelper.JSON_MAPPER.writeValueAsString(serde);
+
+    Assertions.assertTrue(json.contains("objectStorageCompressionLevel"));
+    Assertions.assertFalse(json.contains("\"dictionaryEncodedColumnCompression\""));
+    Assertions.assertFalse(json.contains("\"longColumnCompression\""));
+    Assertions.assertFalse(json.contains("\"doubleColumnCompression\""));
+
+    final NestedCommonFormatColumnPartSerde.FormatSpec restored =
+        TestHelper.JSON_MAPPER.readValue(
+            json,
+            NestedCommonFormatColumnPartSerde.FormatSpec.class
+        );
+
+    Assertions.assertEquals(Integer.valueOf(3), restored.getObjectStorageCompressionLevel());
+
+    final IndexSpec target = IndexSpec.builder()
+        .withDimensionCompression(CompressionStrategy.LZ4)
+        .withDimensionCompressionLevel(4)
+        .withMetricCompression(CompressionStrategy.ZSTD)
+        .withMetricCompressionLevel(6)
+        .build()
+        .getEffectiveSpec();
+
+    final NestedCommonFormatColumnFormatSpec merged =
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(restored, target);
+
+    Assertions.assertEquals(Integer.valueOf(4), merged.getInheritedDictionaryCompressionLevel());
+    Assertions.assertEquals(Integer.valueOf(6), merged.getInheritedLongCompressionLevel());
+    Assertions.assertEquals(Integer.valueOf(6), merged.getInheritedDoubleCompressionLevel());
+    Assertions.assertEquals(Integer.valueOf(3), merged.getObjectStorageCompressionLevel());
+  }
+
+  @Test
+  public void testExplicitNestedCodecsRemainOverridesAfterSerde() throws Exception
+  {
+    final NestedCommonFormatColumnFormatSpec explicit =
+        NestedCommonFormatColumnFormatSpec.builder()
+            .setObjectStorageCompression(CompressionStrategy.ZSTD)
+            .setObjectStorageCompressionLevel(3)
+            .setDictionaryEncodedColumnCompression(CompressionStrategy.LZ4)
+            .setLongColumnCompression(CompressionStrategy.ZSTD)
+            .setDoubleColumnCompression(CompressionStrategy.ZSTD)
+            .build();
+
+    final String json = TestHelper.JSON_MAPPER.writeValueAsString(
+        NestedCommonFormatColumnPartSerde.FormatSpec.forSerde(explicit)
+    );
+
+    Assertions.assertTrue(json.contains("\"dictionaryEncodedColumnCompression\""));
+    Assertions.assertTrue(json.contains("\"longColumnCompression\""));
+    Assertions.assertTrue(json.contains("\"doubleColumnCompression\""));
+
+    final NestedCommonFormatColumnPartSerde.FormatSpec restored =
+        TestHelper.JSON_MAPPER.readValue(
+            json,
+            NestedCommonFormatColumnPartSerde.FormatSpec.class
+        );
+
+    final NestedCommonFormatColumnFormatSpec merged =
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(restored, indexSpec());
+
+    Assertions.assertNull(merged.getInheritedDictionaryCompressionLevel());
+    Assertions.assertNull(merged.getInheritedLongCompressionLevel());
+    Assertions.assertNull(merged.getInheritedDoubleCompressionLevel());
+    Assertions.assertEquals(Integer.valueOf(3), merged.getObjectStorageCompressionLevel());
+  }
+
+  @Test
+  public void testDefaultCompressionLevelReinheritsAfterPersistence() throws Exception
+  {
+    final IndexSpec source = IndexSpec.builder()
+        .withDimensionCompression(CompressionStrategy.LZ4)
+        .withMetricCompression(CompressionStrategy.ZSTD)
+        .build()
+        .getEffectiveSpec();
+
+    Assertions.assertNull(source.getDimensionCompressionLevel());
+    Assertions.assertNull(source.getMetricCompressionLevel());
+
+    final NestedCommonFormatColumnFormatSpec sourceFormat =
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, source);
+
+    final String json = TestHelper.JSON_MAPPER.writeValueAsString(
+        NestedCommonFormatColumnPartSerde.FormatSpec.forSerde(sourceFormat)
+    );
+
+    final NestedCommonFormatColumnPartSerde.FormatSpec restored =
+        TestHelper.JSON_MAPPER.readValue(
+            json,
+            NestedCommonFormatColumnPartSerde.FormatSpec.class
+        );
+
+    final IndexSpec target = IndexSpec.builder()
+        .withDimensionCompression(CompressionStrategy.LZ4)
+        .withDimensionCompressionLevel(4)
+        .withMetricCompression(CompressionStrategy.ZSTD)
+        .withMetricCompressionLevel(6)
+        .build()
+        .getEffectiveSpec();
+
+    final NestedCommonFormatColumnFormatSpec merged =
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(restored, target);
+
+    Assertions.assertEquals(
+        Integer.valueOf(4),
+        merged.getInheritedDictionaryCompressionLevel()
+    );
+    Assertions.assertEquals(
+        Integer.valueOf(6),
+        merged.getInheritedLongCompressionLevel()
+    );
+    Assertions.assertEquals(
+        Integer.valueOf(6),
+        merged.getInheritedDoubleCompressionLevel()
+    );
   }
 }

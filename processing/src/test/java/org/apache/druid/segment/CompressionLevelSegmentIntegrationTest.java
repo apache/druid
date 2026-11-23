@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
@@ -39,6 +40,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -211,5 +213,103 @@ public class CompressionLevelSegmentIntegrationTest extends InitializedNullHandl
             Map.of("dim", "delta", "longDim", 10L, "variant", "last", "longVal", 400L, "doubleVal", 4.0)
         )
     );
+  }
+
+  @Test
+  public void testPersistedNestedCompressionLevelsSurviveMerge() throws IOException
+  {
+    final IndexSpec sourceSpec = IndexSpec.builder()
+        .withDimensionCompression(CompressionStrategy.LZ4)
+        .withDimensionCompressionLevel(5)
+        .withMetricCompression(CompressionStrategy.ZSTD)
+        .withMetricCompressionLevel(7)
+        .withAutoColumnFormatSpec(
+            NestedCommonFormatColumnFormatSpec.builder()
+                .setObjectStorageCompression(CompressionStrategy.ZSTD)
+                .setObjectStorageCompressionLevel(3)
+                .build()
+        )
+        .build();
+
+    final IndexSpec targetSpec = IndexSpec.builder()
+        .withDimensionCompression(CompressionStrategy.LZ4)
+        .withDimensionCompressionLevel(4)
+        .withMetricCompression(CompressionStrategy.ZSTD)
+        .withMetricCompressionLevel(6)
+        .build();
+
+    final IndexMerger merger = TestHelper.getTestIndexMergerV9(
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
+
+    final IndexIO indexIO = TestHelper.getTestIndexIO();
+
+    try (QueryableIndex persisted = buildIndex(false, sourceSpec)) {
+      final AutoTypeColumnSchema persistedSchema = (AutoTypeColumnSchema)
+          persisted.getColumnHolder("nested").getColumnFormat().getColumnSchema("nested");
+
+      final NestedCommonFormatColumnFormatSpec persistedFormat =
+          persistedSchema.getColumnFormatSpec();
+
+      Assertions.assertNotNull(persistedFormat);
+      Assertions.assertEquals(
+          Integer.valueOf(3),
+          persistedFormat.getObjectStorageCompressionLevel()
+      );
+
+      final NestedCommonFormatColumnFormatSpec targetFormat =
+          NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
+              persistedFormat,
+              targetSpec.getEffectiveSpec()
+          );
+
+      Assertions.assertEquals(
+          Integer.valueOf(4),
+          targetFormat.getInheritedDictionaryCompressionLevel()
+      );
+      Assertions.assertEquals(
+          Integer.valueOf(6),
+          targetFormat.getInheritedLongCompressionLevel()
+      );
+      Assertions.assertEquals(
+          Integer.valueOf(6),
+          targetFormat.getInheritedDoubleCompressionLevel()
+      );
+
+      final File mergedFile = merger.mergeQueryableIndex(
+          List.of(persisted),
+          false,
+          persisted.getMetadata().getAggregators(),
+          temporaryFolder.newFolder(),
+          targetSpec,
+          null,
+          -1
+      );
+
+      try (QueryableIndex merged = indexIO.loadIndex(mergedFile)) {
+        Assertions.assertEquals(persisted.getNumRows(), merged.getNumRows());
+
+        final AutoTypeColumnSchema mergedSchema = (AutoTypeColumnSchema)
+            merged.getColumnHolder("nested").getColumnFormat().getColumnSchema("nested");
+
+        Assertions.assertEquals(
+            Integer.valueOf(3),
+            mergedSchema.getColumnFormatSpec().getObjectStorageCompressionLevel()
+        );
+
+        final List<DebugRow> expected =
+            RowIteratorHelper.toList(new QueryableIndexIndexableAdapter(persisted).getRows());
+
+        final List<DebugRow> actual =
+            RowIteratorHelper.toList(new QueryableIndexIndexableAdapter(merged).getRows());
+
+        Assertions.assertEquals(expected.size(), actual.size());
+
+        for (int i = 0; i < expected.size(); i++) {
+          Assertions.assertEquals(expected.get(i).dimensionValues(), actual.get(i).dimensionValues());
+          Assertions.assertEquals(expected.get(i).metricValues(), actual.get(i).metricValues());
+        }
+      }
+    }
   }
 }
