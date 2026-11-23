@@ -234,7 +234,7 @@ values for the above mentioned configs among others provided by Java implementat
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 |`druid.auth.unsecuredPaths`| List of Strings|List of paths for which security checks will not be performed. All requests to these paths will be allowed.|[]|no|
 |`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, skip authentication checks for HTTP OPTIONS requests. This is needed for certain use cases, such as supporting CORS pre-flight requests. Note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404), so enabling this option may reveal information about server configuration, including information about what extensions are loaded (if those extensions add extensions).|false|no|
-|`druid.auth.emitAuthMetrics`|Boolean|If true, emit service metrics for authorization events. When enabled, Druid emits `auth/forbidden` when access is denied and `auth/exception` when an internal authorization error occurs. See [Security metrics](#security) for details.|false|no|
+|`druid.auth.emitAuthMetrics`|Boolean|If true, emit service metrics for authorization events. When enabled, Druid emits `auth/forbidden` when access is denied and `auth/exception` when an internal authorization error occurs. See [Security metrics](../operations/metrics.md#security) for details.|false|no|
 |`druid.auth.enableLookupAuthorization`|Boolean|If true, authorize lookup endpoints with `LOOKUP` resources. Requests where neither a tier nor a lookup can be resolved require `LOOKUP:LOOKUP`. See [LOOKUP resource permissions](../operations/security-user-auth.md#lookup).|false|no|
 
 For more information, please see [Authentication and Authorization](../operations/auth.md).
@@ -2017,7 +2017,7 @@ The following table lists available monitors and the respective services where t
 
 |Name|Description|Service|
 |----|-----------|-------|
-|`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker services. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|Broker, Historical, Indexer, Peon|
+|`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker services. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and errors.|Broker, Historical, Indexer, Peon|
 |`org.apache.druid.java.util.metrics.OshiSysMonitor`|Reports on various system activities and statuses using the [OSHI](https://github.com/oshi/oshi), a JNA-based (native) Operating System and Hardware Information library for Java.|Any|
 |`org.apache.druid.java.util.metrics.JvmMonitor`|Reports various JVM-related statistics.|Any|
 |`org.apache.druid.java.util.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|Any|
