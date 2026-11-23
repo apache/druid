@@ -60,6 +60,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -155,7 +156,8 @@ public abstract class BaseJettyTest
       final Handler.Sequence handlerList = new Handler.Sequence(
           JettyServerInitUtils.wrapWithCompressionHandler(
               root,
-              HttpServerCompression.DEFAULT
+              HttpServerCompression.DEFAULT,
+              List.of()
           )
       );
       server.setHandler(handlerList);

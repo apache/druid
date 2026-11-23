@@ -64,6 +64,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 public class AsyncManagementForwardingServletTest extends BaseJettyTest
@@ -541,7 +542,8 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
       final Handler.Sequence handlerList = new Handler.Sequence(
           JettyServerInitUtils.wrapWithCompressionHandler(
               root,
-              HttpServerCompression.DEFAULT
+              HttpServerCompression.DEFAULT,
+              List.of()
           )
       );
       server.setHandler(handlerList);

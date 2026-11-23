@@ -155,7 +155,8 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
         rewriteHandler,
         JettyServerInitUtils.wrapWithCompressionHandler(
             root,
-            serverConfig.getHttpServerCompression()
+            serverConfig.getHttpServerCompression(),
+            serverConfig.getAllowedHttpMethods()
         )
     );
     server.setHandler(handlerList);

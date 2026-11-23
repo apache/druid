@@ -163,7 +163,8 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     // Add compression handler at the very end
     handlerList.addHandler(JettyServerInitUtils.wrapWithCompressionHandler(
         root,
-        serverConfig.getHttpServerCompression()
+        serverConfig.getHttpServerCompression(),
+        serverConfig.getAllowedHttpMethods()
     ));
 
     final StatisticsHandler statisticsHandler = new StatisticsHandler();

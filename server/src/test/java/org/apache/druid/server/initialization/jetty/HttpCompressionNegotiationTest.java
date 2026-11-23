@@ -260,14 +260,29 @@ public class HttpCompressionNegotiationTest
     for (String method : ImmutableList.of("GET", "PUT", "DELETE", "PATCH", "OPTIONS")) {
       for (String encoding : ImmutableList.of("gzip", "zstd")) {
         final byte[] body = "gzip".equals(encoding) ? gzip(PAYLOAD) : Zstd.compress(PAYLOAD, 3);
-        final Request request = new Request(HttpMethod.valueOf(method), newServer)
-            .setHeader("Content-Encoding", encoding)
-            .setContent("application/octet-stream", body);
-        final BytesFullResponseHolder holder = client.go(request, new BytesFullResponseHandler()).get();
-        Assertions.assertEquals(200, holder.getStatus().code(), method);
-        Assertions.assertArrayEquals(PAYLOAD, holder.getContent(), StringUtils.format("%s %s", method, encoding));
+        Assertions.assertArrayEquals(
+            PAYLOAD,
+            sendAndReadEcho(client, newServer, method, encoding, body),
+            StringUtils.format("%s %s", method, encoding)
+        );
       }
     }
+  }
+
+  @Test
+  public void testRequestDecompressionOfAllowedCustomMethod() throws Exception
+  {
+    // A method that Jetty does not know is decompressed only if druid.server.http.allowedHttpMethods allows it.
+    // Otherwise AllowHttpMethodsResourceFilter rejects it, so it is not added here and its body passes through as is.
+    final String method = "X-DRUID-CUSTOM";
+    final byte[] body = Zstd.compress(PAYLOAD, 3);
+    final HttpClient client = makeClient(null);
+
+    final URL allowedServer = startServer(NEW_SERVER, List.of(method));
+    Assertions.assertArrayEquals(PAYLOAD, sendAndReadEcho(client, allowedServer, method, "zstd", body));
+
+    final URL notAllowedServer = startServer(NEW_SERVER);
+    Assertions.assertArrayEquals(body, sendAndReadEcho(client, notAllowedServer, method, "zstd", body));
   }
 
   @Test
@@ -341,6 +356,22 @@ public class HttpCompressionNegotiationTest
     return compressed.length;
   }
 
+  private static byte[] sendAndReadEcho(
+      final HttpClient client,
+      final URL url,
+      final String method,
+      final String contentEncoding,
+      final byte[] body
+  ) throws Exception
+  {
+    final Request request = new Request(HttpMethod.valueOf(method), url)
+        .setHeader("Content-Encoding", contentEncoding)
+        .setContent("application/octet-stream", body);
+    final BytesFullResponseHolder holder = client.go(request, new BytesFullResponseHandler()).get();
+    Assertions.assertEquals(200, holder.getStatus().code(), method);
+    return holder.getContent();
+  }
+
   private byte[] postAndReadEcho(final URL url, final String contentEncoding, final byte[] body) throws IOException
   {
     final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -372,6 +403,12 @@ public class HttpCompressionNegotiationTest
 
   private URL startServer(final HttpServerCompression compressionConfig) throws Exception
   {
+    return startServer(compressionConfig, List.of());
+  }
+
+  private URL startServer(final HttpServerCompression compressionConfig, final List<String> allowedHttpMethods)
+      throws Exception
+  {
     final Server server = new Server();
     final ServerConnector connector = new ServerConnector(server);
     connector.setPort(0);
@@ -380,7 +417,7 @@ public class HttpCompressionNegotiationTest
     final ServletContextHandler root = new ServletContextHandler();
     root.addServlet(new ServletHolder(new PayloadServlet()), "/*");
     server.setHandler(
-        JettyServerInitUtils.wrapWithCompressionHandler(root, compressionConfig)
+        JettyServerInitUtils.wrapWithCompressionHandler(root, compressionConfig, allowedHttpMethods)
     );
     servers.add(server);
     server.start();

@@ -1173,7 +1173,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       handlerList.setHandlers(
           JettyServerInitUtils.wrapWithCompressionHandler(
               root,
-              HttpServerCompression.DEFAULT
+              HttpServerCompression.DEFAULT,
+              List.of()
           )
       );
       server.setHandler(handlerList);

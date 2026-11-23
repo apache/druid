@@ -100,7 +100,8 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
 
     handlerList.addHandler(JettyServerInitUtils.wrapWithCompressionHandler(
         root,
-        serverConfig.getHttpServerCompression()
+        serverConfig.getHttpServerCompression(),
+        serverConfig.getAllowedHttpMethods()
     ));
 
     handlerList.addHandler(new DefaultHandler());

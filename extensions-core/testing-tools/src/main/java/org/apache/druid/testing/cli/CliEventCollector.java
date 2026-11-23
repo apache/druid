@@ -159,7 +159,8 @@ public class CliEventCollector extends ServerRunnable
       handlerList.addHandler(
           JettyServerInitUtils.wrapWithCompressionHandler(
               root,
-              serverConfig.getHttpServerCompression()
+              serverConfig.getHttpServerCompression(),
+              serverConfig.getAllowedHttpMethods()
           )
       );
 

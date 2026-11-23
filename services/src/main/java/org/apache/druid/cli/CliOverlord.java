@@ -590,7 +590,8 @@ public class CliOverlord extends ServerRunnable
           rewriteHandler,
           JettyServerInitUtils.wrapWithCompressionHandler(
               root,
-              serverConfig.getHttpServerCompression()
+              serverConfig.getHttpServerCompression(),
+              serverConfig.getAllowedHttpMethods()
           )
       );
 

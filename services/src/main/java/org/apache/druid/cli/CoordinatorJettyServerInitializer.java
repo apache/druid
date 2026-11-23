@@ -139,7 +139,8 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
         rewriteHandler,
         JettyServerInitUtils.wrapWithCompressionHandler(
             root,
-            serverConfig.getHttpServerCompression()
+            serverConfig.getHttpServerCompression(),
+            serverConfig.getAllowedHttpMethods()
         )
     );
 

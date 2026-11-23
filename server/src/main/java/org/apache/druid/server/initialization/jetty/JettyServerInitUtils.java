@@ -64,22 +64,30 @@ public class JettyServerInitUtils
    *
    * {@link HttpServerCompression.Gzip#inflateBufferSizeOrDefault()} sets the buffer size of the gzip request
    * decoder. If it is 0, request bodies are not decompressed, for any codec, as with the old {@code GzipHandler}.
+   *
+   * @param allowedHttpMethods methods allowed by {@code druid.server.http.allowedHttpMethods}, whose request bodies
+   *                           are decompressed in addition to those of the methods Jetty knows
    */
   public static Handler wrapWithCompressionHandler(
       final ServletContextHandler handler,
-      final HttpServerCompression compressionConfig
+      final HttpServerCompression compressionConfig,
+      final List<String> allowedHttpMethods
   )
   {
     final CompressionHandler compressionHandler = createCompressionHandler(compressionConfig);
 
     // defaults() compresses responses to GET and POST and skips already-compressed types. It decompresses only POST
-    // bodies, and its method include list cannot be cleared, so include every method Jetty knows, as the old
-    // GzipHandler inflated request bodies of any method.
+    // bodies, and its method include list cannot be cleared. The old GzipHandler inflated request bodies of any
+    // method, so include every method Jetty knows, and the extra methods Druid is configured to allow, since
+    // AllowHttpMethodsResourceFilter rejects all others.
     final CompressionConfig.Builder config = CompressionConfig.builder()
                                                               .defaults()
                                                               .compressPreferredEncodings(compressionConfig.getCodecNames());
     for (HttpMethod method : HttpMethod.values()) {
       config.decompressIncludeMethod(method.asString());
+    }
+    for (String method : allowedHttpMethods) {
+      config.decompressIncludeMethod(method);
     }
     if (!compressionConfig.getCodecs().contains(CompressionCodec.GZIP)) {
       // gzip stays registered for request decompression, so exclude it from response compression.
