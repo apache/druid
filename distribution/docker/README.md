@@ -25,6 +25,15 @@ From the root of the repo, run following command:
 DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile .
 ```
 
+To override the Druid version reported by the image (for example in `sys.servers` and `/status`), pass `REVISION`:
+
+```bash
+DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile --build-arg REVISION=40.0.0-custom .
+```
+
+The same version can be set for a Maven build with `-Drevision=40.0.0-custom`.
+If you build with `BUILD_FROM_SOURCE=false`, build the distribution with the same `-Drevision` value that you pass as `REVISION`.
+
 ### Building images on Apple M1/M2
 To build images on Apple M1/M2, you need to follow the instructions in this section.
 

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -71,12 +70,21 @@ public class QueryContext
   @JsonCreator
   public QueryContext(Map<String, Object> context)
   {
+    this(context, true);
+  }
+
+  /**
+   * @param copy whether to copy {@code context}.
+   *             Pass false only for a {@link TreeMap} this class has just built and will not modify afterwards.
+   */
+  private QueryContext(@Nullable final Map<String, Object> context, final boolean copy)
+  {
     // There is no semantic difference between an empty and a null context.
     // Ensure that a context always exists to avoid the need to check for
     // a null context. Jackson serialization will omit empty contexts.
     this.context = context == null
         ? Collections.emptyMap()
-        : Collections.unmodifiableMap(new TreeMap<>(context));
+        : Collections.unmodifiableMap(copy ? new TreeMap<>(context) : context);
   }
 
   public static QueryContext empty()
@@ -235,19 +243,14 @@ public class QueryContext
     return context.isEmpty();
   }
 
+  /**
+   * Returns the context as an unmodifiable map.
+   * Any attempt to modify the returned map throws {@link UnsupportedOperationException};
+   * to change values, create a new context with {@link #override(Map)} or {@link #override(QueryContextParameter, Object)}.
+   */
   public Map<String, Object> asMap()
   {
     return context;
-  }
-
-  /**
-   * Check if the given string key is set. If the client will then fetch the value,
-   * consider using one of the {@code get<Type>(String key)} methods instead:
-   * they each return {@code null} if the value is not set.
-   */
-  public boolean containsKey(String key)
-  {
-    return context.containsKey(key);
   }
 
   /**
@@ -256,7 +259,7 @@ public class QueryContext
    */
   public boolean has(final QueryContextParameter<?> parameter)
   {
-    return get(parameter.getName()) != null;
+    return context.get(parameter.getName()) != null;
   }
 
   /**
@@ -278,7 +281,14 @@ public class QueryContext
   @Nullable
   public <T> T get(final QueryContextParameter<T> parameter)
   {
-    return parseOrDefault(parameter, parameter.getLiteralDefault());
+    final T defaultValue = parameter.getLiteralDefault();
+    if (!context.containsKey(parameter.getName())) {
+      return defaultValue;
+    }
+
+    // Parse even an explicit null so that non-nullable parameters reject it.
+    final T parsed = parameter.parse(context.get(parameter.getName()));
+    return parsed == null ? defaultValue : parsed;
   }
 
   /**
@@ -303,17 +313,11 @@ public class QueryContext
    */
   public <T> T getOrDefault(final QueryContextParameter<T> parameter, final T defaultValue)
   {
-    return parseOrDefault(parameter, defaultValue);
-  }
-
-  @Nullable
-  private <T> T parseOrDefault(final QueryContextParameter<T> parameter, @Nullable final T defaultValue)
-  {
-    if (!containsKey(parameter.getName())) {
+    if (!context.containsKey(parameter.getName())) {
       return defaultValue;
     }
     // Parse even an explicit null so that non-nullable parameters reject it.
-    final T parsed = parameter.parse(get(parameter.getName()));
+    final T parsed = parameter.parse(context.get(parameter.getName()));
     return parsed == null ? defaultValue : parsed;
   }
 
@@ -326,12 +330,7 @@ public class QueryContext
   @Nullable
   public String getString(String key)
   {
-    return getString(key, null);
-  }
-
-  public String getString(String key, String defaultValue)
-  {
-    return QueryContexts.parseString(context, key, defaultValue);
+    return QueryContexts.parseString(context, key, null);
   }
 
   /**
@@ -342,7 +341,7 @@ public class QueryContext
    */
   public Boolean getBoolean(final String key)
   {
-    return QueryContexts.getAsBoolean(key, get(key));
+    return QueryContexts.getAsBoolean(key, context.get(key));
   }
 
   /**
@@ -353,7 +352,7 @@ public class QueryContext
    */
   public boolean getBoolean(final String key, final boolean defaultValue)
   {
-    return QueryContexts.parseBoolean(context, key, defaultValue);
+    return QueryContexts.getAsBoolean(key, context.get(key), defaultValue);
   }
 
   /**
@@ -375,7 +374,7 @@ public class QueryContext
    */
   public int getInt(final String key, final int defaultValue)
   {
-    return QueryContexts.parseInt(context, key, defaultValue);
+    return QueryContexts.getAsInt(key, get(key), defaultValue);
   }
 
   /**
@@ -397,7 +396,7 @@ public class QueryContext
    */
   public long getLong(final String key, final long defaultValue)
   {
-    return QueryContexts.parseLong(context, key, defaultValue);
+    return QueryContexts.getAsLong(key, get(key), defaultValue);
   }
 
   /**
@@ -409,16 +408,6 @@ public class QueryContext
   public float getFloat(final String key, final float defaultValue)
   {
     return QueryContexts.getAsFloat(key, get(key), defaultValue);
-  }
-
-  public HumanReadableBytes getHumanReadableBytes(final String key, final HumanReadableBytes defaultValue)
-  {
-    return QueryContexts.getAsHumanReadableBytes(key, get(key), defaultValue);
-  }
-
-  public HumanReadableBytes getHumanReadableBytes(final String key, final long defaultBytes)
-  {
-    return QueryContexts.getAsHumanReadableBytes(key, get(key), HumanReadableBytes.valueOf(defaultBytes));
   }
 
   public <E extends Enum<E>> E getEnum(String key, Class<E> clazz, E defaultValue)
@@ -849,7 +838,17 @@ public class QueryContext
     if (contextOverride == null || contextOverride.isEmpty()) {
       return this;
     }
-    return QueryContext.of(QueryContexts.override(asMap(), contextOverride));
+
+    final TreeMap<String, Object> overridden = new TreeMap<>(context);
+    // A null override unsets the key, like QueryContexts.override(Map, Map).
+    contextOverride.forEach((key, value) -> {
+      if (value == null) {
+        overridden.remove(key);
+      } else {
+        overridden.put(key, value);
+      }
+    });
+    return new QueryContext(overridden, false);
   }
 
   public QueryContext override(QueryContext queryContext)
@@ -858,6 +857,48 @@ public class QueryContext
       return this;
     }
     return override(queryContext.asMap());
+  }
+
+  /**
+   * Treats this context as defaults, such as the defaults an operator configures with
+   * {@code druid.query.default.context}, and merges the user-provided context over them. Unlike
+   * {@link #override(Map)}, a {@code null} user value means the user did not set the key, so the default applies
+   * instead of the key being removed. See {@link QueryContexts#withDefaults(Map, Map)}.
+   */
+  public QueryContext overrideDefaults(@Nullable final Map<String, Object> userContext)
+  {
+    if (userContext == null || userContext.isEmpty()) {
+      return this;
+    }
+
+    final TreeMap<String, Object> merged = new TreeMap<>(context);
+    // A null user value leaves the default in place, like QueryContexts.withDefaults(Map, Map).
+    userContext.forEach((key, value) -> {
+      if (value != null) {
+        merged.put(key, value);
+      }
+    });
+    return new QueryContext(merged, false);
+  }
+
+  /**
+   * Same as {@link #overrideDefaults(Map)}, for a user-provided context that is already a {@link QueryContext}.
+   */
+  public QueryContext overrideDefaults(@Nullable final QueryContext userContext)
+  {
+    return userContext == null ? this : overrideDefaults(userContext.context);
+  }
+
+  /**
+   * Returns a new context with one typed parameter inserted, updated or, if {@code value} is null, removed. Leaves this context unchanged.
+   *
+   * @throws BadQueryContextException if the value is invalid
+   */
+  public <T> QueryContext override(final QueryContextParameter<T> parameter, @Nullable final T value)
+  {
+    final TreeMap<String, Object> overridden = new TreeMap<>(context);
+    parameter.set(overridden, value);
+    return new QueryContext(overridden, false);
   }
 
   public boolean isPrePlanned()

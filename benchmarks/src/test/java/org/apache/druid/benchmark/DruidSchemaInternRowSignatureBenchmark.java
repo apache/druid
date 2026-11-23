@@ -196,11 +196,10 @@ public class DruidSchemaInternRowSignatureBenchmark
         0
     );
 
-    DataSegment.Builder builder = DataSegment.builder()
-                                             .dataSource("dummy")
+    // the interval is replaced for every segment in the loop below
+    DataSegment.Builder builder = DataSegment.builder(SegmentId.of("dummy", Intervals.ETERNITY, "1", 0))
                                              .shardSpec(new LinearShardSpec(0))
                                              .dimensions(ImmutableList.of("col1", "col2", "col3", "col4"))
-                                             .version("1")
                                              .size(0);
     for (int i = 0; i < 10000; ++i) {
       DataSegment dataSegment = builder.interval(Intervals.of(i + "/" + (i + 1)))

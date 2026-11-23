@@ -32,4 +32,11 @@ public class LoadableSegmentUtils
     final RowCountInspector inspector = segment.as(RowCountInspector.class);
     return inspector != null ? inspector.getNumRows() : 0;
   }
+
+  /**
+   * Row and byte counts of an acquired segment.
+   */
+  record FileCounts(long rows, long bytes)
+  {
+  }
 }

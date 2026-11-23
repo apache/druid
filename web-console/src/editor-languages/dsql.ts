@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
+import type { CompletionContext } from '@codemirror/autocomplete';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { indentNodeProp, LanguageSupport, LRLanguage } from '@codemirror/language';
 import { keymap } from '@codemirror/view';
 import { styleTags, tags } from '@lezer/highlight';
 
-import { makeCompletionSource } from '../components/code-editor/completion-source';
+import { makeCompletionSource, tokenBefore } from '../components/code-editor/completion-source';
 import type { SqlCompletionOptions } from '../editor-completions/sql-completions';
 import { getSqlCompletions } from '../editor-completions/sql-completions';
 import type { AvailableFunctions } from '../helpers';
@@ -85,6 +86,18 @@ export function getDsqlLanguage(availableSqlFunctions?: AvailableFunctions): LRL
   return language;
 }
 
+/**
+ * Whether the cursor is right after a SET keyword and any amount of whitespace, where the query context parameter names
+ * are suggested without typing a letter first. A SET in a string literal or a comment does not count.
+ */
+function isAfterSetKeyword({ state, pos }: CompletionContext): boolean {
+  let setEnd = pos;
+  while (setEnd > 0 && /\s/.test(state.sliceDoc(setEnd - 1, setEnd))) setEnd--;
+  if (setEnd === pos) return false;
+  const { name, from, to } = tokenBefore(state, setEnd);
+  return name === 'Keyword' && to === setEnd && state.sliceDoc(from, to).toUpperCase() === 'SET';
+}
+
 export type DsqlOptions = SqlCompletionOptions;
 
 /**
@@ -94,8 +107,9 @@ export function dsql(options: DsqlOptions = {}): LanguageSupport {
   const language = getDsqlLanguage(options.availableSqlFunctions);
   return new LanguageSupport(language, [
     language.data.of({
-      autocomplete: makeCompletionSource((context, word) =>
-        getSqlCompletions(context, word, options),
+      autocomplete: makeCompletionSource(
+        (context, word) => getSqlCompletions(context, word, options),
+        { completeEmptyWord: isAfterSetKeyword },
       ),
     }),
     closeBrackets(),

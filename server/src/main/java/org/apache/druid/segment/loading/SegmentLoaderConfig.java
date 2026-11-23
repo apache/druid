@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
  */
 public class SegmentLoaderConfig
 {
+  private static final String INFO_DIR_NAME = "info_dir";
   private static final boolean DEFAULT_LAZY_LOAD_ON_START = false;
   private static final boolean DEFAULT_DELETE_ON_REMOVE = true;
   private static final int DEFAULT_DROP_SEGMENT_DELAY_MILLIS = (int) TimeUnit.SECONDS.toMillis(30);
@@ -273,6 +274,22 @@ public class SegmentLoaderConfig
   public File getInfoDir()
   {
     return infoDir;
+  }
+
+  /**
+   * Returns the info directory determined by this config alone: {@link #getInfoDir()} if set, otherwise
+   * {@code info_dir} under the first entry of {@link #getLocations()}. Returns null if neither is set.
+   */
+  @Nullable
+  public File getEffectiveInfoDir()
+  {
+    if (infoDir != null) {
+      return infoDir;
+    } else if (!locations.isEmpty()) {
+      return new File(locations.getFirst().getPath(), INFO_DIR_NAME);
+    } else {
+      return null;
+    }
   }
 
   public int getStatusQueueMaxSize()

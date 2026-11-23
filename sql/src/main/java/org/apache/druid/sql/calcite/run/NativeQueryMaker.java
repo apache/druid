@@ -27,21 +27,18 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.runtime.Hook;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.planning.RequireTimeConditionAnalyzer;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.QueryLifecycle;
@@ -54,7 +51,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.hook.DruidHook;
-import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -88,10 +84,9 @@ public class NativeQueryMaker implements QueryMaker
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
         && !(druidQuery.getDataSource() instanceof InlineDataSource)) {
-      if (Intervals.ONLY_ETERNITY.equals(getBaseIntervals(query))) {
-        throw new CannotBuildQueryException(
-            "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
-        );
+      final RequireTimeConditionAnalyzer.Result result = RequireTimeConditionAnalyzer.analyze(query);
+      if (!result.isSatisfied()) {
+        throw new CannotBuildQueryException(buildRequireTimeConditionMessage(result));
       }
     }
     int numFilters = plannerContext.getPlannerConfig().getMaxNumericInFilters();
@@ -154,6 +149,28 @@ public class NativeQueryMaker implements QueryMaker
         query,
         mapColumnList(rowOrder, fieldMapping),
         mapColumnList(columnTypes, fieldMapping)
+    );
+  }
+
+  private static String buildRequireTimeConditionMessage(RequireTimeConditionAnalyzer.Result result)
+  {
+    final String leaf = result.getLeafName();
+    final RequireTimeConditionAnalyzer.Position position = result.getPosition();
+    if (position == RequireTimeConditionAnalyzer.Position.JOIN_RIGHT) {
+      return StringUtils.format(
+          "requireTimeCondition is enabled: datasource '%s' on the right side of a join has no filter on the __time column",
+          leaf
+      );
+    }
+    if (position == RequireTimeConditionAnalyzer.Position.NESTED_SUBQUERY) {
+      return StringUtils.format(
+          "requireTimeCondition is enabled: datasource '%s' inside a nested subquery has no filter on the __time column",
+          leaf
+      );
+    }
+    return StringUtils.format(
+        "requireTimeCondition is enabled: datasource '%s' has no filter on the __time column",
+        leaf
     );
   }
 
@@ -267,23 +284,5 @@ public class NativeQueryMaker implements QueryMaker
     }
 
     return out;
-  }
-
-  /**
-   * Returns the effective intervals of the query that reads the base datasource, following subqueries on the
-   * left-hand side. Used for {@link PlannerConfig#isRequireTimeCondition()}.
-   */
-  private static List<Interval> getBaseIntervals(final Query<?> query)
-  {
-    final ExecutionVertex ev = ExecutionVertex.of(query);
-    if (ev.getBaseDataSource() instanceof QueryDataSource) {
-      final Query<?> subQuery = ((QueryDataSource) ev.getBaseDataSource()).getQuery();
-
-      // ExecutionVertex can only analyze BaseQuery.
-      if (subQuery instanceof BaseQuery) {
-        return getBaseIntervals(subQuery);
-      }
-    }
-    return ev.getEffectiveQuerySegmentSpec().getIntervals();
   }
 }

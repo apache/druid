@@ -20,6 +20,7 @@
 package org.apache.druid.segment.projections;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -56,6 +57,12 @@ public class TableClusterGroupSpec
   private final int numRows;
 
   /**
+   * {@link Projections#getClusterGroupBundleName} of {@link #clusteringValueIds}, derived (not serialized) and kept so
+   * per-query callers don't rebuild and re-intern it.
+   */
+  private final String bundleName;
+
+  /**
    * Parent back-reference, set once via {@link #setSummary} during the schema constructor. Readers observe the
    * spec only after the holding {@code SimpleQueryableIndex}'s final field publishes it, so non-final is safe.
    */
@@ -73,6 +80,7 @@ public class TableClusterGroupSpec
     }
     this.clusteringValueIds = List.copyOf(clusteringValueIds);
     this.numRows = numRows == null ? 0 : numRows;
+    this.bundleName = Projections.getClusterGroupBundleName(this.clusteringValueIds);
     this.summary = null;
   }
 
@@ -139,6 +147,15 @@ public class TableClusterGroupSpec
   public int getNumRows()
   {
     return numRows;
+  }
+
+  /**
+   * This group's bundle name in the V10 file, see {@link Projections#getClusterGroupBundleName}. Interned.
+   */
+  @JsonIgnore
+  public String getBundleName()
+  {
+    return bundleName;
   }
 
   @Override

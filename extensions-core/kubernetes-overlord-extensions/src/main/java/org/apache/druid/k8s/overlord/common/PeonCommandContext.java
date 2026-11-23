@@ -19,6 +19,7 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,6 +33,8 @@ public class PeonCommandContext
   private final File taskDir;
   private final boolean enableTls;
   private final int cpuMicroCore;
+  @Nullable
+  private final String taskId;
 
   public PeonCommandContext(List<String> command, List<String> javaOpts, File taskDir, int cpuMicroCore)
   {
@@ -46,11 +49,24 @@ public class PeonCommandContext
       boolean enableTls
   )
   {
+    this(command, javaOpts, taskDir, cpuMicroCore, enableTls, null);
+  }
+
+  public PeonCommandContext(
+      List<String> command,
+      List<String> javaOpts,
+      File taskDir,
+      int cpuMicroCore,
+      boolean enableTls,
+      @Nullable String taskId
+  )
+  {
     this.command = command;
     this.javaOpts = javaOpts;
     this.taskDir = taskDir;
     this.cpuMicroCore = cpuMicroCore;
     this.enableTls = enableTls;
+    this.taskId = taskId;
   }
 
   public List<String> getCommand()
@@ -82,5 +98,11 @@ public class PeonCommandContext
   public boolean isEnableTls()
   {
     return enableTls;
+  }
+
+  @Nullable
+  public String getTaskId()
+  {
+    return taskId;
   }
 }

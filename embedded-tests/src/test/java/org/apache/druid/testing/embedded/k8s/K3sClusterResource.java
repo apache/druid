@@ -47,6 +47,8 @@ import org.testcontainers.k3s.K3sContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
+import javax.annotation.Nullable;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -84,6 +86,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   private final List<K3sDruidService> services = new ArrayList<>();
 
   private KubernetesClient client;
+  private K3sPodDiagnostics podDiagnostics;
   private String druidImageName;
   private String druidManifestTemplate = DEFAULT_SERVICE_MANIFEST;
 
@@ -158,7 +161,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   @Override
   public void onStarted(EmbeddedDruidCluster cluster)
   {
-    initKubernetesClient();
+    initKubernetesClient(cluster);
     loadLocalDockerImageIntoContainer(druidImageName, cluster.getTestFolder());
     manifestFiles.forEach(this::applyManifest);
     initializeDruidServices(cluster);
@@ -180,7 +183,13 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 
   protected void waitUntilServicesAreHealthy()
   {
-    services.forEach(this::waitUntilServiceIsHealthy);
+    try {
+      services.forEach(this::waitUntilServiceIsHealthy);
+    }
+    catch (Exception e) {
+      dumpPodLogs(DRUID_NAMESPACE);
+      throw e;
+    }
   }
 
   protected List<K3sDruidService> getServices()
@@ -198,17 +207,33 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
     );
   }
 
-  private void initKubernetesClient()
+  private void initKubernetesClient(EmbeddedDruidCluster cluster)
   {
     client = new KubernetesClientBuilder()
         .withConfig(Config.fromKubeconfig(getContainer().getKubeConfigYaml()))
         .build();
     closer.register(client);
+    final File podLogDir = new File(new File("druid-container-logs", cluster.getTestClassName()), "k3s-pods");
+    podDiagnostics = new K3sPodDiagnostics(client, podLogDir);
   }
 
-  protected void waitUntilPodsAreReady(String namespace)
+  protected void waitUntilPodsAreReady(final String namespace)
   {
-    client.pods().inNamespace(namespace).resources().forEach(this::waitUntilPodIsReady);
+    if (DRUID_NAMESPACE.equals(namespace) && !services.isEmpty()) {
+      try {
+        ITRetryUtil.retryUntil(
+            () -> client.pods().inNamespace(namespace).list().getItems().size() >= services.size(),
+            true,
+            1_000L,
+            60,
+            StringUtils.format("All [%d] service pods created in namespace [%s]", services.size(), namespace)
+        );
+      }
+      catch (Exception e) {
+        log.warn(e, "Did not observe [%d] pods in namespace [%s]", services.size(), namespace);
+      }
+    }
+    client.pods().inNamespace(namespace).resources().forEach(pod -> waitUntilPodIsReady(pod, namespace));
   }
 
   /**
@@ -339,9 +364,9 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   }
 
   /**
-   * Waits for the given pod to be ready.
+   * Waits for the given pod to be ready in the given namespace.
    */
-  private void waitUntilPodIsReady(PodResource pod)
+  private void waitUntilPodIsReady(final PodResource pod, @Nullable final String defaultNamespace)
   {
     try {
       pod.waitUntilCondition(
@@ -355,8 +380,13 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
       );
     }
     catch (KubernetesClientTimeoutException e) {
-      throw new ISE("Timed out waiting for pod[%s] to be ready", pod.get().getMetadata().getName());
+      throw podDiagnostics.onReadyTimeout(pod, defaultNamespace);
     }
+  }
+
+  public void dumpPodLogs(final String namespace)
+  {
+    podDiagnostics.dumpPodLogs(namespace);
   }
 
   /**

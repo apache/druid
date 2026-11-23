@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -59,7 +60,7 @@ public class DruidConnection
    * individual query. This session context is shared by all queries (statements)
    * within the connection.
    */
-  private final Map<String, Object> sessionContext;
+  private final QueryContext sessionContext;
   private final AtomicInteger statementCounter = new AtomicInteger();
   private final AtomicReference<Future<?>> timeoutFuture = new AtomicReference<>();
 
@@ -81,7 +82,7 @@ public class DruidConnection
     this.connectionId = Preconditions.checkNotNull(connectionId);
     this.maxStatements = maxStatements;
     this.userSecret = Collections.unmodifiableMap(userSecret);
-    this.sessionContext = Collections.unmodifiableMap(sessionContext);
+    this.sessionContext = QueryContext.of(sessionContext);
   }
 
   public String getConnectionId()
@@ -89,7 +90,7 @@ public class DruidConnection
     return connectionId;
   }
 
-  public Map<String, Object> sessionContext()
+  public QueryContext sessionContext()
   {
     return sessionContext;
   }
@@ -101,7 +102,7 @@ public class DruidConnection
 
   public synchronized DruidJdbcStatement createStatement(
       final SqlStatementFactory sqlStatementFactory,
-      final Map<String, Object> systemDefaultContext,
+      final QueryContext systemDefaultContext,
       final ResultFetcherFactory fetcherFactory
   )
   {
@@ -137,7 +138,7 @@ public class DruidConnection
   public synchronized DruidJdbcPreparedStatement createPreparedStatement(
       final SqlStatementFactory sqlStatementFactory,
       final SqlQueryPlus sqlQueryPlus,
-      final Map<String, Object> systemDefaultContext,
+      final QueryContext systemDefaultContext,
       final long maxRowCount,
       final ResultFetcherFactory fetcherFactory,
       final String remoteAddress

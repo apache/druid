@@ -20,13 +20,16 @@
 package org.apache.druid.msq.querykit;
 
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.std.StandardPartitionReader;
@@ -34,6 +37,7 @@ import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
+import org.apache.druid.query.Order;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.loading.AcquireMode;
@@ -41,20 +45,26 @@ import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.utils.CloseableUtils;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BooleanSupplier;
 
 /**
  * Queue for returning {@link ReadableInput} from a list of {@link PhysicalInputSlice}.
@@ -77,7 +87,7 @@ public class ReadableInputQueue implements Closeable
    * Segments to be loaded.
    */
   @GuardedBy("this")
-  private final Queue<NumberedItem<LoadableSegment>> loadableSegments = new ArrayDeque<>();
+  private final Deque<NumberedItem<LoadableSegment>> loadableSegments = new ArrayDeque<>();
 
   /**
    * Realtime servers to be queried.
@@ -99,10 +109,20 @@ public class ReadableInputQueue implements Closeable
   private final Set<SegmentReferenceHolder> loadedSegments = new LinkedHashSet<>();
 
   /**
-   * Futures that are sitting ready to be handed out by a call to {@link #nextInput()}.
+   * Futures waiting to be handed out by a call to {@link #nextInput()}, some still loading, mapped to the input each
+   * one delivers, in the order their acquisition started.
    */
   @GuardedBy("this")
-  private final Set<ListenableFuture<NumberedReadableInput>> pendingNextInputs = Sets.newIdentityHashSet();
+  private final LinkedHashMap<ListenableFuture<NumberedReadableInput>, PendingInput> pendingNextInputs =
+      new LinkedHashMap<>();
+
+  /**
+   * Interval of the last group probed by {@link #acquireCachedInNextGroup()}. Intervals in the same group compare equal
+   * under {@link #intervalOrder}.
+   */
+  @GuardedBy("this")
+  @Nullable
+  private Interval probedGroupInterval;
 
   /**
    * Futures whose delivery is mid-flight and have been removed from {@link #loadingSegments} by {@link #onSegmentReady}
@@ -128,10 +148,19 @@ public class ReadableInputQueue implements Closeable
   private final AcquireMode acquireMode;
 
   /**
-   * Whether the caller needs no more inputs. Once true, {@link #nextInput()} returns null and no new segment loads
-   * start; inputs that were already acquired are released by {@link #close()}.
+   * Decides which inputs can be skipped as well as which order (if any) they should be processed in.
    */
-  private final BooleanSupplier canSkipRemaining;
+  private final InputPruner inputPruner;
+
+  /**
+   * Time order in which segments are handed out, from {@link InputPruner#getTimeOrder()}.
+   */
+  private final Order timeOrder;
+
+  /**
+   * Orders segment intervals by {@link #timeOrder}. Intervals that can hold the best rows come first.
+   */
+  private final Comparator<Interval> intervalOrder;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   /**
@@ -142,7 +171,7 @@ public class ReadableInputQueue implements Closeable
    * @param slices array of slices, one per input (same length as inputNumbers)
    * @param loadahead number of items to load ahead of the queue
    * @param acquireMode acquire mode for {@link SegmentCacheManager}
-   * @param canSkipRemaining whether the caller needs no more inputs; see {@link #canSkipRemaining}
+   * @param inputPruner decides which inputs can be skipped; see {@link #inputPruner}
    */
   public ReadableInputQueue(
       final StandardPartitionReader partitionReader,
@@ -150,24 +179,27 @@ public class ReadableInputQueue implements Closeable
       final List<PhysicalInputSlice> slices,
       final int loadahead,
       final AcquireMode acquireMode,
-      final BooleanSupplier canSkipRemaining
+      final InputPruner inputPruner
   )
   {
     this.partitionReader = partitionReader;
     this.loadahead = loadahead;
     this.acquireMode = acquireMode;
-    this.canSkipRemaining = canSkipRemaining;
+    this.inputPruner = inputPruner;
+    this.timeOrder = inputPruner.getTimeOrder();
+    this.intervalOrder = makeIntervalOrder(timeOrder);
 
     if (inputNumbers.size() != slices.size()) {
       throw DruidException.defensive("Got input numbers[%s] for slices[%s]", inputNumbers, slices);
     }
 
+    final List<NumberedItem<LoadableSegment>> segments = new ArrayList<>();
     for (int i = 0; i < slices.size(); i++) {
       final int inputNumber = inputNumbers.getInt(i);
       final PhysicalInputSlice slice = slices.get(i);
 
       for (final LoadableSegment segment : slice.getLoadableSegments()) {
-        loadableSegments.add(new NumberedItem<>(inputNumber, segment));
+        segments.add(new NumberedItem<>(inputNumber, segment));
       }
 
       for (final DataServerQueryHandler server : slice.getQueryableServers()) {
@@ -178,11 +210,17 @@ public class ReadableInputQueue implements Closeable
         readablePartitions.add(new NumberedItem<>(inputNumber, partition));
       }
     }
+
+    if (timeOrder != Order.NONE) {
+      segments.sort(Comparator.comparing(item -> item.item().descriptor().getInterval(), intervalOrder));
+    }
+    loadableSegments.addAll(segments);
   }
 
   /**
    * If this method has not yet been called, then:
-   * (1) transition all locally-cached segments out of {@link #loadableSegments}
+   * (1) acquire the locally-cached segments of the first interval group, see {@link #acquireCachedInNextGroup()}. When
+   * {@link #timeOrder} is {@link Order#NONE}, that is all locally-cached segments.
    * (2) start loading up to {@link #loadahead} additional segments for future calls to {@link #nextInput()}
    * If this method has previously been called, subsequent calls do nothing.
    * This is separated from the constructor because we don't want to acquire resources immediately on construction.
@@ -190,30 +228,9 @@ public class ReadableInputQueue implements Closeable
   public void start()
   {
     if (started.compareAndSet(false, true)) {
-      // (1) acquire all locally-cached segments
+      // (1) acquire the locally-cached segments of the first interval group
       synchronized (this) {
-        // Temporarily store all non-cached segments.
-        final List<NumberedItem<LoadableSegment>> toLoad = new ArrayList<>();
-        NumberedItem<LoadableSegment> nextItem;
-        while ((nextItem = loadableSegments.poll()) != null) {
-          final LoadableSegment loadableSegment = nextItem.item();
-          final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached(acquireMode);
-          if (cachedSegment.isPresent()) {
-            final SegmentReferenceHolder holder = new SegmentReferenceHolder(
-                new SegmentReference(loadableSegment.descriptor(), cachedSegment),
-                loadableSegment.description()
-            );
-            loadedSegments.add(holder);
-            pendingNextInputs.add(
-                Futures.immediateFuture(
-                    new NumberedReadableInput(nextItem.inputNumber(), ReadableInput.segment(holder))
-                )
-            );
-          } else {
-            toLoad.add(nextItem);
-          }
-        }
-        loadableSegments.addAll(toLoad); // Put non-cached segments back into loadableSegments
+        acquireCachedInNextGroup();
       }
 
       // (2) start loading up to "loadahead" additional segments
@@ -226,7 +243,8 @@ public class ReadableInputQueue implements Closeable
   }
 
   /**
-   * Returns the number of remaining inputs that can be returned by calls to {@link #nextInput()}.
+   * Returns an upper bound on the number of remaining inputs that can be returned by calls to {@link #nextInput()}.
+   * Inputs that {@link #inputPruner} will rule out are counted until they are reached.
    */
   public int remaining()
   {
@@ -245,7 +263,13 @@ public class ReadableInputQueue implements Closeable
       throw DruidException.defensive("Not started, must call start() first");
     }
 
-    if (canSkipRemaining.getAsBoolean()) {
+    if (canSkipRemaining()) {
+      final List<ListenableFuture<NumberedReadableInput>> skippedFutures;
+      synchronized (this) {
+        skippedFutures = new ArrayList<>(pendingNextInputs.keySet());
+        pendingNextInputs.clear();
+      }
+      releaseSkippedInputs(skippedFutures);
       return null;
     }
 
@@ -331,61 +355,238 @@ public class ReadableInputQueue implements Closeable
   @Nullable
   private ListenableFuture<NumberedReadableInput> nextSegmentInput()
   {
-    // Pick a loadahead future, preferring ones that are already loaded.
-    ListenableFuture<NumberedReadableInput> selectedLoadaheadFuture = null;
-    synchronized (this) {
-      for (ListenableFuture<NumberedReadableInput> f : pendingNextInputs) {
-        if (selectedLoadaheadFuture == null || f.isDone()) {
-          selectedLoadaheadFuture = f;
-          if (f.isDone()) {
-            break;
-          }
-        }
-      }
+    final List<ListenableFuture<NumberedReadableInput>> skippedFutures = new ArrayList<>();
+    ListenableFuture<NumberedReadableInput> unskippedFuture = null;
+    LoadableSegment unskippedSegment = null;
 
-      if (selectedLoadaheadFuture != null) {
-        pendingNextInputs.remove(selectedLoadaheadFuture);
-        if (pendingNextInputs.size() < loadahead) {
-          addLoadaheadFuture(); // Replace the one we just took out.
+    synchronized (this) {
+      acquireCachedInNextGroup();
+      while (unskippedFuture == null && !pendingNextInputs.isEmpty()) {
+        final ListenableFuture<NumberedReadableInput> selectedFuture = selectPendingInput();
+        final PendingInput selectedInput = pendingNextInputs.remove(selectedFuture);
+        if (!selectedInput.cached()) {
+          addLoadaheadFuture();
         }
-        return selectedLoadaheadFuture;
+        // The selected segment may have been pruned since its load was started, check if it can be skipped once more
+        // before handing it out.
+        if (canSkipSegment(selectedInput.segment())) {
+          skippedFutures.add(selectedFuture);
+          // Skipping may have moved the next input to a new interval group.
+          acquireCachedInNextGroup();
+        } else {
+          unskippedFuture = selectedFuture;
+          unskippedSegment = selectedInput.segment();
+        }
       }
     }
 
-    return loadNextSegment();
-  }
-
-  /**
-   * Load the next segment from {@link #loadableSegments} and return a future to its reference. Returns null
-   * if {@link #loadableSegments} is empty, or if {@link #canSkipRemaining} is true.
-   */
-  @Nullable
-  private ListenableFuture<NumberedReadableInput> loadNextSegment()
-  {
-    if (canSkipRemaining.getAsBoolean()) {
-      return null;
+    releaseSkippedInputs(skippedFutures);
+    if (unskippedFuture != null) {
+      registerCountOnSuccess(unskippedFuture, unskippedSegment);
+      return unskippedFuture;
     }
 
+    // Acquires on demand when loadahead is 0. With loadahead, no unpruned segments remain here.
+    final NumberedItem<LoadableSegment> nextItem;
+    final ListenableFuture<NumberedReadableInput> future;
     synchronized (this) {
-      final NumberedItem<LoadableSegment> nextItem = loadableSegments.poll();
+      nextItem = pollUnprunedSegment();
       if (nextItem == null) {
         return null;
       }
+      future = acquireSegment(nextItem);
+    }
+    registerCountOnSuccess(future, nextItem.item());
+    return future;
+  }
 
-      final LoadableSegment nextLoadableSegment = nextItem.item();
-      final SettableFuture<NumberedReadableInput> future = SettableFuture.create();
-      final AcquireSegmentAction acquireSegmentAction = nextLoadableSegment.acquire(acquireMode);
-      loadingSegments.put(acquireSegmentAction, future);
-      // may fire immediately on this thread for an already-ready acquire; the queue monitor is reentrant
-      acquireSegmentAction.addReadyCallback(
-          () -> onSegmentReady(nextItem.inputNumber(), nextLoadableSegment, acquireSegmentAction)
-      );
-      return future;
+  /**
+   * Registers a callback that counts {@code segment} as read once {@code future} succeeds, which is when the input is
+   * handed off for processing.
+   */
+  private static void registerCountOnSuccess(
+      final ListenableFuture<NumberedReadableInput> future,
+      final LoadableSegment segment
+  )
+  {
+    Futures.addCallback(
+        future,
+        new FutureCallback<>()
+        {
+          @Override
+          public void onSuccess(final NumberedReadableInput result)
+          {
+            segment.countHandedOut();
+          }
+
+          @Override
+          public void onFailure(final Throwable t)
+          {
+            // Failed inputs are never processed, so there is nothing to count.
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
+  }
+
+  /**
+   * Picks the pending input to hand out next. Never null; only called when {@link #pendingNextInputs} is nonempty.
+   */
+  @GuardedBy("this")
+  private ListenableFuture<NumberedReadableInput> selectPendingInput()
+  {
+    final Iterator<Map.Entry<ListenableFuture<NumberedReadableInput>, PendingInput>> iterator =
+        pendingNextInputs.entrySet().iterator();
+    final Map.Entry<ListenableFuture<NumberedReadableInput>, PendingInput> head = iterator.next();
+    if (head.getKey().isDone()) {
+      // Eagerly hand out a ready head input.
+      return head.getKey();
+    }
+
+    // head is not ready, seek for the next ready input who compares equal to head. for ordered inputs that means
+    // matching intervals, for unordered inputs any ready input is fine.
+    final Interval headInterval = head.getValue().interval();
+    while (iterator.hasNext()) {
+      final Map.Entry<ListenableFuture<NumberedReadableInput>, PendingInput> entry = iterator.next();
+      if (entry.getKey().isDone() && intervalOrder.compare(headInterval, entry.getValue().interval()) == 0) {
+        return entry.getKey();
+      }
+    }
+
+    // Nothing level with the head is loaded, so hand out the head and let the caller wait for it.
+    return head.getKey();
+  }
+
+  /**
+   * Acquires the locally-cached segments of the next interval group to be handed out and adds them to
+   * {@link #pendingNextInputs}, once per group.
+   * <p>
+   * A group is the leading run of {@link #loadableSegments} whose intervals compare equal under {@link #intervalOrder};
+   * with {@link Order#NONE}, that is every segment. Segments that {@link #inputPruner} rules out are dropped.
+   */
+  @GuardedBy("this")
+  private void acquireCachedInNextGroup()
+  {
+    final Interval nextInterval;
+    if (!pendingNextInputs.isEmpty()) {
+      nextInterval = pendingNextInputs.values().iterator().next().interval();
+    } else if (!loadableSegments.isEmpty()) {
+      nextInterval = loadableSegments.peek().item().descriptor().getInterval();
+    } else {
+      return;
+    }
+
+    if (probedGroupInterval != null && intervalOrder.compare(probedGroupInterval, nextInterval) == 0) {
+      return;
+    }
+    probedGroupInterval = nextInterval;
+
+    final List<NumberedItem<LoadableSegment>> notCached = new ArrayList<>();
+    NumberedItem<LoadableSegment> nextItem;
+    while ((nextItem = loadableSegments.peek()) != null
+           && intervalOrder.compare(nextInterval, nextItem.item().descriptor().getInterval()) == 0) {
+      loadableSegments.poll();
+      if (canSkipSegment(nextItem.item())) {
+        continue;
+      }
+      final ListenableFuture<NumberedReadableInput> cachedFuture = acquireIfCached(nextItem);
+      if (cachedFuture != null) {
+        pendingNextInputs.put(cachedFuture, new PendingInput(nextItem.item(), true));
+      } else {
+        notCached.add(nextItem);
+      }
+    }
+
+    // Put non-cached segments back at the front of loadableSegments.
+    for (int i = notCached.size() - 1; i >= 0; i--) {
+      loadableSegments.addFirst(notCached.get(i));
     }
   }
 
   /**
-   * Delivery path for {@link #loadNextSegment} which transfers ownership of the acquired segment out of the handle and
+   * Removes and returns the next item from {@link #loadableSegments} that {@link #inputPruner} does not rule out, or
+   * null if none remain.
+   */
+  @GuardedBy("this")
+  @Nullable
+  private NumberedItem<LoadableSegment> pollUnprunedSegment()
+  {
+    NumberedItem<LoadableSegment> nextItem;
+    do {
+      nextItem = loadableSegments.poll();
+    } while (nextItem != null && canSkipSegment(nextItem.item()));
+    return nextItem;
+  }
+
+  /**
+   * Returns whether processing the given segment can be safely skipped.
+   */
+  private boolean canSkipSegment(final LoadableSegment segment)
+  {
+    return inputPruner.canSkip(segment.descriptor().getInterval());
+  }
+
+  /**
+   * Acquires the segment in {@code nextItem}: immediately if it is cached, otherwise by starting to load it.
+   */
+  @GuardedBy("this")
+  private ListenableFuture<NumberedReadableInput> acquireSegment(final NumberedItem<LoadableSegment> nextItem)
+  {
+    final ListenableFuture<NumberedReadableInput> cachedFuture = acquireIfCached(nextItem);
+    return cachedFuture != null ? cachedFuture : loadSegment(nextItem);
+  }
+
+  /**
+   * Acquires the segment in {@code nextItem} if it is cached, returning an already-completed future to it, or null if
+   * it is not cached. The segment is tracked in {@link #loadedSegments} so {@link #close()} releases it if it is never
+   * handed out.
+   */
+  @GuardedBy("this")
+  @Nullable
+  private ListenableFuture<NumberedReadableInput> acquireIfCached(final NumberedItem<LoadableSegment> nextItem)
+  {
+    final LoadableSegment loadableSegment = nextItem.item();
+    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached(acquireMode);
+    if (cachedSegment.isEmpty()) {
+      return null;
+    }
+
+    final SegmentReferenceHolder holder = new SegmentReferenceHolder(
+        new SegmentReference(loadableSegment.descriptor(), cachedSegment),
+        loadableSegment.description()
+    );
+    loadedSegments.add(holder);
+    return Futures.immediateFuture(new NumberedReadableInput(nextItem.inputNumber(), ReadableInput.segment(holder)));
+  }
+
+  /**
+   * Starts loading the segment in {@code nextItem} and returns a future to its reference.
+   */
+  @GuardedBy("this")
+  private ListenableFuture<NumberedReadableInput> loadSegment(final NumberedItem<LoadableSegment> nextItem)
+  {
+    final LoadableSegment nextLoadableSegment = nextItem.item();
+    final SettableFuture<NumberedReadableInput> future = SettableFuture.create();
+    final AcquireSegmentAction acquireSegmentAction = nextLoadableSegment.acquire(acquireMode);
+    loadingSegments.put(acquireSegmentAction, future);
+    // may fire immediately on this thread for an already-ready acquire; the queue monitor is reentrant
+    acquireSegmentAction.addReadyCallback(
+        () -> onSegmentReady(nextItem.inputNumber(), nextLoadableSegment, acquireSegmentAction)
+    );
+    return future;
+  }
+
+  /**
+   * Whether no remaining input can contribute, whatever its interval.
+   */
+  private boolean canSkipRemaining()
+  {
+    // If all of time can be skipped then no remaining input can contribute, whatever its interval.
+    return inputPruner.canSkip(Intervals.ETERNITY);
+  }
+
+  /**
+   * Delivery path for {@link #loadSegment} which transfers ownership of the acquired segment out of the handle and
    * into a {@link SegmentReferenceHolder}, then completes the future handed to the frame processor. The future is
    * completed OUTSIDE the queue monitor so downstream listeners never run while holding the queue lock; deliveries
    * racing {@link #close()} are arbitrated by a closed re-check plus {@link SettableFuture}'s behavior where the first
@@ -471,20 +672,135 @@ public class ReadableInputQueue implements Closeable
   }
 
   /**
-   * Calls {@link #nextSegmentInput()} and adds the future to {@link #pendingNextInputs}. Returns whether a future
-   * was added.
+   * Acquires the next segment that {@link #inputPruner} does not rule out and adds its future to
+   * {@link #pendingNextInputs}. Returns whether a future was added.
    */
   private boolean addLoadaheadFuture()
   {
-    final ListenableFuture<NumberedReadableInput> nextFuture = loadNextSegment();
-    if (nextFuture != null) {
-      synchronized (this) {
-        pendingNextInputs.add(nextFuture);
-      }
-      return true;
-    } else {
+    if (canSkipRemaining()) {
       return false;
     }
+
+    synchronized (this) {
+      final NumberedItem<LoadableSegment> nextItem = pollUnprunedSegment();
+      if (nextItem == null) {
+        return false;
+      }
+      pendingNextInputs.put(acquireSegment(nextItem), new PendingInput(nextItem.item(), false));
+      return true;
+    }
+  }
+
+  /**
+   * Releases pending inputs that will never be handed out for processing. Loads still in progress are canceled, and
+   * loaded inputs are released. An input that is mid-delivery (claimed from {@link #loadingSegments} by
+   * {@link #onSegmentReady} but not yet completed) is left for {@link #close()}; this is a conscious decision to
+   * avoid complexity for what is a sliver of a race.
+   * <p>
+   * Called outside the queue monitor, because canceling a load can run its canceler and releasing a segment can take
+   * cache locks.
+   */
+  private void releaseSkippedInputs(final List<ListenableFuture<NumberedReadableInput>> skippedFutures)
+  {
+    if (skippedFutures.isEmpty()) {
+      return;
+    }
+
+    final Set<ListenableFuture<NumberedReadableInput>> pendingSkips = Sets.newIdentityHashSet();
+    pendingSkips.addAll(skippedFutures);
+    final Map<AcquireSegmentAction, SettableFuture<NumberedReadableInput>> loadsToCancel = new LinkedHashMap<>();
+
+    synchronized (this) {
+      final Iterator<Map.Entry<AcquireSegmentAction, SettableFuture<NumberedReadableInput>>> iterator =
+          loadingSegments.entrySet().iterator();
+      while (iterator.hasNext()) {
+        final Map.Entry<AcquireSegmentAction, SettableFuture<NumberedReadableInput>> entry = iterator.next();
+        if (pendingSkips.remove(entry.getValue())) {
+          loadsToCancel.put(entry.getKey(), entry.getValue());
+          iterator.remove();
+        }
+      }
+    }
+
+    // Cancel all pending segment loads in segments that have been skipped.
+    for (final Map.Entry<AcquireSegmentAction, SettableFuture<NumberedReadableInput>> entry : loadsToCancel.entrySet()) {
+      closeLoadingSegment(entry.getKey());
+      entry.getValue().setException(DruidException.defensive("Segment load canceled because its input was skipped"));
+    }
+
+    // Lastly, release completed loads that were skipped if their future is done.
+    for (final ListenableFuture<NumberedReadableInput> future : pendingSkips) {
+      if (future.isDone()) {
+        final NumberedReadableInput input;
+        try {
+          input = Futures.getDone(future);
+        }
+        catch (ExecutionException | CancellationException e) {
+          // A failed load has already closed its handle in onSegmentReady, so there is nothing to release.
+          continue;
+        }
+        releaseLoadedSegment(input.input().getSegment());
+      }
+    }
+  }
+
+  /**
+   * Removes {@code holder} from {@link #loadedSegments} and closes its segment, unless {@link #close()} claimed it
+   * first.
+   */
+  private void releaseLoadedSegment(final SegmentReferenceHolder holder)
+  {
+    synchronized (this) {
+      loadedSegments.remove(holder);
+    }
+    closeLoadedSegment(holder);
+  }
+
+  /**
+   * Closes a load that has not been delivered: closing a NEW handle runs its canceler (aborting the load), and closing
+   * a ready but unclaimed handle (its ready callback hasn't reached the queue monitor yet) closes the delivered result.
+   * The caller must have claimed the handle's entry from {@link #loadingSegments}, and is responsible for failing its
+   * future. Called outside the queue monitor.
+   */
+  private static void closeLoadingSegment(final AcquireSegmentAction acquireSegmentAction)
+  {
+    CloseableUtils.closeAndSuppressExceptions(
+        acquireSegmentAction,
+        // AcquireSegmentAction currently doesn't have a meaningful toString method, so if this message
+        // ever actually gets logged, it won't mention the specific segment that had a problem. Perhaps
+        // one day this will change.
+        e -> log.warn(e, "Failed to close loadingSegment[%s]", acquireSegmentAction)
+    );
+  }
+
+  /**
+   * Claims the segment reference from {@code holder} and closes it. Does nothing if the reference was already claimed,
+   * by a caller it was handed out to or by another release path, so the segment is closed exactly once. Called outside
+   * the queue monitor.
+   */
+  private static void closeLoadedSegment(final SegmentReferenceHolder holder)
+  {
+    final SegmentReference ref = holder.getSegmentReferenceOnce();
+    if (ref != null) {
+      CloseableUtils.closeAndSuppressExceptions(
+          ref,
+          e -> log.warn(e, "Failed to close loadedSegment[%s]", ref.getSegmentDescriptor())
+      );
+    }
+  }
+
+  /**
+   * Returns the comparator that sorts intervals into {@code timeOrder}, so intervals that can hold the best rows come
+   * first. Intervals compare equal when they bound their best possible row at the same time. With {@link Order#NONE},
+   * every pair compares equal, so {@link #selectPendingInput()} may hand out any loaded input first.
+   */
+  private static Comparator<Interval> makeIntervalOrder(final Order timeOrder)
+  {
+    return switch (timeOrder) {
+      case ASCENDING -> Comparator.comparingLong(Interval::getStartMillis);
+      case DESCENDING -> Comparator.comparingLong(Interval::getEndMillis).reversed();
+      case NONE -> (_, _) -> 0;
+    };
   }
 
   @Override
@@ -521,29 +837,15 @@ public class ReadableInputQueue implements Closeable
       pendingNextInputs.clear();
     }
 
-    // Cancel all pending segment loads: closing a NEW handle runs its canceler (aborting the load); closing a
-    // ready but unclaimed handle (its ready callback hasn't reached the queue monitor yet) closes the delivered
-    // result.
+    // Cancel all pending segment loads.
     for (final AcquireSegmentAction acquireSegmentAction : handlesToClose) {
-      CloseableUtils.closeAndSuppressExceptions(
-          acquireSegmentAction,
-          // AcquireSegmentAction currently doesn't have a meaningful toString method, so if this message
-          // ever actually gets logged, it won't mention the specific segment that had a problem. Perhaps
-          // one day this will change.
-          e -> log.warn(e, "Failed to close loadingSegment[%s]", acquireSegmentAction)
-      );
+      closeLoadingSegment(acquireSegmentAction);
     }
 
     // Close all segments that have been loaded and not yet transferred to callers. (Segments transferred to
     // callers must be closed by the callers.)
-    for (SegmentReferenceHolder referenceHolder : holdersToDrain) {
-      final SegmentReference ref = referenceHolder.getSegmentReferenceOnce();
-      if (ref != null) {
-        CloseableUtils.closeAndSuppressExceptions(
-            ref,
-            e -> log.warn(e, "Failed to close loadedSegment[%s]", ref.getSegmentDescriptor())
-        );
-      }
+    for (final SegmentReferenceHolder referenceHolder : holdersToDrain) {
+      closeLoadedSegment(referenceHolder);
     }
 
     // Explicitly fail the futures of the loads we just canceled. Closing a handle fires its pending ready callback,
@@ -559,6 +861,20 @@ public class ReadableInputQueue implements Closeable
    */
   public record NumberedReadableInput(int inputNumber, ReadableInput input)
   {
+  }
+
+  /**
+   * A segment in {@link #pendingNextInputs}.
+   * <p>
+   * Cached segments come from {@link #acquireCachedInNextGroup()} and are marked accordingly so consumers are aware
+   * of how the segment was acquired.
+   */
+  private record PendingInput(LoadableSegment segment, boolean cached)
+  {
+    Interval interval()
+    {
+      return segment.descriptor().getInterval();
+    }
   }
 
   /**

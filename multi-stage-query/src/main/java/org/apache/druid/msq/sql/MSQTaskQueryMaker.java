@@ -168,7 +168,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         taskId,
         querySpec,
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(plannerContext.getSql()),
-        plannerContext.queryContextMap(),
+        plannerContext.queryContext().asMap(),
         resultsContext.getSqlResultsContext(),
         resultsContext.getSqlTypeNames(),
         typeList.stream().map(typeInfo -> typeInfo.rhs).collect(Collectors.toList()),

@@ -220,7 +220,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().totalFiles(1),
+                .with().rows(6).files(1).totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(

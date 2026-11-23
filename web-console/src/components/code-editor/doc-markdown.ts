@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 
-// `code`, *emphasis* (which can contain code) or a backslash escaped character
-const INLINE_REGEXP = /`([^`]*)`|\*((?:\\.|`[^`]*`|[^*\\`])+)\*|\\(.)/g;
+// `code`, *emphasis* (which can contain code), a [link](https://...) or a backslash escaped character
+const INLINE_REGEXP =
+  /`([^`]*)`|\*((?:\\.|`[^`]*`|[^*\\`])+)\*|\[([^[\]]*)\]\((https:\/\/[^\s()]+)\)|\\(.)/g;
 
 function renderInline(text: string): (Node | string)[] {
   const nodes: (Node | string)[] = [];
   let lastIndex = 0;
   for (const m of text.matchAll(INLINE_REGEXP)) {
     if (m.index > lastIndex) nodes.push(text.slice(lastIndex, m.index));
-    const [, code, emphasis, escaped] = m;
+    const [, code, emphasis, linkText, linkHref, escaped] = m;
     if (typeof code === 'string') {
       const codeElement = document.createElement('code');
       codeElement.textContent = code;
@@ -33,6 +34,13 @@ function renderInline(text: string): (Node | string)[] {
       const emphasisElement = document.createElement('em');
       emphasisElement.append(...renderInline(emphasis));
       nodes.push(emphasisElement);
+    } else if (typeof linkText === 'string') {
+      const linkElement = document.createElement('a');
+      linkElement.href = linkHref;
+      linkElement.target = '_blank';
+      linkElement.rel = 'noopener noreferrer';
+      linkElement.append(...renderInline(linkText));
+      nodes.push(linkElement);
     } else {
       nodes.push(escaped);
     }
@@ -47,6 +55,7 @@ function renderInline(text: string): (Node | string)[] {
  * sanitizeMarkdown in script/create-sql-docs.mjs):
  * - `code` spans
  * - *emphasis*
+ * - [links](https://...), only to https URLs (anything else is shown as text)
  * - line breaks (\n)
  * - list items (lines that start with "- ")
  * - a backslash escapes the next character

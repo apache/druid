@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -36,7 +37,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import java.lang.reflect.Type;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -51,10 +51,12 @@ public class AsyncRequest
 {
   private static final Logger log = new Logger(AsyncRequest.class);
 
-  private final AtomicBoolean completed = new AtomicBoolean(false);
   private final AsyncContext context;
   private final ObjectMapper objectMapper;
   private final String contentType;
+
+  @GuardedBy("this")
+  private boolean completed = false;
 
   /**
    * Starts async processing of the request and immediately completes it with the given response, writing any
@@ -96,13 +98,15 @@ public class AsyncRequest
   /**
    * Completes the request as described by the {@link AsyncResponse} obtained from the given supplier, if it
    * hasn't already been completed. The supplier is invoked only if the request is not already complete.
+   * Synchronized so that a call made while another thread is writing the response waits for that write to finish.
    */
-  private <T> void complete(Supplier<AsyncResponse<T>> responseSupplier)
+  private synchronized <T> void complete(Supplier<AsyncResponse<T>> responseSupplier)
   {
-    if (!completed.compareAndSet(false, true)) {
+    if (completed) {
       // Request has already been completed
       return;
     }
+    completed = true;
 
     try {
       final AsyncResponse<T> response = responseSupplier.get();
@@ -242,6 +246,7 @@ public class AsyncRequest
 
     /**
      * Function invoked with the result of the future on success, to determine how to respond. Required.
+     * Invoked while holding the lock that the timeout listener waits on, so it must not block.
      */
     public Builder<T> onSuccess(Function<T, AsyncResponse<?>> onSuccess)
     {
@@ -251,6 +256,7 @@ public class AsyncRequest
 
     /**
      * Function invoked with the failure cause of the future, to determine how to respond. Required.
+     * Invoked while holding the lock that the timeout listener waits on, so it must not block.
      */
     public Builder<T> onFailure(Function<Throwable, AsyncResponse<?>> onFailure)
     {
@@ -274,8 +280,17 @@ public class AsyncRequest
       asyncRequest.context.setTimeout(timeoutMillis);
       asyncRequest.context.addListener(
           ServletResourceUtils.createAsyncTimeoutListener(event -> {
-            asyncRequest.complete(() -> AsyncResponse.status(onTimeoutStatusCode));
-            future.cancel(true);
+            try {
+              asyncRequest.complete(() -> AsyncResponse.status(onTimeoutStatusCode));
+              future.cancel(true);
+            }
+            finally {
+              // While a request is timing out, the container only allows it to be completed from this thread, so if
+              // the future won the race to respond, its call to complete() was rejected. Complete the request here,
+              // otherwise the connection is never reused. Since complete() is synchronized, any response being written
+              // by the future's thread has been fully written by now. No-op if the request is already complete.
+              event.getAsyncContext().complete();
+            }
           })
       );
 

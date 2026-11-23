@@ -37,3 +37,5 @@ echo 'Running Maven install...'
 ./mvnw -B pmd:check --fail-at-end
 
 ./mvnw -B spotbugs:check --fail-at-end -pl '!benchmarks'
+
+MAVEN_OPTS=-Xmx8g ./mvnw -B rewrite:dryRun -Dweb.console.skip=true

@@ -20,11 +20,15 @@
 package org.apache.druid.sql.calcite.aggregation;
 
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 
@@ -47,6 +51,10 @@ public class Aggregations
    *
    * 1) They can take direct field accesses or expressions as inputs.
    * 2) They cannot implicitly cast strings to numbers when using a direct field access.
+   *
+   * Unlike {@link #toDruidExpressionForNumericAggregator}, this does not reject string literals, because it is also
+   * used by aggregators that accept strings, such as COUNT and SINGLE_VALUE.
+   *
    * @param plannerContext SQL planner context
    * @param call           aggregate call object
    * @param inputAccessor  gives access to input fields and schema
@@ -64,7 +72,7 @@ public class Aggregations
         .getArgList()
         .stream()
         .map(i -> inputAccessor.getField(i))
-        .map(rexNode -> toDruidExpressionForNumericAggregator(plannerContext, inputAccessor.getInputRowSignature(), rexNode))
+        .map(rexNode -> toDruidExpressionWithStringColumnCast(plannerContext, inputAccessor.getInputRowSignature(), rexNode))
         .collect(Collectors.toList());
 
     if (args.stream().noneMatch(Objects::isNull)) {
@@ -82,6 +90,10 @@ public class Aggregations
    * Consider using {@link Expressions#toDruidExpression(PlannerContext, RowSignature, RexNode)} for projections
    * or the aggregators that don't require numeric inputs.
    *
+   * String literals are converted to numbers the same way as string columns, but since their value is known at
+   * planning time, a string literal that cannot be parsed as a number is rejected with an {@link InvalidSqlInput}
+   * error instead of silently producing nulls at runtime.
+   *
    * @param plannerContext SQL planner context
    * @param rowSignature   signature of the rows to be extracted from
    * @param rexNode        expression meant to be applied on top of the rows
@@ -89,6 +101,17 @@ public class Aggregations
    * @return DruidExpression referring to fields in rowOrder, or null if not possible to translate
    */
   public static DruidExpression toDruidExpressionForNumericAggregator(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode
+  )
+  {
+    validateStringLiteralIsNumeric(rexNode);
+    return toDruidExpressionWithStringColumnCast(plannerContext, rowSignature, rexNode);
+  }
+
+  @Nullable
+  private static DruidExpression toDruidExpressionWithStringColumnCast(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode
@@ -107,6 +130,22 @@ public class Aggregations
       return druidExpression.map(simpleExtraction -> null, Function.identity());
     } else {
       return druidExpression;
+    }
+  }
+
+  /**
+   * Throws an {@link InvalidSqlInput} error if the given node is a non-null string literal that cannot be parsed as a
+   * number. See {@link Calcites#isNumericString(String)}.
+   */
+  private static void validateStringLiteralIsNumeric(final RexNode rexNode)
+  {
+    if (!(rexNode instanceof RexLiteral) || !SqlTypeFamily.CHARACTER.contains(rexNode.getType())) {
+      return;
+    }
+
+    final String value = ((RexLiteral) rexNode).getValueAs(String.class);
+    if (value != null && !Calcites.isNumericString(value)) {
+      throw Calcites.nonNumericStringLiteralError("Aggregator input", value);
     }
   }
 }

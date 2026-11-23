@@ -26,6 +26,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContext;
@@ -651,20 +652,28 @@ public class Projections
    */
   public static String getClusterGroupSegmentInternalFileName(List<Integer> clusteringValueIds, String column)
   {
-    return getClusterGroupSegmentInternalFilePrefix(clusteringValueIds) + column;
+    return buildClusterGroupBundleName(clusteringValueIds).append('/').append(column).toString();
   }
 
   public static String getClusterGroupSegmentInternalFilePrefix(List<Integer> clusteringValueIds)
   {
-    return getClusterGroupBundleName(clusteringValueIds) + '/';
+    return buildClusterGroupBundleName(clusteringValueIds).append('/').toString();
   }
 
   /**
    * Bundle name for a cluster group's containers in the V10 file, matching the tag {@code IndexMergerV10} applies at
    * write time: {@code __base$<id0>_<id1>...<idK>}. This is the cluster group's canonical identity; the per-group file
    * prefix ({@link #getClusterGroupSegmentInternalFilePrefix}) is just this name plus a trailing {@code '/'} separator.
+   * <p>
+   * The returned value is interned, this method is intended for uses where the name is retained in memory for as long
+   * as the segment is loaded.
    */
   public static String getClusterGroupBundleName(List<Integer> clusteringValueIds)
+  {
+    return SmooshedFileMapper.STRING_INTERNER.intern(buildClusterGroupBundleName(clusteringValueIds).toString());
+  }
+
+  private static StringBuilder buildClusterGroupBundleName(List<Integer> clusteringValueIds)
   {
     if (clusteringValueIds == null || clusteringValueIds.isEmpty()) {
       throw DruidException.defensive("clusteringValueIds must not be null or empty");
@@ -676,7 +685,7 @@ public class Projections
       }
       sb.append(clusteringValueIds.get(i));
     }
-    return sb.toString();
+    return sb;
   }
 
   /**

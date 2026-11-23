@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -35,6 +36,7 @@ import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -68,8 +70,8 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
                                                              .binaryVersion(0)
                                                              .size(1)
                                                              .build();
-  private static final DeepStorageSegmentConfig ZIP_CONFIG = new DeepStorageSegmentConfig(true);
-  private static final DeepStorageSegmentConfig NO_ZIP_CONFIG = new DeepStorageSegmentConfig(false);
+  private static final DeepStorageSegmentConfig ZIP_CONFIG = new DeepStorageSegmentConfig(true, null);
+  private static final DeepStorageSegmentConfig NO_ZIP_CONFIG = new DeepStorageSegmentConfig(false, null);
   private static final byte[] DATA = new byte[]{0x0, 0x0, 0x0, 0x1};
   private static final String UNIQUE_MATCHER_NO_PREFIX = "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/[A-Za-z0-9-]{36}/index\\.zip";
   private static final String UNIQUE_MATCHER_PREFIX = PREFIX + "/" + UNIQUE_MATCHER_NO_PREFIX;
@@ -573,5 +575,55 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     DataSegment withColons = DATA_SEGMENT.withVersion("2018-01-05T14:54:09.295Z");
     String segmentPath = pusher.getStorageDir(withColons, false);
     assertFalse(segmentPath.contains(":"), "Path should not contain any columns");
+  }
+
+  @Test
+  public void testUnsupportedCompressionFormatThrows()
+  {
+    assertThrows(
+        IAE.class,
+        () -> new AzureDataSegmentPusher(
+            azureStorage,
+            azureAccountConfig,
+            segmentConfigWithPrefix,
+            new DeepStorageSegmentConfig(null, CompressionUtils.Format.LZ4)
+        )
+    );
+  }
+
+  @Test
+  public void testExplicitCompressionFormatZip()
+  {
+    final AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(
+        azureStorage,
+        azureAccountConfig,
+        segmentConfigWithPrefix,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.ZIP)
+    );
+    assertNotNull(pusher);
+  }
+
+  @Test
+  public void testExplicitCompressionFormatNone()
+  {
+    final AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(
+        azureStorage,
+        azureAccountConfig,
+        segmentConfigWithPrefix,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+    assertNotNull(pusher);
+  }
+
+  @Test
+  public void testDefaultCompressionFormatIsZip()
+  {
+    final AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(
+        azureStorage,
+        azureAccountConfig,
+        segmentConfigWithPrefix,
+        new DeepStorageSegmentConfig()
+    );
+    assertNotNull(pusher);
   }
 }

@@ -105,14 +105,14 @@ public class BasicAuthorizerResourceTest
   @Test
   public void getUserShouldReturnExpectedUser()
   {
-    Assertions.assertNotNull(target.getUser(req, AUTHORIZER_NAME, USER_NAME, null, null));
+    Assertions.assertNotNull(target.getUser(req, AUTHORIZER_NAME, USER_NAME, null));
   }
 
   @Test
   public void getUserWithInvalidAuthorizerNameShouldThrowException()
   {
     assertThrows(IllegalArgumentException.class, () ->
-      target.getUser(req, INVALID_AUTHORIZER_NAME, USER_NAME, null, null));
+      target.getUser(req, INVALID_AUTHORIZER_NAME, USER_NAME, null));
   }
 
   @Test
@@ -183,14 +183,14 @@ public class BasicAuthorizerResourceTest
   @Test
   public void getRoleShouldReturnExpectedResult()
   {
-    Assertions.assertNotNull(target.getRole(req, AUTHORIZER_NAME, ROLE_NAME, null, null));
+    Assertions.assertNotNull(target.getRole(req, AUTHORIZER_NAME, ROLE_NAME, null));
   }
 
   @Test
   public void getRoleWithInvalidAuthorizerNameShouldThrowException()
   {
     assertThrows(IllegalArgumentException.class, () ->
-      target.getRole(req, INVALID_AUTHORIZER_NAME, ROLE_NAME, null, null));
+      target.getRole(req, INVALID_AUTHORIZER_NAME, ROLE_NAME, null));
   }
 
   @Test

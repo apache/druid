@@ -1041,10 +1041,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         }
 
         final DataSegment segment = DataSegment
-            .builder()
-            .dataSource("ds")
-            .interval(interval)
-            .version(lock.getVersion())
+            .builder(SegmentId.of("ds", interval, lock.getVersion(), 0))
             .size(0)
             .build();
 
@@ -1084,10 +1081,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
         final DataSegment segment = DataSegment
-            .builder()
-            .dataSource("ds")
-            .interval(Intervals.of("2012-01-01/P2D"))
-            .version(myLock.getVersion())
+            .builder(SegmentId.of("ds", Intervals.of("2012-01-01/P2D"), myLock.getVersion(), 0))
             .size(0)
             .build();
 
@@ -1128,10 +1122,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
         final DataSegment segment = DataSegment
-            .builder()
-            .dataSource("ds")
-            .interval(Intervals.of("2012-01-01/P1D"))
-            .version(myLock.getVersion() + "1!!!1!!")
+            .builder(SegmentId.of("ds", Intervals.of("2012-01-01/P1D"), myLock.getVersion() + "1!!!1!!", 0))
             .size(0)
             .build();
 

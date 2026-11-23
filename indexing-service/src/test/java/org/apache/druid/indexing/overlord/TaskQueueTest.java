@@ -68,6 +68,9 @@ import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerTest;
 import org.apache.druid.indexing.overlord.hrtr.WorkerHolder;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTaskIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateTest;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
@@ -87,6 +90,8 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -100,6 +105,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -803,6 +809,62 @@ public class TaskQueueTest extends IngestionTestBase
     Assertions.assertEquals(lowPriority1.getId(), submitted.get(4));
   }
 
+  @Test
+  public void testRunningAndPendingTaskCountForCompletedAndRemovedTasks()
+  {
+    final TestTask activeTask = new TestTask("active", Intervals.of("2021-01/P1M"));
+    final TestTask completedTask = new TestTask("completed", Intervals.of("2021-02/P1M"));
+    final TestSeekableStreamIndexTask completedStreamTask = createStreamTask("completedStream");
+    final TestSeekableStreamIndexTask removedStreamTask = createStreamTask("removedStream");
+
+    final TaskRunner taskRunner = EasyMock.createNiceMock(TaskRunner.class);
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(List.of(
+        workItem(activeTask),
+        workItem(completedTask),
+        workItem(completedStreamTask),
+        workItemWithTask(removedStreamTask)
+    )).anyTimes();
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getPendingTasks()).andReturn(List.of(
+        new RemoteTaskRunnerWorkItem("unknown", "index_kafka", null, null, "wiki")
+    )).anyTimes();
+    EasyMock.replay(taskRunner);
+
+    final TaskQueue queue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null, null, null),
+        new DefaultTaskConfig(),
+        getTaskStorage(),
+        taskRunner,
+        actionClientFactory,
+        getLockbox(),
+        serviceEmitter,
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
+    );
+    queue.setActive(true);
+    queue.add(removedStreamTask);
+    queue.shutdown(removedStreamTask.getId(), "test shutdown");
+    queue.syncFromStorage();
+    Assertions.assertFalse(queue.getActiveTaskInfo(removedStreamTask.getId()).isPresent());
+
+    queue.add(activeTask);
+    queue.add(completedTask);
+    queue.add(completedStreamTask);
+    queue.shutdown(completedTask.getId(), "test shutdown");
+    queue.shutdown(completedStreamTask.getId(), "test shutdown");
+
+    Assertions.assertEquals(
+        Map.of(
+            RowKey.with(Dimension.DATASOURCE, "datasource").and(Dimension.TASK_TYPE, "test"), 2L,
+            RowKey.with(Dimension.DATASOURCE, "stream")
+                  .with(Dimension.TASK_TYPE, "test_seekable_stream")
+                  .and(Dimension.SUPERVISOR_ID, "supervisor"), 2L
+        ),
+        queue.getRunningTaskCount()
+    );
+    Assertions.assertEquals(Map.of(RowKey.empty(), 1L), queue.getPendingTaskCount());
+  }
+
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()
   {
     final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider
@@ -848,6 +910,42 @@ public class TaskQueueTest extends IngestionTestBase
     Assertions.assertEquals(
         failureCount,
         taskQueue.getFailedTaskCount().values().stream().mapToLong(Long::longValue).sum()
+    );
+  }
+
+  private static TaskRunnerWorkItem workItem(final Task task)
+  {
+    return new RemoteTaskRunnerWorkItem(task.getId(), task.getType(), null, null, task.getDataSource());
+  }
+
+  private static TaskRunnerWorkItem workItemWithTask(final Task task)
+  {
+    return new RemoteTaskRunnerWorkItem(task.getId(), task.getType(), null, null, task.getDataSource())
+    {
+      @Override
+      public Task getTask()
+      {
+        return task;
+      }
+    };
+  }
+
+  private static TestSeekableStreamIndexTask createStreamTask(final String id)
+  {
+    return new TestSeekableStreamIndexTask(
+        id,
+        "supervisor",
+        null,
+        DataSchema.builder()
+                  .withDataSource("stream")
+                  .withTimestamp(TimestampSpec.DEFAULT)
+                  .withDimensions(DimensionsSpec.builder().build())
+                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
+                  .build(),
+        SeekableStreamSupervisorStateTest.createSupervisorTuningConfig().convertToTaskTuningConfig(),
+        new TestSeekableStreamIndexTaskIOConfig(),
+        null,
+        null
     );
   }
 

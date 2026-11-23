@@ -26,6 +26,7 @@
   - [ ] [Maven credentials](#maven-credentials)
 - [ ] [Announce intention to release](#announce-intention-to-release)
 - [ ] [Security vulnerabilities](#security-vulnerabilities)
+- [ ] [Refresh licenses.yaml versions](#refresh-licensesyaml-versions)
 - [ ] [Create a release branch](#create-a-release-branch)
   - [ ] [Preparing the release branch](#preparing-the-release-branch)
   - [ ] [Preparing the master branch for the next version after branching](#preparing-the-master-branch-for-the-next-version-after-branching)
@@ -130,6 +131,40 @@ First up in performing an official release of Apache Druid is to announce in the
 ## Security vulnerabilities
 The release manager should also keep an eye-out for `Cron Job ITS` failures: https://github.com/apache/druid/actions/workflows/cron-job-its.yml. If there are security vulnerabilities, we need to fix them before creating an RC.
 
+## Refresh licenses.yaml versions
+
+Check the `licenses.yaml` versions before you create the release branch, and again on the release branch before you tag. CI only warns when a version in `licenses.yaml` no longer matches the dependency the build uses, but the [release build](#build-artifacts) fails on it. The license scripts need Python 3 with PyYAML.
+
+From the repository root, install the branch, because the dependency reports resolve Druid modules from your local Maven repository:
+
+```bash
+mvn clean install -Pskip-static-checks,skip-tests -Dweb.console.skip=true -T1C
+```
+
+Generate the dependency reports:
+
+```bash
+mvn -Papache-release -pl distribution exec:exec@generate-licenses-report
+```
+
+Search the output for `Encountered error`. The report script keeps going when a module fails, and neither the check nor the refresh covers a module without a report.
+
+Run the release build's check. If it passes, skip the rest of this section:
+
+```bash
+mvn -Papache-release -pl distribution exec:exec@check-licenses
+```
+
+If it fails, refresh the versions:
+
+```bash
+distribution/bin/refresh-license-versions.py licenses.yaml distribution/target/license-reports
+```
+
+Edit the entries marked `needs a manual edit`. Most of these lines say what to change, and [dev/license.md](../dev/license.md#when-you-add-a-new-library-dependency-into-druid) describes the entry format. Run the check again until it passes.
+
+Open a PR with the `licenses.yaml` changes against the same branch, and merge it before you branch or tag. On a release branch, this direct PR is an exception to [Release branch hygiene](#release-branch-hygiene).
+
 ## Create a release branch
 
 Next up is creating the release branch off of master (or the previous release branch for a bug fix release). Be sure to do this from the apache git repo, _not your fork_. Name the branch for the release version that is being created, omitting the `druid` prefix that will appear on the release candidate and release tags:
@@ -198,7 +233,7 @@ Once everything is ready, then push the branch to `origin`.
 If doing a quarterly release, it will also be necessary to prepare master for the release _after_ the release you are working on, by setting the version to the next release snapshot:
 
 ```bash
-$ mvn versions:set -DnewVersion=38.0.0-SNAPSHOT
+$ mvn -N versions:set-property -Dproperty=revision -DnewVersion=38.0.0-SNAPSHOT -DgenerateBackupPoms=false
 ```
 
 You should also prepare the web-console for the next release, by bumping the [package.json](../web-console/package.json) and [package-lock.json](../web-console/package-lock.json) version:
@@ -293,8 +328,8 @@ These additional tools were largely used to bootstrap the initial `LICENSE`, `LI
 | tool | description |
 | --- | --- |
 | [generate-license-dependency-reports](bin/generate-license-dependency-reports.py) | Point this to the Druid source root, and give it the location of a temp scratch directory, and it will output Maven dependency reports for Druid. |
-| [check-licenses](bin/check-licenses.py) | Checks `licenses.yaml` against the output of `generate-license-dependency-reports.py`, used by travis and `-Papache-release` when building distribution, to verify that all dependencies are present and match the versions in `licenses.yaml`, and that every `license_file_path` exists and every file in `licenses/bin` is referenced. |
-| [refresh-license-versions](bin/refresh-license-versions.py) | Updates the `version` of each `licenses.yaml` entry whose libraries moved to a new version in the output of `generate-license-dependency-reports.py`, and lists the entries that need a manual edit, such as an entry whose libraries moved to different versions. Use `--dry-run` to only print the changes. |
+| [check-licenses](bin/check-licenses.py) | Checks `licenses.yaml` against the output of `generate-license-dependency-reports.py`, used by `-Papache-release` when building distribution, to verify that all dependencies are present and match the versions in `licenses.yaml`, and that every `license_file_path` exists and every file in `licenses/bin` is referenced. |
+| [refresh-license-versions](bin/refresh-license-versions.py) | Updates the `version` of each `licenses.yaml` entry whose libraries moved to a new version in the output of `generate-license-dependency-reports.py`, and lists the entries that need a manual edit, such as an entry whose libraries moved to different versions or a current entry that lists a library no report contains. Use `--dry-run` to only print the changes. |
 | [jar-notice-lister](bin/jar-notice-lister.py) | Point this to an extracted Druid binary distribution, and give it a temp scratch directory, and it will output NOTICE information for all the Druid JAR files. |
 
 
@@ -333,20 +368,23 @@ In this case, the commit must be backported to the release branch. The [find-mis
 find such commits that have not been backported. Note that this script relies on the milestone tagged in the PR, so PRs
 must be tagged properly to make this script working. See the above [Release notes](#release-notes) section for more details about the script.
 
+Before you tag, [check the `licenses.yaml` versions](#refresh-licensesyaml-versions) on the release branch, starting with the install.
+
 ### Set version and make a tag
 
 Once the release branch is good for an RC, you can build a new tag with:
 
 ```bash
-$ mvn -Pwebsite-docs -DreleaseVersion=37.0.0 -DdevelopmentVersion=38.0.0-SNAPSHOT -Dtag=druid-37.0.0-rc1 -DpushChanges=false -DskipTests -Darguments=-DskipTests clean release:clean release:prepare
+$ git checkout --detach 37.0.0
+$ mvn -N versions:set-property versions:set-scm-tag -Dproperty=revision -DnewVersion=37.0.0 -DnewTag=druid-37.0.0-rc1 -DgenerateBackupPoms=false
+$ git commit -am "Prepare release druid-37.0.0-rc1"
+$ git tag druid-37.0.0-rc1
 $ git push origin tag druid-37.0.0-rc1
 ```
 
 In this example it will create a tag, `druid-37.0.0-rc1`. If this release passes vote then we can add the final `druid-37.0.0` release tag later. 
-We added `website-docs` profile, because otherwise, website module is not updated with rc version. 
+The Druid version is set only by the `revision` property in the root `pom.xml`, so do not use `mvn versions:set` or `release:prepare`, which would replace `${revision}` in every `pom.xml`.
 
-
-**Retain the release.properties file! You will need it when uploading the Maven artifacts for the final release.**
 
 ### Do a clean clone (so the source distribution does not pick up extra files)
 
@@ -467,8 +505,7 @@ Before opening the release vote thread, we create a staged maven repository cont
 
 You can generate a staged maven repo for the RC with the following steps:	
 
-- Copy the `release.properties` that was generated when the RC tag was created back to your repo root (You'll need to change scm.tag in that file to match the specific rc tag you created if you did not specify `-Dtag` when creating the release). If you still have the working copy that build the `tag` available, you may use that.	
-- Run `mvn release:perform`	
+- From the working copy checked out at the RC tag, run `mvn clean deploy -Papache-release -DskipTests -Daether.connector.basic.parallelPut=false -Dgpg.keyname=<your GPG key fingerprint>`	
 
 This will create a staged Maven repo here (login with Apache credentials): https://repository.apache.org/#stagingRepositories	
 
@@ -565,7 +602,7 @@ Anyone can vote on a release. When voting, you should list out what exactly you 
 ```plaintext
 +1 (binding)
 
-- Proper NOTICE, LICENSE, DISCLAIMER files are present in both src and bin packages.
+- Proper NOTICE and LICENSE files are present in both src and bin packages.
 - Verified .asc signatures and .sha512 checksums of both src and bin packages.
 - Source tarball git.version file is present and correct.
 - Source tarball builds and tests pass.

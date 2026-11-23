@@ -3019,20 +3019,17 @@ public class CachingClusteredClientTest
   public void testIfNoneMatch()
   {
     Interval interval = Intervals.of("2016/2017");
-    final DataSegment dataSegment = new DataSegment(
-        "dataSource",
-        interval,
-        "ver",
-        ImmutableMap.of(
-            "type", "hdfs",
-            "path", "/tmp"
-        ),
-        ImmutableList.of("product"),
-        ImmutableList.of("visited_sum"),
-        NoneShardSpec.instance(),
-        9,
-        12334
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("dataSource", interval, "ver", 0))
+                                               .loadSpec(ImmutableMap.of(
+                                                       "type", "hdfs",
+                                                       "path", "/tmp"
+                                                   ))
+                                               .dimensions(ImmutableList.of("product"))
+                                               .metrics(ImmutableList.of("visited_sum"))
+                                               .shardSpec(NoneShardSpec.instance())
+                                               .binaryVersion(9)
+                                               .size(12334)
+                                               .build();
     final ServerSelector selector = new ServerSelector(
         dataSegment,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
@@ -3061,20 +3058,17 @@ public class CachingClusteredClientTest
     final Interval interval = Intervals.of("2016-01-01/2016-01-02");
     final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
     final Interval queryInterval2 = Intervals.of("2016-01-01T18:00:00/2016-01-02T18:00:00");
-    final DataSegment dataSegment = new DataSegment(
-        "dataSource",
-        interval,
-        "ver",
-        ImmutableMap.of(
-            "type", "hdfs",
-            "path", "/tmp"
-        ),
-        ImmutableList.of("product"),
-        ImmutableList.of("visited_sum"),
-        NoneShardSpec.instance(),
-        9,
-        12334
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("dataSource", interval, "ver", 0))
+                                               .loadSpec(ImmutableMap.of(
+                                                       "type", "hdfs",
+                                                       "path", "/tmp"
+                                                   ))
+                                               .dimensions(ImmutableList.of("product"))
+                                               .metrics(ImmutableList.of("visited_sum"))
+                                               .shardSpec(NoneShardSpec.instance())
+                                               .binaryVersion(9)
+                                               .size(12334)
+                                               .build();
     final ServerSelector selector = new ServerSelector(
         dataSegment,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
@@ -3112,20 +3106,17 @@ public class CachingClusteredClientTest
   {
     final Interval interval = Intervals.of("2016-01-01/2016-01-02");
     final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
-    final DataSegment dataSegment = new DataSegment(
-            "dataSource",
-            interval,
-            "ver",
-            ImmutableMap.of(
-                    "type", "hdfs",
-                    "path", "/tmp"
-            ),
-            ImmutableList.of("product"),
-            ImmutableList.of("visited_sum"),
-            NoneShardSpec.instance(),
-            9,
-            12334
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("dataSource", interval, "ver", 0))
+                                               .loadSpec(ImmutableMap.of(
+                                                           "type", "hdfs",
+                                                           "path", "/tmp"
+                                                   ))
+                                               .dimensions(ImmutableList.of("product"))
+                                               .metrics(ImmutableList.of("visited_sum"))
+                                               .shardSpec(NoneShardSpec.instance())
+                                               .binaryVersion(9)
+                                               .size(12334)
+                                               .build();
     final ServerSelector selector = new ServerSelector(
             dataSegment,
             new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
@@ -3185,17 +3176,14 @@ public class CachingClusteredClientTest
   {
     final Interval interval = Intervals.of("2016-01-01/2016-01-02");
     final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
-    final DataSegment dataSegment = new DataSegment(
-            "dataSource",
-            interval,
-            "ver",
-            ImmutableMap.of("type", "hdfs", "path", "/tmp"),
-            ImmutableList.of("product"),
-            ImmutableList.of("visited_sum"),
-            NoneShardSpec.instance(),
-            9,
-            12334
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("dataSource", interval, "ver", 0))
+                                               .loadSpec(ImmutableMap.of("type", "hdfs", "path", "/tmp"))
+                                               .dimensions(ImmutableList.of("product"))
+                                               .metrics(ImmutableList.of("visited_sum"))
+                                               .shardSpec(NoneShardSpec.instance())
+                                               .binaryVersion(9)
+                                               .size(12334)
+                                               .build();
 
     // selector backed only by a realtime server — isRealtimeSegment() == true
     final DruidServer realtimeServer = new DruidServer(

@@ -678,17 +678,14 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
       String version
   )
   {
-    return new DataSegment(
-        dataSource,
-        Intervals.of(interval),
-        version,
-        Map.of(),
-        List.of(),
-        List.of(),
-        new LinearShardSpec(1),
-        9,
-        1234L
-    );
+    return DataSegment.builder(SegmentId.of(dataSource, Intervals.of(interval), version, 1))
+                      .loadSpec(Map.of())
+                      .dimensions(List.of())
+                      .metrics(List.of())
+                      .shardSpec(new LinearShardSpec(1))
+                      .binaryVersion(9)
+                      .size(1234L)
+                      .build();
   }
 
   private static DataSegment createNewSegment1(String datasource)

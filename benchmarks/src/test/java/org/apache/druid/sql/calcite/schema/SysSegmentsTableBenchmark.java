@@ -171,7 +171,7 @@ public class SysSegmentsTableBenchmark
           new LinearShardSpec(0)
       );
       final DataSegment segment = DataSegment.builder(segmentId).size(1000L).build();
-      segments.add(new SegmentStatusInCluster(segment, false, 1, 100L, false));
+      segments.add(new SegmentStatusInCluster(segment, false, 1, 100L, false, true));
     }
     // sys.segments serves published segments sorted by SegmentId (datasource-prefixed).
     segments.sort(Comparator.naturalOrder());

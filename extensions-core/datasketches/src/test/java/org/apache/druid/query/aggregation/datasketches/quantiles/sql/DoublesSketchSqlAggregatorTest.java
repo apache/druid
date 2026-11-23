@@ -1141,6 +1141,194 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
   }
 
+  @Test
+  public void testApproxQuantileWithNonNumericStringLiteral()
+  {
+    // verify invalid queries return 400 (user error)
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE_DS('m1', 0.99) FROM foo",
+        invalidSqlContains(
+            "Function [APPROX_QUANTILE_DS] argument [column] must be numeric, got string literal ['m1']."
+            + " If you meant to refer to a column, use double quotes."
+        )
+    );
+    testQueryThrows(
+        "SELECT DS_QUANTILES_SKETCH('m1') FROM foo",
+        invalidSqlContains(
+            "Function [DS_QUANTILES_SKETCH] argument [column] must be numeric, got string literal ['m1']."
+            + " If you meant to refer to a column, use double quotes."
+        )
+    );
+  }
+
+  @Test
+  public void testQuantileOnNull()
+  {
+    // NULL inputs are accepted, the same as before the first operand was type checked
+    testQuery(
+        "SELECT APPROX_QUANTILE_DS(NULL, 0.5), APPROX_QUANTILE_DS(CAST(NULL AS DOUBLE), 0.5), DS_QUANTILES_SKETCH(NULL), DS_QUANTILES_SKETCH(CAST(NULL AS DOUBLE)) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "null",
+                          ColumnType.FLOAT,
+                          TestExprMacroTable.INSTANCE
+                      )
+                  )
+                  .aggregators(ImmutableList.of(
+                      new DoublesSketchAggregatorFactory("a0:agg", "v0", 128),
+                      new DoublesSketchAggregatorFactory("a1", "v0", null, null, false)
+                  ))
+                  .postAggregators(
+                      new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.5f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{Double.NaN, Double.NaN, "\"AQMIHoAAAAA=\"", "\"AQMIHoAAAAA=\""}
+        )
+    );
+  }
+
+  @Test
+  public void testQuantileAndSketchWithNonNumericInputTypes()
+  {
+    // verify invalid queries return 400 (user error)
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE_DS(m1 > 1, 0.99) FROM foo",
+        invalidSqlContains("Cannot apply 'APPROX_QUANTILE_DS'")
+    );
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE_DS(ARRAY[1.0, 2.0], 0.99) FROM foo",
+        invalidSqlContains("Cannot apply 'APPROX_QUANTILE_DS'")
+    );
+    testQueryThrows(
+        "SELECT APPROX_QUANTILE_DS(PARSE_JSON('1'), 0.99) FROM foo",
+        invalidSqlContains("Cannot apply 'APPROX_QUANTILE_DS'")
+    );
+    testQueryThrows(
+        "SELECT DS_QUANTILES_SKETCH(m1 > 1) FROM foo",
+        invalidSqlContains("Cannot apply 'DS_QUANTILES_SKETCH'")
+    );
+    testQueryThrows(
+        "SELECT DS_QUANTILES_SKETCH(ARRAY[1.0, 2.0]) FROM foo",
+        invalidSqlContains("Cannot apply 'DS_QUANTILES_SKETCH'")
+    );
+    testQueryThrows(
+        "SELECT DS_QUANTILES_SKETCH(PARSE_JSON('1')) FROM foo",
+        invalidSqlContains("Cannot apply 'DS_QUANTILES_SKETCH'")
+    );
+  }
+
+  @Test
+  public void testQuantileOnStringColumn()
+  {
+    // string columns are implicitly cast to numbers, like testQuantileOnCastedString
+    testQuery(
+        "SELECT APPROX_QUANTILE_DS(dim1, 0.5), DS_QUANTILES_SKETCH(dim1) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "CAST(\"dim1\", 'DOUBLE')",
+                          ColumnType.FLOAT,
+                          TestExprMacroTable.INSTANCE
+                      )
+                  )
+                  .aggregators(ImmutableList.of(
+                      new DoublesSketchAggregatorFactory("a0:agg", "v0", 128),
+                      new DoublesSketchAggregatorFactory("a1", "v0", null, null, false)
+                  ))
+                  .postAggregators(
+                      new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.5f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2.0, "\"AgMIGoAAAAADAAAAAAAAAAAAAAAAAPA/MzMzMzMzJEAAAAAAAADwPwAAAAAAAABAMzMzMzMzJEA=\""}
+        )
+    );
+  }
+
+  @Test
+  public void testQuantileOnTimeColumn()
+  {
+    // timestamps are used as numbers of milliseconds
+    testQuery(
+        "SELECT APPROX_QUANTILE_DS(__time, 0.5), DS_QUANTILES_SKETCH(__time) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(ImmutableList.of(
+                      new DoublesSketchAggregatorFactory("a0:agg", "__time", 128),
+                      new DoublesSketchAggregatorFactory("a1", "__time", null, null, false)
+                  ))
+                  .postAggregators(
+                      new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.5f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                946857600000.0,
+                "\"AgMIGoAAAAAGAAAAAAAAAAAAgPVZjWtCAACAfT56bEIAAID1WY1rQgAAAMH+jWtCAACAjKOOa0IAAIDm9HhsQgAAALKZeWxCAACAfT56bEI=\""
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testQuantileOnNumericStringLiteral()
+  {
+    // string literals that can be parsed as numbers are accepted
+    testQuery(
+        "SELECT APPROX_QUANTILE_DS('1.5', 0.5), DS_QUANTILES_SKETCH('1.5') FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "1.5",
+                          ColumnType.FLOAT,
+                          TestExprMacroTable.INSTANCE
+                      )
+                  )
+                  .aggregators(ImmutableList.of(
+                      new DoublesSketchAggregatorFactory("a0:agg", "v0", 128),
+                      new DoublesSketchAggregatorFactory("a1", "v0", null, null, false)
+                  ))
+                  .postAggregators(
+                      new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.5f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                1.5,
+                "\"AgMIGoAAAAAGAAAAAAAAAAAAAAAAAPg/AAAAAAAA+D8AAAAAAAD4PwAAAAAAAPg/AAAAAAAA+D8AAAAAAAD4PwAAAAAAAPg/AAAAAAAA+D8=\""
+            }
+        )
+    );
+  }
+
   private static PostAggregator makeFieldAccessPostAgg(String name)
   {
     return new FieldAccessPostAggregator(name, name);

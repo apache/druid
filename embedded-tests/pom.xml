@@ -34,7 +34,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>40.0.0-SNAPSHOT</version>
+    <version>${revision}</version>
   </parent>
 
   <dependencies>
@@ -374,6 +374,17 @@
       <groupId>org.apache.druid.extensions.contrib</groupId>
       <artifactId>aliyun-oss-extensions</artifactId>
       <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-tsfile-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tsfile</groupId>
+      <artifactId>tsfile</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -822,11 +833,6 @@
       <artifactId>docker-java-transport</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-server</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>
@@ -847,7 +853,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.6.3</version>
+        <version>3.7.0</version>
         <executions>
           <execution>
             <id>default-cli</id>

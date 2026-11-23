@@ -27,7 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
  * Lag cost is based on recovery time in seconds; idle cost is a penalty derived from
  * the predicted idle ratio.
  *
- * <p>Idle cost uses a U-shaped penalty with minimum at {@link #OPTIMAL_TASK_IDLE_RATIO}.
+ * <p>Idle cost uses a U-shaped penalty with minimum at {@link CostBasedAutoScalerConfig#getOptimalTaskIdleRatio()}.
  * This penalizes both under-provisioning (low idle, no safety margin, lag risk) and
  * over-provisioning (high idle, wasted capacity), with asymmetric severity controlled by
  * {@link #UNDER_PROVISIONING_PENALTY} and {@link #OVER_PROVISIONING_PENALTY}.
@@ -37,20 +37,8 @@ public class WeightedCostFunction
   private static final Logger log = new Logger(WeightedCostFunction.class);
 
   /**
-   * Normal-path lag amplification multiplier. Critical-lag tiers provide the
-   * urgency amplification, so normal lag uses unamplified recovery time.
-   */
-  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.0;
-
-  /**
-   * Default cost factor used once aggregate lag crosses {@link #HIGH_LAG_THRESHOLD_FRACTION} of
-   * {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()}.
-   */
-  static final double DEFAULT_HIGH_LAG_COST_FACTOR = 6.0;
-
-  /**
    * Fraction of {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} at which the high-lag
-   * fast path engages: the cost factor maxes out at {@link #DEFAULT_HIGH_LAG_COST_FACTOR}
+   * fast path engages: the cost factor maxes out at {@link CostBasedAutoScalerConfig#getHighLagCostFactor()}
    * and the scale-up candidate boundary is bypassed.
    */
   static final double HIGH_LAG_THRESHOLD_FRACTION = 0.75;
@@ -138,8 +126,10 @@ public class WeightedCostFunction
       final boolean highLag = criticalLagThreshold != null
           && metrics.getAggregateLag() >= criticalLagThreshold * HIGH_LAG_THRESHOLD_FRACTION;
 
-      final double costFactor = highLag ? config.getHighLagCostFactor() : LAG_AMPLIFICATION_MULTIPLIER;
-      final double amplification = Math.max(1.0, 1.0 + costFactor * Math.log(lagPerPartition));
+      final double amplification =
+          highLag
+          ? Math.max(1.0, 1.0 + config.getHighLagCostFactor() * Math.log(lagPerPartition))
+          : 1;
       final double adjustedProcessingRate = Math.max(avgProcessingRate, MIN_PROCESSING_RATE);
       lagRecoveryTime = metrics.getAggregateLag() * amplification / (proposedTaskCount * adjustedProcessingRate);
     }

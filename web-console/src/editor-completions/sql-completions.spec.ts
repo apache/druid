@@ -18,6 +18,7 @@
 
 import { EditorState } from '@codemirror/state';
 
+import type { QueryContextParameterMetadata } from '../druid-models';
 import { dsql } from '../editor-languages/dsql';
 import { completionContextAt } from '../test-utils/completion-context';
 import type { ColumnMetadata } from '../utils';
@@ -241,11 +242,53 @@ describe('sql-completions', () => {
       expect(columnCompletions.map(c => c.label)).toContain('"user"');
     });
 
-    it('includes context keys after SET keyword', () => {
-      const completions = completionsAt('SET |');
+    it('suggests the query context parameters from sys.query_context_parameters after SET', () => {
+      const queryContextParameters: QueryContextParameterMetadata[] = [
+        {
+          name: 'sqlTimeZone',
+          type: 'String',
+          description:
+            'Time zone for a connection. See [time zones](../querying/sql.md#time-zones).',
+          default_value: null,
+          default_description: 'UTC',
+          effective_value: null,
+          effective_source: null,
+          deprecation: null,
+          query_languages: ['JSON', 'SQL'],
+        },
+        {
+          name: 'useCache',
+          type: 'Boolean',
+          description: 'Whether to use the cache.<br />Applies to native queries.',
+          default_value: 'true',
+          default_description: null,
+          effective_value: 'false',
+          effective_source: 'BROKER_DYNAMIC_CONFIG',
+          deprecation: 'Use `useResultLevelCache` instead.',
+          query_languages: ['JSON', 'SQL'],
+        },
+      ];
 
-      const contextCompletions = completions.filter(c => c.detail === 'context');
-      expect(contextCompletions.length).toBeGreaterThan(0);
+      // Only the context parameters, no keywords, tables or columns. Their docs are tested with getQueryContextCompletions.
+      expect(
+        completionsAt('SET |', { queryContextParameters, columnMetadata }).map(c => [
+          c.label,
+          c.boost,
+          c.detail,
+        ]),
+      ).toEqual([
+        ['sqlTimeZone', 50, 'context'],
+        ['useCache', 40, 'context'],
+      ]);
+    });
+
+    it('falls back to the well-known context keys when the parameters are not loaded', () => {
+      for (const queryContextParameters of [undefined, []]) {
+        const completions = completionsAt('SET |', { queryContextParameters });
+        // Only context keys, without docs
+        expect(completions.map(c => c.label)).toContain('sqlTimeZone');
+        expect(completions.every(c => c.detail === 'context' && c.doc === undefined)).toBe(true);
+      }
     });
 
     it('handles column names correctly with quotes', () => {

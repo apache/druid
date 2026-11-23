@@ -46,6 +46,14 @@ public class CacheConfig
   @JsonProperty
   private boolean populateResultLevelCache = false;
 
+  /**
+   * When true, the Broker's result-level cache key includes the query's datasource and intervals, so that queries which
+   * differ only by interval or datasource no longer share (and overwrite) one cache entry. Off by default, since
+   * changing the key invalidates existing result-level cache entries.
+   */
+  @JsonProperty
+  private boolean includeDatasourceAndIntervalsInResultLevelCacheKey = false;
+
   @JsonProperty
   @Min(0)
   private int numBackgroundThreads = 0;
@@ -85,6 +93,11 @@ public class CacheConfig
   public boolean isUseResultLevelCache()
   {
     return useResultLevelCache;
+  }
+
+  public boolean isIncludeDatasourceAndIntervalsInResultLevelCacheKey()
+  {
+    return includeDatasourceAndIntervalsInResultLevelCacheKey;
   }
 
   public int getNumBackgroundThreads()

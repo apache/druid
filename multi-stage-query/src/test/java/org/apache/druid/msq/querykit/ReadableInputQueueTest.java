@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
@@ -35,9 +36,13 @@ import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -48,7 +53,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 /**
  * Tests for {@link ReadableInputQueue}'s segment-load lifecycle: close-while-loading must promptly fail the futures
@@ -95,7 +100,10 @@ class ReadableInputQueueTest
     private final AcquireSegmentAction action;
     private final Optional<Segment> cached;
     private final boolean throwOnDescriptor;
+    private final SegmentDescriptor descriptor;
     final AtomicInteger countDeliveredCalls = new AtomicInteger();
+    final AtomicInteger countAcquires = new AtomicInteger();
+    final AtomicInteger countHandedOutCalls = new AtomicInteger();
 
     TestLoadableSegment(AcquireSegmentAction action)
     {
@@ -109,20 +117,31 @@ class ReadableInputQueueTest
 
     TestLoadableSegment(AcquireSegmentAction action, Optional<Segment> cached, boolean throwOnDescriptor)
     {
+      this(action, cached, throwOnDescriptor, DESCRIPTOR);
+    }
+
+    TestLoadableSegment(
+        AcquireSegmentAction action,
+        Optional<Segment> cached,
+        boolean throwOnDescriptor,
+        SegmentDescriptor descriptor
+    )
+    {
       this.action = action;
       this.cached = cached;
       this.throwOnDescriptor = throwOnDescriptor;
+      this.descriptor = descriptor;
     }
 
     @Override
     public SegmentDescriptor descriptor()
     {
       // Simulates a post-release failure in the queue's delivery path: onSegmentReady calls descriptor() after
-      // release() has already transferred ownership of the result.
-      if (throwOnDescriptor) {
+      // release() has already transferred ownership of the result. Calls before then, such as for pruning, succeed.
+      if (throwOnDescriptor && countDeliveredCalls.get() > 0) {
         throw new IllegalStateException("descriptor blew up");
       }
-      return DESCRIPTOR;
+      return descriptor;
     }
 
     @Nullable
@@ -135,6 +154,9 @@ class ReadableInputQueueTest
     @Override
     public Optional<Segment> acquireIfCached(AcquireMode acquireMode)
     {
+      if (cached.isPresent()) {
+        countAcquires.incrementAndGet();
+      }
       return cached;
     }
 
@@ -142,8 +164,15 @@ class ReadableInputQueueTest
     public AcquireSegmentAction acquire(AcquireMode acquireMode)
     {
       // install delivery accounting the same way real implementations do: a successful release counts exactly once
+      countAcquires.incrementAndGet();
       action.setOnRelease(result -> countDeliveredCalls.incrementAndGet());
       return action;
+    }
+
+    @Override
+    public void countHandedOut()
+    {
+      countHandedOutCalls.incrementAndGet();
     }
 
     @Override
@@ -155,12 +184,12 @@ class ReadableInputQueueTest
 
   private static ReadableInputQueue makeQueue(int loadahead, LoadableSegment... segments)
   {
-    return makeQueue(loadahead, () -> false, segments);
+    return makeQueue(loadahead, InputPruner.INCLUDE_ALL, segments);
   }
 
   private static ReadableInputQueue makeQueue(
       int loadahead,
-      BooleanSupplier canSkipRemaining,
+      InputPruner inputPruner,
       LoadableSegment... segments
   )
   {
@@ -170,7 +199,7 @@ class ReadableInputQueueTest
         List.of(new PhysicalInputSlice(ReadablePartitions.empty(), List.of(segments), List.of())),
         loadahead,
         AcquireMode.FULL,
-        canSkipRemaining
+        inputPruner
     );
   }
 
@@ -197,6 +226,7 @@ class ReadableInputQueueTest
     Assertions.assertTrue(e.getCause().getMessage().contains("Input queue closed"), e.getCause().getMessage());
     Assertions.assertEquals(1, cancels.get(), "canceler must run exactly once");
     Assertions.assertEquals(0, loadable.countDeliveredCalls.get(), "cancelled loads must not be counted");
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get(), "failed inputs must not be counted as read");
   }
 
   @Test
@@ -264,8 +294,9 @@ class ReadableInputQueueTest
     );
     Assertions.assertTrue(e.getCause().getMessage().contains("descriptor blew up"), e.getCause().getMessage());
     Assertions.assertEquals(1, segment.closes.get(), "post-release failure must close the delivered segment");
-    // release succeeded, so the delivery was counted even though the downstream handoff then failed
+    // release succeeded, so the load was counted, but the failed input was never read
     Assertions.assertEquals(1, loadable.countDeliveredCalls.get());
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get());
 
     // nothing left to close on queue teardown
     queue.close();
@@ -291,6 +322,7 @@ class ReadableInputQueueTest
     result.close();
     Assertions.assertEquals(1, segment.closes.get());
     Assertions.assertEquals(0, loadable.countDeliveredCalls.get());
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get());
   }
 
   @Test
@@ -309,6 +341,7 @@ class ReadableInputQueueTest
     // never call nextInput(): the loaded-but-untransferred segment must be closed by the queue
     queue.close();
     Assertions.assertEquals(1, segment.closes.get());
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get(), "inputs never handed out must not be counted");
   }
 
   @Test
@@ -329,6 +362,7 @@ class ReadableInputQueueTest
     final SegmentReference ref = input.getSegment().getSegmentReferenceOnce();
     Assertions.assertNotNull(ref);
     Assertions.assertEquals(1, loadable.countDeliveredCalls.get());
+    Assertions.assertEquals(1, loadable.countHandedOutCalls.get());
 
     // queue close must not close a transferred reference
     queue.close();
@@ -356,6 +390,7 @@ class ReadableInputQueueTest
     );
     Assertions.assertTrue(e.getCause().getMessage().contains("load went sideways"));
     Assertions.assertEquals(0, loadable.countDeliveredCalls.get(), "failed loads must not be counted");
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get(), "failed loads must not be counted as read");
     queue.close();
   }
 
@@ -374,6 +409,7 @@ class ReadableInputQueueTest
     Assertions.assertNotNull(ref);
     Assertions.assertTrue(ref.getSegmentReference().isEmpty());
     Assertions.assertEquals(1, loadable.countDeliveredCalls.get());
+    Assertions.assertEquals(1, loadable.countHandedOutCalls.get());
     ref.close();
     queue.close();
   }
@@ -398,7 +434,8 @@ class ReadableInputQueueTest
     final SegmentReference ref = input.getSegment().getSegmentReferenceOnce();
     Assertions.assertNotNull(ref);
     Assertions.assertSame(cachedSegment, ref.getSegmentReference().orElseThrow());
-    Assertions.assertEquals(0, loadable.countDeliveredCalls.get(), "acquireIfCached counts inline, not via the hook");
+    Assertions.assertEquals(0, loadable.countDeliveredCalls.get(), "a cached segment has no delivery to count");
+    Assertions.assertEquals(1, loadable.countHandedOutCalls.get());
     ref.close();
     queue.close();
   }
@@ -429,15 +466,150 @@ class ReadableInputQueueTest
     final TestLoadableSegment loadable = new TestLoadableSegment(new AcquireSegmentAction(), Optional.of(cachedSegment));
     final AtomicBoolean canSkipRemaining = new AtomicBoolean(false);
 
-    final ReadableInputQueue queue = makeQueue(0, canSkipRemaining::get, loadable);
+    final ReadableInputQueue queue = makeQueue(0, interval -> canSkipRemaining.get(), loadable);
     queue.start();
     Assertions.assertEquals(1, queue.remaining());
 
     canSkipRemaining.set(true);
     Assertions.assertNull(queue.nextInput(), "no inputs may be handed out once remaining inputs can be skipped");
+    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must be released before close");
+    Assertions.assertEquals(0, loadable.countHandedOutCalls.get(), "skipped inputs must not be counted as read");
 
     queue.close();
-    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must be closed on close");
+    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must not be closed twice");
+  }
+
+  @Test
+  void testCanSkipRemainingCancelsPendingLoadsBeforeClose()
+  {
+    final CountingSegment cachedSegment = new CountingSegment();
+    final TestLoadableSegment cached = new TestLoadableSegment(new AcquireSegmentAction(), Optional.of(cachedSegment));
+    final AtomicInteger cancels = new AtomicInteger();
+    final TestLoadableSegment loading = new TestLoadableSegment(new AcquireSegmentAction(cancels::incrementAndGet));
+    final AtomicBoolean canSkipRemaining = new AtomicBoolean(false);
+
+    // loadahead=1: start() parks the cached segment, then starts loading the other one.
+    final ReadableInputQueue queue = makeQueue(1, interval -> canSkipRemaining.get(), cached, loading);
+    queue.start();
+    Assertions.assertEquals(1, loading.countAcquires.get());
+
+    canSkipRemaining.set(true);
+    Assertions.assertNull(queue.nextInput());
+    Assertions.assertEquals(1, cancels.get(), "skipped load must be canceled before close");
+    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must be released before close");
+    Assertions.assertEquals(0, queue.remaining());
+
+    queue.close();
+    Assertions.assertEquals(1, cachedSegment.closes.get(), "skipped cached segment must not be closed twice");
+    Assertions.assertEquals(1, cancels.get(), "skipped load must not be canceled twice");
+    Assertions.assertEquals(0, loading.countDeliveredCalls.get(), "canceled loads must not be counted");
+  }
+
+  @Test
+  void testTimeOrderSkippedLoadedSegmentReleasedBeforeClose()
+  {
+    final CountingSegment day2Segment = new CountingSegment();
+    final TestLoadableSegment day2 = new TestLoadableSegment(
+        AcquireSegmentAction.completed(AcquireSegmentResult.of(Optional.of(day2Segment))),
+        Optional.empty(),
+        false,
+        descriptorOnDay(2, 0)
+    );
+    final AtomicBoolean skipDay2 = new AtomicBoolean(false);
+
+    // loadahead=2: start() loads both segments before day 2 becomes skippable.
+    final ReadableInputQueue queue = makeQueue(
+        2,
+        timeOrderedPruner(Order.DESCENDING, interval -> skipDay2.get() && interval.equals(day(2))),
+        cachedSegmentOnDay(3),
+        day2
+    );
+    queue.start();
+    Assertions.assertEquals(1, day2.countDeliveredCalls.get(), "day 2 must be loaded before it becomes skippable");
+
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> day3Future = queue.nextInput();
+    Assertions.assertEquals(day(3), Futures.getUnchecked(day3Future).input().getSegment().getDescriptor().getInterval());
+
+    skipDay2.set(true);
+    Assertions.assertNull(queue.nextInput());
+    Assertions.assertEquals(1, day2Segment.closes.get(), "skipped loaded segment must be released before close");
+    Assertions.assertEquals(0, day2.countHandedOutCalls.get(), "skipped loaded segment must not be counted as read");
+
+    closeHandedOut(day3Future);
+    queue.close();
+    Assertions.assertEquals(1, day2Segment.closes.get(), "skipped loaded segment must not be closed twice");
+  }
+
+  @Test
+  void testTimeOrderSkippedLoadCanceledBeforeClose()
+  {
+    final AtomicInteger cancels = new AtomicInteger();
+    final AcquireSegmentAction day2Action = new AcquireSegmentAction(cancels::incrementAndGet);
+    final TestLoadableSegment day2 =
+        new TestLoadableSegment(day2Action, Optional.empty(), false, descriptorOnDay(2, 0));
+    final AtomicBoolean skipDay2 = new AtomicBoolean(false);
+
+    // loadahead=2: start() starts loading day 2 before it becomes skippable.
+    final ReadableInputQueue queue = makeQueue(
+        2,
+        timeOrderedPruner(Order.DESCENDING, interval -> skipDay2.get() && interval.equals(day(2))),
+        cachedSegmentOnDay(3),
+        day2
+    );
+    queue.start();
+    Assertions.assertEquals(1, day2.countAcquires.get());
+
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> day3Future = queue.nextInput();
+    Assertions.assertEquals(day(3), Futures.getUnchecked(day3Future).input().getSegment().getDescriptor().getInterval());
+
+    skipDay2.set(true);
+    Assertions.assertNull(queue.nextInput());
+    Assertions.assertEquals(1, cancels.get(), "skipped load must be canceled before close");
+
+    // A delivery arriving after the cancel loses, so the producer keeps ownership of its result.
+    final CountingSegment lateSegment = new CountingSegment();
+    final AcquireSegmentResult lateResult = AcquireSegmentResult.of(Optional.of(lateSegment));
+    Assertions.assertFalse(day2Action.set(lateResult));
+    lateResult.close();
+
+    closeHandedOut(day3Future);
+    queue.close();
+    Assertions.assertEquals(1, cancels.get(), "skipped load must not be canceled twice");
+    Assertions.assertEquals(1, lateSegment.closes.get());
+    Assertions.assertEquals(0, day2.countDeliveredCalls.get(), "canceled loads must not be counted");
+  }
+
+  @Test
+  void testTimeOrderSkippedFailedLoadHasNothingToRelease()
+  {
+    final AtomicInteger cancels = new AtomicInteger();
+    final AcquireSegmentAction day2Action = new AcquireSegmentAction(cancels::incrementAndGet);
+    final TestLoadableSegment day2 =
+        new TestLoadableSegment(day2Action, Optional.empty(), false, descriptorOnDay(2, 0));
+    final AtomicBoolean skipDay2 = new AtomicBoolean(false);
+
+    final ReadableInputQueue queue = makeQueue(
+        2,
+        timeOrderedPruner(Order.DESCENDING, interval -> skipDay2.get() && interval.equals(day(2))),
+        cachedSegmentOnDay(3),
+        day2
+    );
+    queue.start();
+
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> day3Future = queue.nextInput();
+    Assertions.assertEquals(day(3), Futures.getUnchecked(day3Future).input().getSegment().getDescriptor().getInterval());
+
+    // The load fails before day 2 becomes skippable, so its pending future is already failed when it is skipped.
+    day2Action.setException(DruidException.defensive("load failed"));
+
+    skipDay2.set(true);
+    Assertions.assertNull(queue.nextInput());
+    Assertions.assertEquals(0, cancels.get(), "a failed load must not be canceled");
+    Assertions.assertEquals(0, day2.countDeliveredCalls.get(), "a failed load must not be counted");
+
+    closeHandedOut(day3Future);
+    queue.close();
+    Assertions.assertEquals(0, cancels.get());
   }
 
   @Test
@@ -446,7 +618,7 @@ class ReadableInputQueueTest
     final AtomicInteger cancels = new AtomicInteger();
     final TestLoadableSegment loadable = new TestLoadableSegment(new AcquireSegmentAction(cancels::incrementAndGet));
 
-    final ReadableInputQueue queue = makeQueue(1, () -> true, loadable);
+    final ReadableInputQueue queue = makeQueue(1, interval -> true, loadable);
     queue.start();
     Assertions.assertNull(queue.nextInput());
 
@@ -465,5 +637,192 @@ class ReadableInputQueueTest
     Assertions.assertEquals(0, queue.remaining());
     Assertions.assertNull(queue.nextInput());
     queue.close();
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = Order.class, names = {"ASCENDING", "DESCENDING"})
+  void testTimeOrderHandsOutSegmentsInTimeOrder(final Order order)
+  {
+    final TestLoadableSegment day1 = cachedSegmentOnDay(1);
+    final TestLoadableSegment day2 = cachedSegmentOnDay(2);
+    final TestLoadableSegment day3 = cachedSegmentOnDay(3);
+    final ReadableInputQueue queue = makeQueue(0, timeOrderedPruner(order, interval -> false), day2, day1, day3);
+    queue.start();
+
+    // Only the first interval in time order is acquired up front; later ones are acquired as they are reached.
+    Assertions.assertEquals(1, day1.countAcquires.get() + day3.countAcquires.get());
+    Assertions.assertEquals(0, day2.countAcquires.get());
+
+    final List<Interval> expected = order == Order.DESCENDING ? List.of(day(3), day(2), day(1))
+                                                              : List.of(day(1), day(2), day(3));
+    Assertions.assertEquals(expected, handOutAll(queue));
+    queue.close();
+  }
+
+  @Test
+  void testTimeOrderDoesNotAcquirePrunedSegments()
+  {
+    final TestLoadableSegment pruned = cachedSegmentOnDay(1);
+    final ReadableInputQueue queue = makeQueue(
+        1,
+        timeOrderedPruner(Order.DESCENDING, interval -> interval.equals(day(1))),
+        pruned,
+        cachedSegmentOnDay(3),
+        cachedSegmentOnDay(2)
+    );
+    queue.start();
+
+    Assertions.assertEquals(List.of(day(3), day(2)), handOutAll(queue));
+    Assertions.assertEquals(0, pruned.countAcquires.get(), "a pruned segment must never be acquired");
+    queue.close();
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {0, 1})
+  void testTimeOrderCachedSegmentJumpsAheadOnlyWithinItsInterval(final int loadahead)
+  {
+    // In time order: a loading segment, then a cached one with the same interval, then a cached one with an older
+    // interval. The cached segment with the same interval is outside the loadahead window.
+    final TestLoadableSegment loading = loadingSegmentOnDay(3, 0);
+    final TestLoadableSegment cachedSameDay = cachedSegmentOnDay(3, 1);
+    final TestLoadableSegment cachedOlderDay = cachedSegmentOnDay(2, 0);
+
+    final ReadableInputQueue queue = makeQueue(
+        loadahead,
+        timeOrderedPruner(Order.DESCENDING, interval -> false),
+        loading,
+        cachedSameDay,
+        cachedOlderDay
+    );
+    queue.start();
+    Assertions.assertEquals(loadahead, loading.countAcquires.get(), "cached segments must not delay loadahead");
+
+    // The cached segment level with the loading one goes first; the older one must wait for the loading one.
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> first = queue.nextInput();
+    Assertions.assertTrue(first.isDone(), "a cached segment level with the head must be handed out first");
+    Assertions.assertEquals(descriptorOnDay(3, 1), Futures.getUnchecked(first).input().getSegment().getDescriptor());
+    Assertions.assertEquals(0, cachedOlderDay.countAcquires.get(), "an older interval must not be acquired early");
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> second = queue.nextInput();
+    Assertions.assertFalse(second.isDone(), "the loading segment must go before a loaded segment from an older day");
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> third = queue.nextInput();
+    Assertions.assertEquals(descriptorOnDay(2, 0), Futures.getUnchecked(third).input().getSegment().getDescriptor());
+
+    closeHandedOut(first);
+    closeHandedOut(third);
+    queue.close();
+  }
+
+  @Test
+  void testTimeOrderCachedSegmentsDoNotCountTowardLoadahead()
+  {
+    // Loadahead pulls day 3's completed load in behind day 4. Reaching day 3 acquires its two cached segments.
+    final TestLoadableSegment completedLoad = new TestLoadableSegment(
+        AcquireSegmentAction.completed(AcquireSegmentResult.of(Optional.of(new CountingSegment()))),
+        Optional.empty(),
+        false,
+        descriptorOnDay(3, 0)
+    );
+    final TestLoadableSegment loading = loadingSegmentOnDay(3, 3);
+
+    final ReadableInputQueue queue = makeQueue(
+        1,
+        timeOrderedPruner(Order.DESCENDING, interval -> false),
+        cachedSegmentOnDay(4),
+        completedLoad,
+        cachedSegmentOnDay(3, 1),
+        cachedSegmentOnDay(3, 2),
+        loading
+    );
+    queue.start();
+
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> day4Future = queue.nextInput();
+    final ListenableFuture<ReadableInputQueue.NumberedReadableInput> completedFuture = queue.nextInput();
+    Assertions.assertEquals(
+        descriptorOnDay(3, 0),
+        Futures.getUnchecked(completedFuture).input().getSegment().getDescriptor()
+    );
+    Assertions.assertEquals(1, loading.countAcquires.get(), "handing out a load must start the next one");
+
+    closeHandedOut(day4Future);
+    closeHandedOut(completedFuture);
+    queue.close();
+  }
+
+  private static Interval day(final int day)
+  {
+    return Intervals.of("2026-01-%02d/2026-01-%02d", day, day + 1);
+  }
+
+  private static SegmentDescriptor descriptorOnDay(final int day, final int partition)
+  {
+    return new SegmentDescriptor(day(day), "v1", partition);
+  }
+
+  private static TestLoadableSegment cachedSegmentOnDay(final int day)
+  {
+    return cachedSegmentOnDay(day, 0);
+  }
+
+  private static TestLoadableSegment cachedSegmentOnDay(final int day, final int partition)
+  {
+    return new TestLoadableSegment(
+        new AcquireSegmentAction(),
+        Optional.of(new CountingSegment()),
+        false,
+        descriptorOnDay(day, partition)
+    );
+  }
+
+  /**
+   * Returns an uncached segment whose load never completes.
+   */
+  private static TestLoadableSegment loadingSegmentOnDay(final int day, final int partition)
+  {
+    return new TestLoadableSegment(
+        new AcquireSegmentAction(() -> {}),
+        Optional.empty(),
+        false,
+        descriptorOnDay(day, partition)
+    );
+  }
+
+  private static InputPruner timeOrderedPruner(final Order order, final Predicate<Interval> canSkip)
+  {
+    return new InputPruner()
+    {
+      @Override
+      public boolean canSkip(final Interval interval)
+      {
+        return canSkip.test(interval);
+      }
+
+      @Override
+      public Order getTimeOrder()
+      {
+        return order;
+      }
+    };
+  }
+
+  /**
+   * Hands out every input, all of which must be ready, and returns their intervals in order. Closes each one.
+   */
+  private static List<Interval> handOutAll(final ReadableInputQueue queue)
+  {
+    final List<Interval> intervals = new ArrayList<>();
+    ListenableFuture<ReadableInputQueue.NumberedReadableInput> future;
+    while ((future = queue.nextInput()) != null) {
+      Assertions.assertTrue(future.isDone(), "cached segments must be ready");
+      intervals.add(Futures.getUnchecked(future).input().getSegment().getDescriptor().getInterval());
+      closeHandedOut(future);
+    }
+    return intervals;
+  }
+
+  private static void closeHandedOut(final ListenableFuture<ReadableInputQueue.NumberedReadableInput> future)
+  {
+    CloseableUtils.closeAndWrapExceptions(
+        Futures.getUnchecked(future).input().getSegment().getSegmentReferenceOnce()
+    );
   }
 }

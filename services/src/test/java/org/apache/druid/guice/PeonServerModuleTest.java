@@ -39,7 +39,22 @@ public class PeonServerModuleTest
     final ServerConfig adjusted = PeonServerModule.adjustServerConfig(config, NoopTask.forDatasource("wiki"));
 
     Assertions.assertEquals(Period.ZERO, adjusted.getUnannouncePropagationDelay());
-    Assertions.assertEquals(config.withUnannouncePropagationDelay(Period.ZERO), adjusted);
+    Assertions.assertEquals(Period.ZERO, adjusted.getGracefulShutdownTimeout());
+    Assertions.assertEquals(
+        config.withUnannouncePropagationDelay(Period.ZERO).withGracefulShutdownTimeout(Period.ZERO),
+        adjusted
+    );
+  }
+
+  @Test
+  public void testNonQueryableTaskIgnoresGracefulShutdownTimeout()
+  {
+    final ServerConfig config = new ServerConfig();
+    Assertions.assertEquals(Period.seconds(30), config.getGracefulShutdownTimeout());
+    Assertions.assertEquals(Period.ZERO, config.getUnannouncePropagationDelay());
+
+    final ServerConfig adjusted = PeonServerModule.adjustServerConfig(config, NoopTask.forDatasource("wiki"));
+    Assertions.assertEquals(config.withGracefulShutdownTimeout(Period.ZERO), adjusted);
   }
 
   @Test
@@ -67,9 +82,9 @@ public class PeonServerModuleTest
   }
 
   @Test
-  public void testZeroDelayIsUnchanged()
+  public void testZeroDelayAndTimeoutIsUnchanged()
   {
-    final ServerConfig config = new ServerConfig();
+    final ServerConfig config = new ServerConfig().withGracefulShutdownTimeout(Period.ZERO);
     Assertions.assertSame(config, PeonServerModule.adjustServerConfig(config, NoopTask.forDatasource("wiki")));
   }
 

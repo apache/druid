@@ -569,7 +569,9 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
         final DataSegment segment = segmentPlus.getDataSegment();
         final boolean isEligibleVersion = eligibleVersions == null
                                           || eligibleVersions.contains(segment.getVersion());
+        // Only segments fully contained in the interval are eligible, same as in SqlSegmentsMetadataQuery
         if (isEligibleVersion
+            && interval.contains(segment.getInterval())
             && writeSegmentsFor(segment.getInterval()).markSegmentAsUnused(segment.getId(), updateTime)) {
           ++updatedCount;
         }

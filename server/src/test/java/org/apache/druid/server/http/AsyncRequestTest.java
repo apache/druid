@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
@@ -35,12 +36,16 @@ import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class AsyncRequestTest
 {
@@ -231,6 +236,94 @@ public class AsyncRequestTest
   }
 
   @Test
+  public void test_start_completesRequestOnTimeout_whenFutureRespondedButCouldNotComplete() throws Exception
+  {
+    final SettableFuture<String> future = SettableFuture.create();
+
+    AsyncRequest.create(request, future, 10L)
+                .contentType(JSON_MAPPER, MediaType.APPLICATION_JSON)
+                .onTimeout(204)
+                .onSuccess(result -> AsyncResponse.of(200, result))
+                .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
+                .start();
+
+    // The future completes just as the request starts timing out. The response is written, but the container
+    // rejects complete() since it is not called from the thread running the timeout listener.
+    asyncContext.rejectComplete = true;
+    future.set("the-result");
+
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertFalse(asyncContext.isCompleted());
+
+    asyncContext.rejectComplete = false;
+    asyncContext.capturedListener.onTimeout(new AsyncEvent(asyncContext));
+
+    // The timeout listener must complete the request, without overwriting the response that was already written.
+    Assertions.assertTrue(asyncContext.isCompleted());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals("the-result", readJson(new TypeReference<String>() {}));
+  }
+
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void test_start_timeoutWaitsForResponseBeingWrittenByAnotherThread() throws Exception
+  {
+    final SettableFuture<String> future = SettableFuture.create();
+    final CountDownLatch writeStarted = new CountDownLatch(1);
+    final CountDownLatch finishWrite = new CountDownLatch(1);
+
+    AsyncRequest.create(request, future, 10L)
+                .contentType(JSON_MAPPER, MediaType.APPLICATION_JSON)
+                .onTimeout(204)
+                .onSuccess(result -> {
+                  writeStarted.countDown();
+                  Uninterruptibles.awaitUninterruptibly(finishWrite);
+                  return AsyncResponse.of(200, result);
+                })
+                .onFailure(t -> AsyncResponse.error(500, t.getMessage()))
+                .start();
+
+    final Thread writer = new Thread(() -> future.set("the-result"));
+
+    // Times out the request while the response is still being written by the writer thread
+    final Thread timeout = new Thread(() -> {
+      try {
+        asyncContext.capturedListener.onTimeout(new AsyncEvent(asyncContext));
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
+
+    try {
+      writer.start();
+      Assertions.assertTrue(writeStarted.await(10, TimeUnit.SECONDS));
+      timeout.start();
+
+      // The timeout listener must block until the write has finished, rather than complete the request mid-write.
+      // Wait for it to either block or finish, to avoid relying on a sleep.
+      final long startNanos = System.nanoTime();
+      while (timeout.isAlive()
+             && timeout.getState() != Thread.State.BLOCKED
+             && System.nanoTime() - startNanos < TimeUnit.SECONDS.toNanos(10)) {
+        Thread.sleep(1);
+      }
+      Assertions.assertEquals(Thread.State.BLOCKED, timeout.getState());
+      Assertions.assertFalse(asyncContext.isCompleted());
+    }
+    finally {
+      finishWrite.countDown();
+    }
+
+    writer.join();
+    timeout.join();
+
+    Assertions.assertTrue(asyncContext.isCompleted());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals("the-result", readJson(new TypeReference<String>() {}));
+  }
+
+  @Test
   public void test_onSuccess_preservesPolymorphicTypeInfo_whenResultTypeIsGenericAndErased()
   {
     final ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = ChangeRequestsSnapshot.success(
@@ -271,16 +364,27 @@ public class AsyncRequestTest
 
   /**
    * A {@link MockAsyncContext} that captures the single listener added to it, so tests can manually fire a
-   * timeout event.
+   * timeout event. If {@link #rejectComplete} is set, {@link #complete()} throws, like a servlet container does
+   * when a request that is timing out is completed from a thread other than the one running the timeout listener.
    */
   private static class CapturingAsyncContext extends MockAsyncContext
   {
     private AsyncListener capturedListener;
+    private boolean rejectComplete;
 
     @Override
     public void addListener(AsyncListener listener)
     {
       capturedListener = listener;
+    }
+
+    @Override
+    public void complete()
+    {
+      if (rejectComplete) {
+        throw new IllegalStateException("Request is timing out");
+      }
+      super.complete();
     }
   }
 }

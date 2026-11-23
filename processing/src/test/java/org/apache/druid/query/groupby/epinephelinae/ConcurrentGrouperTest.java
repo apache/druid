@@ -56,14 +56,17 @@ import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @ParameterizedClass
@@ -187,14 +190,20 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
 
       final int numRows = 1000;
 
-      Future<?>[] futures = new Future[concurrencyHint];
+      final int numTasks = concurrencyHint * 3;
+      final Future<?>[] futures = new Future[numTasks];
 
-      for (int i = 0; i < concurrencyHint; i++) {
+      for (int i = 0; i < numTasks; i++) {
         futures[i] = exec.submit(() -> {
-          for (long j = 0; j < numRows; j++) {
-            if (!grouper.aggregate(new LongKey(j)).isOk()) {
-              throw new ISE("Grouper is full");
+          try {
+            for (long j = 0; j < numRows; j++) {
+              if (!grouper.aggregate(new LongKey(j)).isOk()) {
+                throw new ISE("Grouper is full");
+              }
             }
+          }
+          finally {
+            grouper.clearThreadLocalState();
           }
         });
       }
@@ -205,7 +214,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
 
       final List<Entry<LongKey>> expected = new ArrayList<>();
       for (long i = 0; i < numRows; i++) {
-        expected.add(new ReusableEntry<>(new LongKey(i), new Object[]{(long) concurrencyHint}));
+        expected.add(new ReusableEntry<>(new LongKey(i), new Object[]{(long) numTasks}));
       }
 
       final CloseableIterator<Entry<LongKey>> iterator = closer.register(grouper.iterator(true));
@@ -270,10 +279,15 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
 
       for (int i = 0; i < concurrencyHint; i++) {
         futures[i] = exec.submit(() -> {
-          for (long j = 0; j < numRows; j++) {
-            if (!grouper.aggregate(new LongKey(j)).isOk()) {
-              throw new ISE("Grouper is full");
+          try {
+            for (long j = 0; j < numRows; j++) {
+              if (!grouper.aggregate(new LongKey(j)).isOk()) {
+                throw new ISE("Grouper is full");
+              }
             }
+          }
+          finally {
+            grouper.clearThreadLocalState();
           }
         });
       }
@@ -291,6 +305,136 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
     }
     finally {
       service.shutdownNow();
+    }
+  }
+
+  @Test
+  public void testWorkerDoesNotRetainGroupersAfterClose() throws Exception
+  {
+    assertWorkerDoesNotRetainGroupers(false, false);
+  }
+
+  @Test
+  public void testWorkerDoesNotRetainGroupersAfterFailure() throws Exception
+  {
+    assertWorkerDoesNotRetainGroupers(true, false);
+  }
+
+  @Test
+  public void testWorkerDoesNotRetainGroupersAfterCancellation() throws Exception
+  {
+    assertWorkerDoesNotRetainGroupers(false, true);
+  }
+
+  private void assertWorkerDoesNotRetainGroupers(final boolean failTask, final boolean cancelTask) throws Exception
+  {
+    final ExecutorService worker = Execs.singleThreaded("grouper-retention-test");
+    final GroupByStatsProvider.PerQueryStats perQueryStats = new GroupByStatsProvider.PerQueryStats();
+    try (final ConcurrentGrouper<LongKey> grouper = new ConcurrentGrouper<>(
+        bufferSupplier,
+        null,
+        KEY_SERDE_FACTORY,
+        KEY_SERDE_FACTORY,
+        NULL_FACTORY,
+        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+        1024,
+        0.7f,
+        1,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, 100000, perQueryStats),
+        new DefaultObjectMapper(),
+        1,
+        null,
+        false,
+        MoreExecutors.listeningDecorator(worker),
+        0,
+        false,
+        0,
+        4,
+        1,
+        mergeThreadLocal,
+        1024 * 1024L,
+        perQueryStats
+    )) {
+      grouper.init();
+      // Reuse the same worker for more tasks than there are grouper slots. Cleanup must not assign a new slot per task.
+      for (int i = 0; i < 4; i++) {
+        final CountDownLatch started = new CountDownLatch(1);
+        final CountDownLatch waitForCancellation = new CountDownLatch(1);
+        final Future<?> task = worker.submit(() -> {
+          try {
+            Assertions.assertTrue(grouper.aggregate(new LongKey(1)).isOk());
+            if (failTask) {
+              throw new ISE("Simulated query task failure");
+            }
+            started.countDown();
+            if (cancelTask) {
+              waitForCancellation.await();
+            }
+            return null;
+          }
+          finally {
+            grouper.clearThreadLocalState();
+          }
+        });
+        if (cancelTask) {
+          Assertions.assertTrue(started.await(10, TimeUnit.SECONDS));
+          Assertions.assertTrue(task.cancel(true));
+        } else if (failTask) {
+          final ExecutionException exception = Assertions.assertThrows(
+              ExecutionException.class,
+              () -> task.get(10, TimeUnit.SECONDS)
+          );
+          Assertions.assertInstanceOf(ISE.class, exception.getCause());
+        } else {
+          task.get(10, TimeUnit.SECONDS);
+        }
+        // Cancellation completes its Future before the task exits. This queued check waits for worker cleanup too.
+        worker.submit(() -> {
+          assertNoGroupersInThreadLocals();
+          return null;
+        }).get(10, TimeUnit.SECONDS);
+      }
+
+      // Cleanup without aggregation must be safe and must not consume a buffer slot.
+      worker.submit(grouper::clearThreadLocalState).get(10, TimeUnit.SECONDS);
+      try (final CloseableIterator<Entry<LongKey>> iterator = grouper.iterator(false)) {
+        final Entry<LongKey> entry = iterator.next();
+        Assertions.assertEquals(new LongKey(1), entry.getKey());
+        Assertions.assertArrayEquals(new Object[]{4L}, entry.getValues());
+        Assertions.assertFalse(iterator.hasNext());
+      }
+      // Queries are closed on a different thread from the processing worker, which remains alive for later queries.
+      grouper.close();
+      worker.submit(() -> {
+        assertNoGroupersInThreadLocals();
+        return null;
+      }).get(10, TimeUnit.SECONDS);
+    }
+    finally {
+      worker.shutdownNow();
+    }
+  }
+
+  private static void assertNoGroupersInThreadLocals() throws ReflectiveOperationException
+  {
+    // Inspect the retention root directly rather than relying on the timing of garbage collection.
+    final Field threadLocalsField = Thread.class.getDeclaredField("threadLocals");
+    threadLocalsField.setAccessible(true);
+    final Object threadLocals = threadLocalsField.get(Thread.currentThread());
+    if (threadLocals == null) {
+      return;
+    }
+    final Field tableField = threadLocals.getClass().getDeclaredField("table");
+    tableField.setAccessible(true);
+    for (final Object entry : (Object[]) tableField.get(threadLocals)) {
+      if (entry != null) {
+        final Field valueField = entry.getClass().getDeclaredField("value");
+        valueField.setAccessible(true);
+        Assertions.assertFalse(
+            valueField.get(entry) instanceof SpillingGrouper,
+            "An idle processing worker must not retain a query's SpillingGrouper through a ThreadLocal"
+        );
+      }
     }
   }
 

@@ -32,6 +32,7 @@ import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.DefaultValue;
 import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
@@ -54,7 +55,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -146,8 +146,8 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
 
     // Read once per scan, so that a Broker dynamic configuration change shows up on the next query
     final QueryConfigProvider.ContextWithOverrides contextWithOverrides = queryConfigProvider.getContextWithOverrides();
-    final Map<String, Object> effectiveContext = contextWithOverrides.context();
-    final Map<String, Object> dynamicContext = contextWithOverrides.dynamicOverrides();
+    final QueryContext effectiveContext = contextWithOverrides.context();
+    final QueryContext dynamicContext = contextWithOverrides.dynamicOverrides();
     final List<Object[]> rows = new ArrayList<>();
     for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
       if (parameter.getVisibility() != QueryContextParameter.Visibility.SYSTEM) {
@@ -179,8 +179,8 @@ public class SystemQueryContextParametersTable extends AbstractTable implements 
   private Object[] toRow(
       final QueryContextParameter<?> parameter,
       final boolean canReadConfig,
-      final Map<String, Object> effectiveContext,
-      final Map<String, Object> dynamicContext
+      final QueryContext effectiveContext,
+      final QueryContext dynamicContext
   )
   {
     final Object contextValue = effectiveContext.get(parameter.getName());

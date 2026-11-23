@@ -423,6 +423,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
       this.location = location;
     }
 
+    @Override
     public Task getTask()
     {
       return task;

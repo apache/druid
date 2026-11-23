@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -177,16 +178,12 @@ public class SegmentsCostCacheTest
 
   private static DataSegment createSegment(String dataSource, Interval interval, long size)
   {
-    return new DataSegment(
-        dataSource,
-        interval,
-        UUID.randomUUID().toString(),
-        new ConcurrentHashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        null,
-        0,
-        size
-    );
+    return DataSegment.builder(SegmentId.of(dataSource, interval, UUID.randomUUID().toString(), 0))
+                      .loadSpec(new ConcurrentHashMap<>())
+                      .dimensions(new ArrayList<>())
+                      .metrics(new ArrayList<>())
+                      .binaryVersion(0)
+                      .size(size)
+                      .build();
   }
 }

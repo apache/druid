@@ -251,9 +251,9 @@ public class DruidRexExecutor implements RexExecutor
     }
   }
 
-  ///
-  /// Whether the leaf element type of an array type, looking through any nested arrays, is a complex type.
-  ///
+  /**
+   * Whether the leaf element type of an array type, looking through any nested arrays, is a complex type.
+   */
   private static boolean isArrayOfComplex(final RelDataType arrayType)
   {
     RelDataType elementType = arrayType.getComponentType();
@@ -274,17 +274,17 @@ public class DruidRexExecutor implements RexExecutor
     return constExp.toString();
   }
 
-  ///
-  /// Reduces literal string and integer arrays without formatting, parsing, or evaluating a Druid expression.
-  ///
-  /// Reuses the original array call when every literal's type matches the array component type, ignoring nullability.
-  /// These literals already have the required types and values, so rebuilding them would only add allocations.
-  /// Nullability differences do not require conversion: a non-null literal may belong to an array with nullable elements,
-  /// and reusing the call preserves both null values and the original array type.
-  ///
-  /// Returns null for mismatched element types, unsupported types, or non-literal operands (including CAST calls).
-  /// These retain the existing Druid expression evaluation path, including any required type normalization.
-  ///
+  /**
+   * Reduces literal string and integer arrays without formatting, parsing, or evaluating a Druid expression.
+   *
+   * <p>Reuses the original array call when every literal's type matches the array component type, ignoring nullability.
+   * These literals already have the required types and values, so rebuilding them would only add allocations.
+   * Nullability differences do not require conversion: a non-null literal may belong to an array with nullable elements,
+   * and reusing the call preserves both null values and the original array type.
+   *
+   * <p>Returns null for mismatched element types, unsupported types, or non-literal operands (including CAST calls).
+   * These retain the existing Druid expression evaluation path, including any required type normalization.
+   */
   @Nullable
   @VisibleForTesting
   static RexNode tryReduceLiteralArray(final RexBuilder rexBuilder, final RexNode expression)

@@ -332,6 +332,7 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
       this.task = task;
     }
 
+    @Override
     public Task getTask()
     {
       return task;
