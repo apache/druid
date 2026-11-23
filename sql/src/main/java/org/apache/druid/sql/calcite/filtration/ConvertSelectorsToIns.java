@@ -231,6 +231,10 @@ public class ConvertSelectorsToIns extends BottomUpTransform
     @Override
     protected RangeRefKey getCollectionKey(EqualityFilter selector)
     {
+      // Typed IN filters support only primitive match values.
+      if (!selector.getMatchValueType().isPrimitive()) {
+        return null;
+      }
       return RangeRefKey.from(selector);
     }
 

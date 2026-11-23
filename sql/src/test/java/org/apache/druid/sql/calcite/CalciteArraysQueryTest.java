@@ -941,6 +941,31 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayEqualityOrFilter()
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.arrays "
+        + "WHERE arrayString = ARRAY['a','b'] OR arrayString = ARRAY['d','e']",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.ARRAYS_DATASOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      or(
+                          equality("arrayString", ImmutableList.of("a", "b"), ColumnType.STRING_ARRAY),
+                          equality("arrayString", ImmutableList.of("d", "e"), ColumnType.STRING_ARRAY)
+                      )
+                  )
+                  .aggregators(new CountAggregatorFactory("a0"))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{6L})
+    );
+  }
+
+  @Test
   public void testArrayOverlapFilterStringArrayColumn()
   {
     testQuery(
