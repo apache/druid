@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import java.time.DateTimeException;
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -73,60 +72,19 @@ public final class HumanReadableDuration
 
   public static HumanReadableDuration parse(String value)
   {
-    return parse(value, TimeUnit.MILLISECONDS);
-  }
-
-  /**
-   * Parse a duration using {@code legacyUnit} only for bare, unsuffixed values.
-   * Explicit suffixes and ISO-8601 values always have their specified units.
-   */
-  public static HumanReadableDuration parse(String value, TimeUnit legacyUnit)
-  {
     if (value == null || value.trim().isEmpty()) {
       throw new IAE("Duration must not be null or blank");
-    }
-    if (legacyUnit == null) {
-      throw new IAE("Legacy time unit must not be null");
     }
 
     final String text = value.trim();
     if (text.startsWith("P")) {
-      try {
-        final Matcher weeks = ISO_WEEK_DURATION.matcher(text);
-        final Duration duration;
-
-        if (weeks.matches()) {
-          // Preserve legacy ISO weeks as fixed seven-day durations.
-          final long days = Math.addExact(
-              Math.multiplyExact(Long.parseLong(weeks.group(1)), 7L),
-              weeks.group(2) == null
-                  ? 0L
-                  : Long.parseLong(weeks.group(2))
-          );
-
-          duration = Duration.parse(
-              "P" + days + "D"
-              + (weeks.group(3) == null ? "" : weeks.group(3))
-          );
-        } else {
-          duration = Duration.parse(text);
-        }
-
-        if (duration.isNegative()) {
-          throw new IAE("Duration cannot be negative: %s", text);
-        }
-
-        return ofNanos(duration.toNanos());
-      }
-      catch (DateTimeException | ArithmeticException | NumberFormatException e) {
-        throw new IAE(e, "Invalid or out-of-range ISO duration: %s", text);
-      }
+      return parsePeriod(text);
     }
 
     final long multiplier;
     final String digits;
     if (BARE_NUMBER.matcher(text).matches()) {
-      multiplier = TimeUnit.NANOSECONDS.convert(1, legacyUnit);
+      multiplier = NANOS_PER_MILLI;
       digits = text;
     } else {
       final Matcher matcher = SUFFIXED_NUMBER.matcher(text);
@@ -142,6 +100,40 @@ public final class HumanReadableDuration
     }
     catch (NumberFormatException | ArithmeticException e) {
       throw new IAE(e, "Duration is out of range: %s", text);
+    }
+  }
+
+  private static HumanReadableDuration parsePeriod(String text)
+  {
+    try {
+      final Matcher weeks = ISO_WEEK_DURATION.matcher(text);
+      final Duration duration;
+
+      if (weeks.matches()) {
+        // Preserve legacy ISO weeks as fixed seven-day durations.
+        final long days = Math.addExact(
+            Math.multiplyExact(Long.parseLong(weeks.group(1)), 7L),
+            weeks.group(2) == null
+                ? 0L
+                : Long.parseLong(weeks.group(2))
+        );
+
+        duration = Duration.parse(
+            "P" + days + "D"
+            + (weeks.group(3) == null ? "" : weeks.group(3))
+        );
+      } else {
+        duration = Duration.parse(text);
+      }
+
+      if (duration.isNegative()) {
+        throw new IAE("Duration cannot be negative: %s", text);
+      }
+
+      return ofNanos(duration.toNanos());
+    }
+    catch (DateTimeException | ArithmeticException | NumberFormatException e) {
+      throw new IAE(e, "Invalid or out-of-range ISO duration: %s", text);
     }
   }
 

@@ -45,7 +45,7 @@ public class DruidHttpClientConfig
   private int numConnections = 20;
 
   @JsonProperty
-  private HumanReadableDuration readTimeout = HumanReadableDuration.parse("PT15M");
+  private HumanReadableDuration readTimeout = HumanReadableDuration.parse("15m");
 
   @JsonProperty
   @Min(1)
@@ -62,7 +62,7 @@ public class DruidHttpClientConfig
   private int requestBuffersize = 8 * 1024;
 
   @JsonProperty
-  private HumanReadableDuration unusedConnectionTimeout = HumanReadableDuration.parse("PT4M");
+  private HumanReadableDuration unusedConnectionTimeout = HumanReadableDuration.parse("4m");
 
   /**
    * Maximum number of bytes queued per query before exerting backpressure. Not always used; currently, it's only
@@ -90,7 +90,7 @@ public class DruidHttpClientConfig
    * request-forwarding servlets (Router query proxying, management API forwarding).
    */
   @JsonProperty
-  private HumanReadableDuration connectTimeout = HumanReadableDuration.parse("PT10S");
+  private HumanReadableDuration connectTimeout = HumanReadableDuration.parse("10s");
 
   /**
    * Netty ByteBufAllocator to use for the direct-RPC HTTP client. One of "adaptive" (default, matches Netty's own

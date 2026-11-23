@@ -54,7 +54,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 /**
  * Central catalog of query context parameter descriptors.
@@ -86,7 +85,7 @@ import java.util.regex.Pattern;
  */
 public final class QueryContextParameters
 {
-  private static final Pattern DURATION_SUFFIX_PATTERN = Pattern.compile("[0-9]+(ns|us|ms|s|m|h|d)");
+
 
   // region General query parameters
   //
@@ -2665,17 +2664,14 @@ public final class QueryContextParameters
         Long.class,
         value -> {
           if (value instanceof String text) {
-            final String trimmed = text.trim();
-            if (trimmed.startsWith("P") || DURATION_SUFFIX_PATTERN.matcher(trimmed).matches()) {
-              try {
-                return HumanReadableDuration.parse(trimmed).getMillis();
-              }
-              catch (IAE e) {
-                throw invalidValueException(name, "a valid non-negative duration", value);
-              }
+            try {
+              return HumanReadableDuration.parse(text).getMillis();
+            }
+            catch (IAE e) {
+              // Preserve legacy numeric Long values that cannot fit in a nanosecond-backed duration.
+              return QueryContexts.getAsLong(name, value);
             }
           }
-          // Keep the full legacy Long range, including values larger than the nanosecond range.
           return QueryContexts.getAsLong(name, value);
         }
     );

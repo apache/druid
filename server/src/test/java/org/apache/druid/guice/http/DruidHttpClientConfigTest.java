@@ -26,6 +26,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Properties;
 
@@ -137,31 +139,15 @@ public class DruidHttpClientConfigTest
     Assertions.assertEquals(1L, configure(properties).getClientConnectTimeout());
   }
 
-  @Test
-  public void testInvalidDurationPropertiesAreRejected()
-  {
-    for (String input : new String[]{"-5s", "1.5h", "P1M", "9999999999d"}) {
-      final Properties properties = new Properties();
-      properties.setProperty(PROPERTY_BASE + ".readTimeout", input);
-      Assertions.assertThrows(RuntimeException.class, () -> configure(properties), input);
-    }
-  }
-
-  @Test
-  public void testLegacyIsoWeekDurationProperties()
+  @ParameterizedTest
+  @ValueSource(strings = {"-5s", "1.5h", "P1M", "9999999999d"})
+  public void testInvalidDurationPropertiesAreRejected(String input)
   {
     final Properties properties = new Properties();
-
-    properties.setProperty(PROPERTY_BASE + ".readTimeout", "P2W");
-    properties.setProperty(PROPERTY_BASE + ".unusedConnectionTimeout", "P1W");
-    properties.setProperty(PROPERTY_BASE + ".connectTimeout", "P1W");
-
-    final DruidHttpClientConfig config = configure(properties);
-
-    Assertions.assertEquals(1_209_600_000L, config.getReadTimeout().getMillis());
-    Assertions.assertEquals(604_800_000L, config.getUnusedConnectionTimeout().getMillis());
-    Assertions.assertEquals(604_800_000L, config.getConnectTimeout().getMillis());
+    properties.setProperty(PROPERTY_BASE + ".readTimeout", input);
+    Assertions.assertThrows(RuntimeException.class, () -> configure(properties), input);
   }
+
   private static DruidHttpClientConfig configure(Properties properties)
   {
     final JsonConfigurator configurator = new JsonConfigurator(

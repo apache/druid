@@ -28,7 +28,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 public class HumanReadableDurationTest
 {
@@ -57,9 +56,25 @@ public class HumanReadableDurationTest
 
   @ParameterizedTest
   @ValueSource(strings = {
-      "", " ", "-5s", "1.5h", "2h45m", "30 s", "5 m",
-      "30S", "5M", "2H", "5min", "3sec", "1w", "P1M", "P1Y",
-      "9999999999d", "s", "-1", "9223372036854775807"
+      "",
+      " ",
+      "-5s",
+      "1.5h",
+      "2h45m",
+      "30 s",
+      "5 m",
+      "30S",
+      "5M",
+      "2H",
+      "5min",
+      "3sec",
+      "1w",
+      "P1M",
+      "P1Y",
+      "9999999999d", // Duration exceeds the nanosecond-backed long range.
+      "s",
+      "-1",
+      "9223372036854775807" // Milliseconds overflow when converted to nanoseconds.
   })
   public void testInvalidDurations(String text)
   {
@@ -82,22 +97,11 @@ public class HumanReadableDurationTest
     Assertions.assertEquals(615_600_000L, HumanReadableDuration.parse("P1WT3H").getMillis());
     Assertions.assertEquals(788_400_000L, HumanReadableDuration.parse("P1W2DT3H").getMillis());
 
+    // Negative ISO week values are not supported.
     Assertions.assertThrows(IAE.class, () -> HumanReadableDuration.parse("P-1W"));
+    // Twenty thousand weeks exceed the nanosecond-backed long range.
     Assertions.assertThrows(IAE.class, () -> HumanReadableDuration.parse("P20000W"));
   }
-  @Test
-  public void testLegacySeconds()
-  {
-    Assertions.assertEquals(
-        30_000,
-        HumanReadableDuration.parse("30", TimeUnit.SECONDS).getMillis()
-    );
-    Assertions.assertEquals(
-        30_000,
-        HumanReadableDuration.parse("30s", TimeUnit.SECONDS).getMillis()
-    );
-  }
-
   @Test
   public void testNanosecondPrecisionAndCeiling()
   {
@@ -126,16 +130,35 @@ public class HumanReadableDurationTest
   }
 
   @Test
-  public void testJsonBackwardCompatibility() throws JsonProcessingException
+  public void testJsonDeserialization() throws JsonProcessingException
   {
-    Assertions.assertEquals(
-        HumanReadableDuration.parse("30s"),
-        MAPPER.readValue("30000", HumanReadableDuration.class)
-    );
-    Assertions.assertEquals(
-        HumanReadableDuration.parse("30s"),
-        MAPPER.readValue("\"PT30S\"", HumanReadableDuration.class)
-    );
+    final HumanReadableDuration expected = HumanReadableDuration.parse("30s");
+
+    Assertions.assertEquals(expected, MAPPER.readValue("30000", HumanReadableDuration.class));
+    Assertions.assertEquals(expected, MAPPER.readValue("\"30000\"", HumanReadableDuration.class));
+    Assertions.assertEquals(expected, MAPPER.readValue("\"PT30S\"", HumanReadableDuration.class));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+      "1ns, 1",
+      "1us, 1000",
+      "1ms, 1000000",
+      "1s, 1000000000",
+      "1m, 60000000000",
+      "1h, 3600000000000",
+      "1d, 86400000000000"
+  })
+  public void testJsonDeserializationUnitSuffixes(String value, long expectedNanos)
+      throws JsonProcessingException
+  {
+    final String json = MAPPER.writeValueAsString(value);
+    Assertions.assertEquals(expectedNanos, MAPPER.readValue(json, HumanReadableDuration.class).getNanos());
+  }
+
+  @Test
+  public void testJsonSerialization() throws JsonProcessingException
+  {
     Assertions.assertEquals("30000", MAPPER.writeValueAsString(HumanReadableDuration.parse("30s")));
     Assertions.assertEquals("\"250us\"", MAPPER.writeValueAsString(HumanReadableDuration.parse("250us")));
   }
