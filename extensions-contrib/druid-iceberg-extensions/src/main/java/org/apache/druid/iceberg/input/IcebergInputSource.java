@@ -39,8 +39,6 @@ import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.iceberg.DeleteFile;
-import org.apache.iceberg.FileContent;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.Table;
@@ -76,7 +74,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   public static final String TYPE_KEY = "iceberg";
 
   /** Marker placed at index 0 of a V2-encoded split list. */
-  private static final String V2_MARKER = "v2";
+  private static final String V2_MARKER = IcebergFileTaskInputSource.V2_MARKER;
 
   private final String tableName;
   private final String namespace;
@@ -451,33 +449,17 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
      */
     private InputSplit<List<String>> taskToV2Split(FileScanTask task)
     {
-      List<String> parts = new ArrayList<>();
-      parts.add(V2_MARKER);
-      parts.add(task.file().location());
-      parts.add(task.file().format().name());
-      parts.add(String.valueOf(task.file().fileSizeInBytes()));
-      parts.add(String.valueOf(task.file().recordCount()));
-      parts.add(tableSchemaJson);
-
-      for (DeleteFile deleteFile : task.deletes()) {
-        if (deleteFile.content() == FileContent.POSITION_DELETES) {
-          parts.add("POS:" + deleteFile.fileSizeInBytes()
-                    + ":" + deleteFile.recordCount()
-                    + ":" + deleteFile.location());
-        } else {
-          // EQUALITY_DELETES
-          String fieldIds = deleteFile.equalityFieldIds() == null
-                            ? ""
-                            : deleteFile.equalityFieldIds().stream()
-                                        .map(String::valueOf)
-                                        .collect(Collectors.joining(","));
-          parts.add("EQ:" + fieldIds
-                    + ":" + deleteFile.fileSizeInBytes()
-                    + ":" + deleteFile.recordCount()
-                    + ":" + deleteFile.location());
-        }
-      }
-      return new InputSplit<>(parts);
+      return IcebergFileTaskInputSource.encodeV2Split(
+          task.file().location(),
+          task.file().format().name(),
+          task.file().fileSizeInBytes(),
+          task.file().recordCount(),
+          tableSchemaJson,
+          task.deletes()
+              .stream()
+              .map(IcebergFileTaskInputSource.DeleteFileInfo::fromDeleteFile)
+              .collect(Collectors.toList())
+      );
     }
 
     /**

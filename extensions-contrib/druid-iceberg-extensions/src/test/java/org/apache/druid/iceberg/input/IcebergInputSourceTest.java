@@ -613,10 +613,18 @@ public class IcebergInputSourceTest
     Assertions.assertTrue(splitSource.needsFormat(), "V2 split source must request the configured InputFormat");
     // MSQ's external slicer re-splits the result of withSplit and casts it to SplittableInputSource.
     Assertions.assertTrue(splitSource instanceof SplittableInputSource, "V2 split source must be a SplittableInputSource");
+    // MSQ feeds the file-task source's split back through the original source, so it must round-trip with deletes.
+    @SuppressWarnings("unchecked")
+    final List<InputSplit<List<String>>> resplit =
+        ((SplittableInputSource<List<String>>) splitSource).createSplits(null, null).collect(Collectors.toList());
+    Assertions.assertEquals(1, resplit.size(), "V2 split source must yield exactly one split");
+    Assertions.assertEquals(splits.get(0).get(), resplit.get(0).get(), "Re-split must preserve the V2 encoding");
+    final InputSource roundTripped = inputSource.withSplit(resplit.get(0));
+    Assertions.assertTrue(roundTripped instanceof IcebergFileTaskInputSource);
     Assertions.assertEquals(
-        1,
-        ((SplittableInputSource<?>) splitSource).createSplits(null, null).count(),
-        "V2 split source must yield exactly one split"
+        ((IcebergFileTaskInputSource) splitSource).getDeleteFiles().size(),
+        ((IcebergFileTaskInputSource) roundTripped).getDeleteFiles().size(),
+        "Delete files must survive MSQ re-slicing"
     );
 
     // A V1 split (no marker) should return a non-IcebergFileTaskInputSource.

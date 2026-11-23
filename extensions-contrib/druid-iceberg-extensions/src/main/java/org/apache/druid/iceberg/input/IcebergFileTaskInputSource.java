@@ -34,8 +34,10 @@ import org.apache.iceberg.DeleteFile;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -56,6 +58,7 @@ import java.util.stream.Stream;
 public class IcebergFileTaskInputSource implements SplittableInputSource<List<String>>
 {
   public static final String TYPE_KEY = "icebergFileTask";
+  static final String V2_MARKER = "v2";
 
   @JsonProperty
   private final String dataFilePath;
@@ -134,8 +137,9 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
 
   /**
    * This source already represents exactly one split, but callers such as the MSQ external slicer re-split the
-   * result of {@code withSplit} and require it to be a {@link SplittableInputSource}. So it yields itself as the one
-   * and only split.
+   * result of {@code withSplit} and require it to be a {@link SplittableInputSource}. The slicer then feeds that
+   * split back through {@link IcebergInputSource#withSplit}, so it must be the full V2-encoded split (including the
+   * delete file metadata), not just the data file path; otherwise the deletes would be bypassed.
    */
   @Override
   public Stream<InputSplit<List<String>>> createSplits(
@@ -143,7 +147,9 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
       @Nullable SplitHintSpec splitHintSpec
   )
   {
-    return Stream.of(new InputSplit<>(Collections.singletonList(dataFilePath)));
+    return Stream.of(
+        encodeV2Split(dataFilePath, fileFormat, dataFileSizeInBytes, dataFileRecordCount, tableSchemaJson, deleteFiles)
+    );
   }
 
   @Override
@@ -219,6 +225,48 @@ public class IcebergFileTaskInputSource implements SplittableInputSource<List<St
   public String getTableName()
   {
     return tableName;
+  }
+
+  /**
+   * Encodes one file scan task as a V2 split: {@code [V2_MARKER, dataFilePath, format, dataFileSize,
+   * dataFileRecordCount, tableSchemaJson, deleteToken...]} where each delete token is
+   * {@code POS:<size>:<count>:<path>} or {@code EQ:<fieldIds>:<size>:<count>:<path>}.
+   * {@link IcebergInputSource#withSplit} decodes this format.
+   */
+  static InputSplit<List<String>> encodeV2Split(
+      String dataFilePath,
+      String fileFormat,
+      long dataFileSizeInBytes,
+      long dataFileRecordCount,
+      String tableSchemaJson,
+      List<DeleteFileInfo> deleteFiles
+  )
+  {
+    final List<String> parts = new ArrayList<>();
+    parts.add(V2_MARKER);
+    parts.add(dataFilePath);
+    parts.add(fileFormat);
+    parts.add(String.valueOf(dataFileSizeInBytes));
+    parts.add(String.valueOf(dataFileRecordCount));
+    parts.add(tableSchemaJson);
+
+    for (DeleteFileInfo deleteFile : deleteFiles) {
+      if (deleteFile.isPositionDelete()) {
+        parts.add("POS:" + deleteFile.getFileSizeInBytes()
+                  + ":" + deleteFile.getRecordCount()
+                  + ":" + deleteFile.getPath());
+      } else {
+        final String fieldIds = deleteFile.getEqualityFieldIds()
+                                          .stream()
+                                          .map(String::valueOf)
+                                          .collect(Collectors.joining(","));
+        parts.add("EQ:" + fieldIds
+                  + ":" + deleteFile.getFileSizeInBytes()
+                  + ":" + deleteFile.getRecordCount()
+                  + ":" + deleteFile.getPath());
+      }
+    }
+    return new InputSplit<>(parts);
   }
 
   /**
