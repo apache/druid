@@ -30,7 +30,6 @@ import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.Cos
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DOWN_DELAY;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_UP_DELAY;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_SCALE_ACTION_PERIOD;
-import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.WeightedCostFunction.DEFAULT_HIGH_LAG_COST_FACTOR;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO;
 
 @SuppressWarnings("TextBlockMigration")
@@ -55,7 +54,8 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"optimalTaskIdleRatio\": 0.3,\n"
                   + "  \"minScaleUpDelay\": \"PT5M\",\n"
                   + "  \"minScaleDownDelay\": \"PT10M\",\n"
-                  + "  \"scaleDownDuringTaskRolloverOnly\": true,\n"
+                  + "  \"scaleDownDuringTaskRolloverOnly\": false,\n"
+                  + "  \"useTaskCountBoundariesOnScaleUp\": false,\n"
                   + "  \"usePollIdleRatio\": false,\n"
                   + "  \"criticalLagThreshold\": 500000,\n"
                   + "  \"minCostDropPercentForScaling\": 10,\n"
@@ -75,7 +75,7 @@ public class CostBasedAutoScalerConfigTest
     Assertions.assertEquals(0.3, config.getOptimalTaskIdleRatio(), 0.001);
     Assertions.assertEquals(Duration.standardMinutes(5), config.getMinScaleUpDelay());
     Assertions.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
-    Assertions.assertTrue(config.isScaleDownOnTaskRolloverOnly());
+    Assertions.assertFalse(config.isScaleDownOnTaskRolloverOnly());
     Assertions.assertFalse(config.isUsePollIdleRatio());
     Assertions.assertFalse(config.isUseTaskCountBoundariesOnScaleUp());
     Assertions.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
@@ -114,15 +114,19 @@ public class CostBasedAutoScalerConfigTest
     // minScaleUpDelay and minScaleDownDelay each have their own independent default
     Assertions.assertEquals(DEFAULT_MIN_SCALE_UP_DELAY, config.getMinScaleUpDelay());
     Assertions.assertEquals(DEFAULT_MIN_SCALE_DOWN_DELAY, config.getMinScaleDownDelay());
-    Assertions.assertFalse(config.isScaleDownOnTaskRolloverOnly());
+    Assertions.assertTrue(config.isScaleDownOnTaskRolloverOnly());
     Assertions.assertTrue(config.isUsePollIdleRatio());
-    Assertions.assertFalse(config.isUseTaskCountBoundariesOnScaleUp());
+    Assertions.assertTrue(config.isUseTaskCountBoundariesOnScaleUp());
     Assertions.assertTrue(config.isUseTaskCountBoundariesOnScaleDown());
     Assertions.assertNull(config.getTaskCountStart());
     Assertions.assertNull(config.getStopTaskCountRatio());
     Assertions.assertNull(config.getCriticalLagThreshold());
     Assertions.assertEquals(0, config.getMinCostDropPercentForScaling());
-    Assertions.assertEquals(DEFAULT_HIGH_LAG_COST_FACTOR, config.getHighLagCostFactor(), 0.001);
+    Assertions.assertEquals(
+        CostBasedAutoScalerConfig.DEFAULT_HIGH_LAG_COST_FACTOR,
+        config.getHighLagCostFactor(),
+        0.001
+    );
   }
 
   @Test

@@ -149,6 +149,7 @@ public class MultipleKubernetesTaskRunnerConfig extends KubernetesTaskRunnerStat
       @JsonProperty("useK8sSharedInformers") Boolean useK8sSharedInformers,
       @JsonProperty("k8sSharedInformerResyncPeriod") Period k8sSharedInformerResyncPeriod,
       @JsonProperty("allowTaskPodTemplateSelection") Boolean allowTaskPodTemplateSelection,
+      @JsonProperty("allowTaskImageTagOverride") Boolean allowTaskImageTagOverride,
       @JsonProperty("advertisedPlaintextPort") Integer advertisedPlaintextPort
   )
   {
@@ -177,6 +178,7 @@ public class MultipleKubernetesTaskRunnerConfig extends KubernetesTaskRunnerStat
         useK8sSharedInformers != null && useK8sSharedInformers,
         k8sSharedInformerResyncPeriod,
         allowTaskPodTemplateSelection != null && allowTaskPodTemplateSelection,
+        allowTaskImageTagOverride != null && allowTaskImageTagOverride,
         advertisedPlaintextPort
     );
     Preconditions.checkNotNull(clusters);

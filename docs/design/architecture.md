@@ -127,7 +127,7 @@ For more information, see [Coordinator Operation](../configuration/index.md#coor
 
 ### Historicals and Middle Managers
 
-With higher levels of ingestion or query load, it can make sense to deploy the Historical and Middle Manager services on separate hosts to to avoid CPU and memory contention.
+With higher levels of ingestion or query load, it can make sense to deploy the Historical and Middle Manager services on separate hosts to avoid CPU and memory contention.
 
 The Historical service also benefits from having free memory for memory mapped segments, which can be another reason to deploy the Historical and Middle Manager services separately.
 

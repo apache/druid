@@ -58,7 +58,7 @@ fi
 PR_NUMBER="$1"
 REPOSITORY="$2"
 
-VERSION=$(xmllint --xpath "/*[local-name()='project']/*[local-name()='version']/text()" pom.xml | sed 's/-SNAPSHOT//')
+VERSION=$(xmllint --xpath "/*[local-name()='project']/*[local-name()='properties']/*[local-name()='revision']/text()" pom.xml | sed 's/-SNAPSHOT//')
 
 if [ -z "$VERSION" ]; then
   echo "Error: Could not extract version from pom.xml"

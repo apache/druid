@@ -56,7 +56,7 @@ Before you can contribute to the Druid docs for the first time, you must complet
    ```
 
    Replace `GITHUB_USERNAME` with your GitHub username.
-3. In the directory where you cloned your fork, set up `apache/druid`  as your your remote `upstream` repo:
+3. In the directory where you cloned your fork, set up `apache/druid`  as your remote `upstream` repo:
 
    ```bash
    git remote add upstream https://github.com/apache/druid.git
