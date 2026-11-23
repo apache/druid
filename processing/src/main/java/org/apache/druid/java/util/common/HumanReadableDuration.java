@@ -39,6 +39,7 @@ public final class HumanReadableDuration
   private static final long NANOS_PER_MILLI = 1_000_000L;
   private static final Pattern BARE_NUMBER = Pattern.compile("[0-9]+");
   private static final Pattern SUFFIXED_NUMBER = Pattern.compile("([0-9]+)(ns|us|ms|s|m|h|d)");
+  private static final Pattern ISO_WEEK_DURATION = Pattern.compile("P([0-9]+)W(?:([0-9]+)D)?(T.*)?");
 
   public static final HumanReadableDuration ZERO = new HumanReadableDuration(0L);
 
@@ -91,13 +92,33 @@ public final class HumanReadableDuration
     final String text = value.trim();
     if (text.startsWith("P")) {
       try {
-        final Duration duration = Duration.parse(text);
+        final Matcher weeks = ISO_WEEK_DURATION.matcher(text);
+        final Duration duration;
+
+        if (weeks.matches()) {
+          // Preserve legacy ISO weeks as fixed seven-day durations.
+          final long days = Math.addExact(
+              Math.multiplyExact(Long.parseLong(weeks.group(1)), 7L),
+              weeks.group(2) == null
+                  ? 0L
+                  : Long.parseLong(weeks.group(2))
+          );
+
+          duration = Duration.parse(
+              "P" + days + "D"
+              + (weeks.group(3) == null ? "" : weeks.group(3))
+          );
+        } else {
+          duration = Duration.parse(text);
+        }
+
         if (duration.isNegative()) {
           throw new IAE("Duration cannot be negative: %s", text);
         }
+
         return ofNanos(duration.toNanos());
       }
-      catch (DateTimeException | ArithmeticException e) {
+      catch (DateTimeException | ArithmeticException | NumberFormatException e) {
         throw new IAE(e, "Invalid or out-of-range ISO duration: %s", text);
       }
     }

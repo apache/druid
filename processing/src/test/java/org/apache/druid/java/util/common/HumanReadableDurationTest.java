@@ -73,6 +73,19 @@ public class HumanReadableDurationTest
   }
 
   @Test
+  public void testIsoWeekDurationCompatibility()
+  {
+    Assertions.assertEquals(0L, HumanReadableDuration.parse("P0W").getMillis());
+    Assertions.assertEquals(604_800_000L, HumanReadableDuration.parse("P1W").getMillis());
+    Assertions.assertEquals(1_209_600_000L, HumanReadableDuration.parse("P2W").getMillis());
+    Assertions.assertEquals(777_600_000L, HumanReadableDuration.parse("P1W2D").getMillis());
+    Assertions.assertEquals(615_600_000L, HumanReadableDuration.parse("P1WT3H").getMillis());
+    Assertions.assertEquals(788_400_000L, HumanReadableDuration.parse("P1W2DT3H").getMillis());
+
+    Assertions.assertThrows(IAE.class, () -> HumanReadableDuration.parse("P-1W"));
+    Assertions.assertThrows(IAE.class, () -> HumanReadableDuration.parse("P20000W"));
+  }
+  @Test
   public void testLegacySeconds()
   {
     Assertions.assertEquals(

@@ -147,6 +147,21 @@ public class DruidHttpClientConfigTest
     }
   }
 
+  @Test
+  public void testLegacyIsoWeekDurationProperties()
+  {
+    final Properties properties = new Properties();
+
+    properties.setProperty(PROPERTY_BASE + ".readTimeout", "P2W");
+    properties.setProperty(PROPERTY_BASE + ".unusedConnectionTimeout", "P1W");
+    properties.setProperty(PROPERTY_BASE + ".connectTimeout", "P1W");
+
+    final DruidHttpClientConfig config = configure(properties);
+
+    Assertions.assertEquals(1_209_600_000L, config.getReadTimeout().getMillis());
+    Assertions.assertEquals(604_800_000L, config.getUnusedConnectionTimeout().getMillis());
+    Assertions.assertEquals(604_800_000L, config.getConnectTimeout().getMillis());
+  }
   private static DruidHttpClientConfig configure(Properties properties)
   {
     final JsonConfigurator configurator = new JsonConfigurator(
