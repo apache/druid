@@ -49,6 +49,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   static final Duration DEFAULT_MIN_SCALE_UP_DELAY = Duration.standardMinutes(15);
   static final Duration DEFAULT_MIN_SCALE_DOWN_DELAY = Duration.standardMinutes(30);
   static final Duration DEFAULT_SCALE_ACTION_PERIOD = Duration.standardMinutes(2);
+  static final double DEFAULT_HIGH_LAG_COST_FACTOR = 6.0;
 
   private final boolean enableTaskAutoScaler;
   private final int taskCountMax;
@@ -96,7 +97,10 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   )
   {
     this.enableTaskAutoScaler = Configs.valueOrDefault(enableTaskAutoScaler, false);
-    this.scaleActionPeriodMillis = Configs.valueOrDefault(scaleActionPeriodMillis, DEFAULT_SCALE_ACTION_PERIOD.getMillis());
+    this.scaleActionPeriodMillis = Configs.valueOrDefault(
+        scaleActionPeriodMillis,
+        DEFAULT_SCALE_ACTION_PERIOD.getMillis()
+    );
 
     this.lagWeight = Configs.valueOrDefault(lagWeight, DEFAULT_LAG_WEIGHT);
     this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
@@ -104,11 +108,11 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         optimalTaskIdleRatio,
         WeightedCostFunction.OPTIMAL_TASK_IDLE_RATIO
     );
-    this.useTaskCountBoundariesOnScaleUp = Configs.valueOrDefault(useTaskCountBoundariesOnScaleUp, false);
+    this.useTaskCountBoundariesOnScaleUp = Configs.valueOrDefault(useTaskCountBoundariesOnScaleUp, true);
     this.useTaskCountBoundariesOnScaleDown = Configs.valueOrDefault(useTaskCountBoundariesOnScaleDown, true);
     this.minScaleUpDelay = Configs.valueOrDefault(minScaleUpDelay, DEFAULT_MIN_SCALE_UP_DELAY);
     this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DOWN_DELAY);
-    this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
+    this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, true);
     this.usePollIdleRatio = Configs.valueOrDefault(usePollIdleRatio, true);
     this.criticalLagThreshold = criticalLagThreshold;
 
@@ -121,10 +125,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         this.minCostDropPercentForScaling >= 0 && this.minCostDropPercentForScaling <= 100,
         "minCostDropPercentForScaling must be between 0 and 100"
     );
-    this.highLagCostFactor = Configs.valueOrDefault(
-        highLagCostFactor,
-        WeightedCostFunction.DEFAULT_HIGH_LAG_COST_FACTOR
-    );
+    this.highLagCostFactor = Configs.valueOrDefault(highLagCostFactor, DEFAULT_HIGH_LAG_COST_FACTOR);
     Preconditions.checkArgument(
         this.highLagCostFactor >= 0,
         "highLagCostFactor must be >= 0"
@@ -233,7 +234,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
 
   @Deprecated
   @Override
-  @JsonProperty
   public long getMinTriggerScaleActionFrequencyMillis()
   {
     return -1;
@@ -266,8 +266,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   /**
-   * Target idle ratio representing the optimal operating point for the U-shaped idle cost
-   * in {@link WeightedCostFunction}.
+   * Target idle ratio representing the optimal operating point for the U-shaped
+   * idle cost in {@link WeightedCostFunction}. The idle cost is at its minimum
+   * when the observed poll-idle ratio equals this value.
    */
   @JsonProperty
   public double getOptimalTaskIdleRatio()
