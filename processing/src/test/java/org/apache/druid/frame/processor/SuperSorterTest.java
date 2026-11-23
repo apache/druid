@@ -299,6 +299,7 @@ public class SuperSorterTest
       Assertions.assertEquals(List.of(List.of(0L, 1L, 2L)), result.partitions());
       Assertions.assertEquals(1, result.mergingLevels(), "low-limit sort must not spill to disk");
       MatcherAssert.assertThat(result.truncatingMerges(), Matchers.greaterThan(1));
+      assertAllTruncatingMergesTracked(result);
     }
 
     @Test
@@ -311,6 +312,8 @@ public class SuperSorterTest
       Assertions.assertEquals(List.of(longRange(0, 95)), result.partitions());
       MatcherAssert.assertThat(result.mergingLevels(), Matchers.greaterThan(1));
       Assertions.assertEquals(0, result.truncatingMerges(), "estimate must skip truncating merges up front");
+      Assertions.assertEquals(0, result.progress().getTruncatingMerges());
+      Assertions.assertEquals(0, result.progress().getFramesDroppedByTruncatingMerges());
     }
 
     @Test
@@ -347,6 +350,12 @@ public class SuperSorterTest
           result.truncatingMerges(),
           Matchers.greaterThanOrEqualTo(2)
       );
+      Assertions.assertEquals(
+          result.truncatingMerges() - 1,
+          result.progress().getTruncatingMerges(),
+          "the overflowed truncating merge is not tracked"
+      );
+      MatcherAssert.assertThat(result.progress().getFramesDroppedByTruncatingMerges(), Matchers.greaterThan(0L));
     }
 
     @Test
@@ -364,6 +373,7 @@ public class SuperSorterTest
       Assertions.assertEquals(List.of(expected), result.partitions());
       Assertions.assertEquals(1, result.mergingLevels());
       MatcherAssert.assertThat(result.truncatingMerges(), Matchers.greaterThan(1));
+      assertAllTruncatingMergesTracked(result);
     }
 
     @Test
@@ -385,6 +395,7 @@ public class SuperSorterTest
       Assertions.assertEquals(List.of(List.of(0L, 1L), List.of(2L)), result.partitions());
       Assertions.assertEquals(1, result.mergingLevels());
       MatcherAssert.assertThat(result.truncatingMerges(), Matchers.greaterThan(1));
+      assertAllTruncatingMergesTracked(result);
     }
 
     @Test
@@ -402,6 +413,7 @@ public class SuperSorterTest
       Assertions.assertEquals(List.of(List.of(0L, 1L, 2L)), result.partitions());
       Assertions.assertEquals(1, result.mergingLevels());
       MatcherAssert.assertThat(result.truncatingMerges(), Matchers.greaterThan(1));
+      assertAllTruncatingMergesTracked(result);
     }
 
     @Test
@@ -427,11 +439,21 @@ public class SuperSorterTest
           Assertions.assertEquals(List.of(longRange(0, 7)), result.partitions());
           Assertions.assertEquals(1, result.mergingLevels());
           MatcherAssert.assertThat(result.truncatingMerges(), Matchers.greaterThan(1));
+      assertAllTruncatingMergesTracked(result);
         }
       }
       finally {
         multiThreadedExec.getExecutorService().shutdownNow();
       }
+    }
+
+    /**
+     * Asserts that every truncating merge the sort launched completed without overflowing, and that they dropped frames.
+     */
+    private static void assertAllTruncatingMergesTracked(final SortResult result)
+    {
+      Assertions.assertEquals(result.truncatingMerges(), result.progress().getTruncatingMerges());
+      MatcherAssert.assertThat(result.progress().getFramesDroppedByTruncatingMerges(), Matchers.greaterThan(0L));
     }
 
     /**
@@ -443,9 +465,14 @@ public class SuperSorterTest
 
     /**
      * Output values of a sort, one list per partition, its number of merging levels (more than one means it spilled
-     * to disk), and the number of truncating merges it launched, including any that overflowed.
+     * to disk), the number of truncating merges it launched, including any that overflowed, and its final progress.
      */
-    private record SortResult(List<List<Object>> partitions, int mergingLevels, int truncatingMerges)
+    private record SortResult(
+        List<List<Object>> partitions,
+        int mergingLevels,
+        int truncatingMerges,
+        SuperSorterProgressSnapshot progress
+    )
     {
     }
 
@@ -523,11 +550,8 @@ public class SuperSorterTest
         outputRows.add(rows);
       }
 
-      return new SortResult(
-          outputRows,
-          progressTracker.snapshot().getTotalMergingLevels(),
-          truncatingMerges.get()
-      );
+      final SuperSorterProgressSnapshot progress = progressTracker.snapshot();
+      return new SortResult(outputRows, progress.getTotalMergingLevels(), truncatingMerges.get(), progress);
     }
 
     /**

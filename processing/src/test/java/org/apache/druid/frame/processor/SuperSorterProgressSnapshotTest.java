@@ -148,11 +148,44 @@ public class SuperSorterProgressSnapshotTest
         ImmutableMap.of(1, 2L),
         ImmutableMap.of(1, 3L),
         8,
-        false
+        false,
+        4,
+        30
     );
 
     final String jsonString = jsonMapper.writeValueAsString(snapshot);
     Assertions.assertEquals(snapshot, jsonMapper.readValue(jsonString, SuperSorterProgressSnapshot.class));
+  }
+
+  @Test
+  public void testSerdeWithoutTruncatingMerges() throws Exception
+  {
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    final SuperSorterProgressSnapshot snapshot = new SuperSorterProgressSnapshot(
+        1,
+        ImmutableMap.of(1, 2L),
+        ImmutableMap.of(1, 3L),
+        8,
+        false,
+        0,
+        0
+    );
+
+    final String jsonString = jsonMapper.writeValueAsString(snapshot);
+    Assertions.assertFalse(jsonString.contains("truncatingMerges"), jsonString);
+    Assertions.assertFalse(jsonString.contains("framesDroppedByTruncatingMerges"), jsonString);
+    Assertions.assertEquals(snapshot, jsonMapper.readValue(jsonString, SuperSorterProgressSnapshot.class));
+  }
+
+  @Test
+  public void testSnapshotIncludesTruncatingMerges()
+  {
+    superSorterProgressTracker.addTruncatingMerge(10);
+    superSorterProgressTracker.addTruncatingMerge(7);
+
+    final SuperSorterProgressSnapshot snapshot = superSorterProgressTracker.snapshot();
+    Assertions.assertEquals(2, snapshot.getTruncatingMerges());
+    Assertions.assertEquals(17, snapshot.getFramesDroppedByTruncatingMerges());
   }
 
   @Test

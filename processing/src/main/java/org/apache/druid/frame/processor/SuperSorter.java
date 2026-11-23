@@ -640,7 +640,9 @@ public class SuperSorter
           inMemoryTopKEnabled = false;
         } else {
           final List<Frame> retainedRun = out.getFrames();
-          framesDroppedByTruncatingMerges += mergeInput.size() - retainedRun.size();
+          final int framesDropped = mergeInput.size() - retainedRun.size();
+          framesDroppedByTruncatingMerges += framesDropped;
+          superSorterProgressTracker.addTruncatingMerge(framesDropped);
           addToInputBuffer(retainedRun);
         }
 

@@ -64,6 +64,9 @@ public class SuperSorterProgressTracker
   // This is set to true if the SuperSorter doesn't need to do any work. For example, if there is no input to sort
   private boolean isTriviallyComplete = false;
 
+  private long truncatingMerges = 0;
+  private long framesDroppedByTruncatingMerges = 0;
+
   /**
    * Snapshot of a SuperSorter that is trivially sorted. All the maps have been cleared up. While this is not required
    * since isTriviallyComplete=true ensures that progressDigest=1.0, it produces a better output
@@ -73,7 +76,9 @@ public class SuperSorterProgressTracker
       Collections.emptyMap(),
       Collections.emptyMap(),
       SuperSorter.UNKNOWN_TOTAL,
-      true
+      true,
+      0,
+      0
   );
 
   public SuperSorterProgressTracker()
@@ -167,6 +172,15 @@ public class SuperSorterProgressTracker
   }
 
   /**
+   * Records a truncating merge that completed without overflowing, and the net number of frames it removed.
+   */
+  public synchronized void addTruncatingMerge(final long framesDropped)
+  {
+    truncatingMerges++;
+    framesDroppedByTruncatingMerges += framesDropped;
+  }
+
+  /**
    * If the SuperSorter is trivially done without doing any work (for eg - empty input), the tracker can be marked as
    * trivially complete. Once a tracker is marked as complete, the snapshots will always report back the progress
    * digest as 1. Any modification to the state of the tracker (eg: calling setTotalMergersForLevel()) would proceed
@@ -201,7 +215,9 @@ public class SuperSorterProgressTracker
         levelToTotalBatchesCopy,
         levelToMergedBatchesCopy,
         totalMergersForUltimateLevel,
-        isTriviallyComplete
+        isTriviallyComplete,
+        truncatingMerges,
+        framesDroppedByTruncatingMerges
     );
   }
 }
