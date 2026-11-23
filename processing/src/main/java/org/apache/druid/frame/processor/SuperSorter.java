@@ -92,14 +92,14 @@ import java.util.function.Consumer;
  * corresponding to a single output partition.
  *
  * "In-memory top-K mode": there is a row limit and the {@link #inputBuffer} fills its share of the buffer (see
- * {@link #getRoomForInputInTopKMode()}). {@link #runNextTruncatingMerge()} merges it with the {@link #retainedRun} in
- * memory, keeping only the first rowLimit rows, and the output becomes the new {@link #retainedRun}. This repeats
- * until all input is read. The final merge then works as in direct mode, with the {@link #retainedRun} as one more
- * input to the direct mergers, so {@link #totalMergingLevels} is also 1. Each truncating merge's output is capped at
- * {@link #getMaxRetainedRunFrames()}, so that memory use stays within the buffer. The sorter leaves this mode for
- * external mode if, before the first truncating merge, the row limit is unlikely to fit within the cap, or if a
- * truncating merge's output exceeds the cap. In the latter case, it continues from the {@link #retainedRun} and the
- * merge's input frames.
+ * {@link #getRoomForInputInTopKMode()}). {@link #runNextTruncatingMerge()} merges the whole {@link #inputBuffer} in
+ * memory, keeping only the first rowLimit rows, and puts the output frames (the "retained run") back into the
+ * {@link #inputBuffer}. Each of those frames is individually sorted, so later merges treat them like any other input
+ * frame. This repeats until all input is read. The final merge then works as in direct mode, so
+ * {@link #totalMergingLevels} is also 1. Each truncating merge's output is capped at {@link #getMaxRetainedRunFrames()},
+ * so that memory use stays within the buffer. The sorter leaves this mode for external mode if, before the first
+ * truncating merge, the row limit is unlikely to fit within the cap, or if a truncating merge's output exceeds the cap.
+ * In the latter case, the merge's input frames go back into the {@link #inputBuffer}.
  *
  * "External mode": the {@link #inputBuffer} fills up and in-memory top-K mode does not apply. In this mode,
  * {@link #totalMergingLevels} is 2 or more. Logic for external mode is:
@@ -187,8 +187,8 @@ public class SuperSorter
   private long inputFramesReadSoFar = 0;
 
   /**
-   * Net frames removed by truncating merges: the retained run and input frames each one consumed, less the new retained
-   * run it produced. Later merging levels process {@link #inputFramesReadSoFar} less this many frames.
+   * Net frames removed by truncating merges: the frames each one consumed, less the frames it produced. Later merging
+   * levels process {@link #inputFramesReadSoFar} less this many frames.
    */
   @GuardedBy("runWorkersLock")
   private long framesDroppedByTruncatingMerges = 0;
@@ -209,11 +209,8 @@ public class SuperSorter
   @GuardedBy("runWorkersLock")
   private int framesInTruncatingMerge = 0;
 
-  /**
-   * Sorted run of at most {@link #rowLimit} rows, produced by the most recent truncating merge.
-   */
   @GuardedBy("runWorkersLock")
-  private List<Frame> retainedRun = Collections.emptyList();
+  private long truncatingMergesRunSoFar = 0;
 
   @GuardedBy("runWorkersLock")
   private long levelZeroMergersRunSoFar = 0;
@@ -581,10 +578,6 @@ public class SuperSorter
 
     final List<ReadableFrameChannel> in = new ArrayList<>();
 
-    if (!retainedRun.isEmpty()) {
-      in.add(readableFrameChannel(retainedRun));
-    }
-
     for (final Frame frame : inputBuffer) {
       in.add(singleReadableFrameChannel(frame));
     }
@@ -594,8 +587,8 @@ public class SuperSorter
   }
 
   /**
-   * Launch a truncating merge: merge the {@link #retainedRun} and the full {@link #inputBuffer} in memory, keeping
-   * only the first {@link #rowLimit} rows. The output replaces the {@link #retainedRun}.
+   * Launch a truncating merge: merge the full {@link #inputBuffer} in memory, keeping only the first {@link #rowLimit}
+   * rows. The output frames go back into the {@link #inputBuffer}.
    */
   @GuardedBy("runWorkersLock")
   private boolean runNextTruncatingMerge()
@@ -605,20 +598,16 @@ public class SuperSorter
         || inputChannelsToRead.isEmpty()
         || inputBuffer.isEmpty()
         || getRoomForInputInTopKMode() > 0) {
-      // Otherwise, the direct merger handles the retained run and the inputBuffer once all input is read.
+      // Otherwise, the direct merger handles the inputBuffer once all input is read.
       return false;
     }
 
-    if (retainedRun.isEmpty() && !isRowLimitLikelyToFitInRetainedRun()) {
+    if (truncatingMergesRunSoFar == 0 && !isRowLimitLikelyToFitInRetainedRun()) {
       inMemoryTopKEnabled = false;
       return false;
     }
 
     final List<ReadableFrameChannel> in = new ArrayList<>();
-    if (!retainedRun.isEmpty()) {
-      in.add(readableFrameChannel(retainedRun));
-    }
-
     final List<Frame> mergeInput = new ArrayList<>(inputBuffer);
     for (final Frame frame : mergeInput) {
       in.add(singleReadableFrameChannel(frame));
@@ -626,6 +615,7 @@ public class SuperSorter
     inputBuffer.clear();
     framesInTruncatingMerge = mergeInput.size();
     truncatingMergeRunning = true;
+    truncatingMergesRunSoFar++;
 
     final ListWritableFrameChannel out = new ListWritableFrameChannel(getMaxRetainedRunFrames());
     final FrameChannelMerger worker = new FrameChannelMerger(
@@ -652,15 +642,12 @@ public class SuperSorter
         truncatingMergeRunning = false;
 
         if (out.isOverflowed()) {
-          // Each frame of the old run is sorted, so it can go back into the inputBuffer as-is.
-          inputBuffer.addAll(retainedRun);
           inputBuffer.addAll(mergeInput);
-          retainedRun = Collections.emptyList();
           inMemoryTopKEnabled = false;
         } else {
-          final List<Frame> newRun = out.getFrames();
-          framesDroppedByTruncatingMerges += retainedRun.size() + mergeInput.size() - newRun.size();
-          retainedRun = newRun;
+          final List<Frame> retainedRun = out.getFrames();
+          framesDroppedByTruncatingMerges += mergeInput.size() - retainedRun.size();
+          inputBuffer.addAll(retainedRun);
         }
 
         finishInputIfPossible();
@@ -1193,7 +1180,6 @@ public class SuperSorter
 
     outputsReadyByLevel.clear();
     inputBuffer.clear();
-    retainedRun = Collections.emptyList();
     for (Map.Entry<String, PartitionedOutputChannel> cleanupEntry :
         levelAndRankToReadableChannelMap.entrySet()) {
       try {
@@ -1233,11 +1219,11 @@ public class SuperSorter
   }
 
   /**
-   * Maximum number of frames to store the {@link #retainedRun}, which caps each truncating merge's output.
+   * Maximum number of frames in a truncating merge's output (the retained run).
    * <p>
-   * A truncating merge holds the retained run, its input, and its output together, so capping the run at a quarter of
-   * the buffer leaves at least half the buffer for input. Returns zero if the buffer is too small for in-memory top-K
-   * mode at all.
+   * A truncating merge holds the previous retained run, its other input, and its output together, so capping the run
+   * at a quarter of the buffer leaves at least half the buffer for other input. Returns zero if the buffer is too small
+   * for in-memory top-K mode at all.
    */
   private int getMaxRetainedRunFrames()
   {
@@ -1251,7 +1237,6 @@ public class SuperSorter
   private int getRoomForInputInTopKMode()
   {
     return getMaxInputBufferFramesForDirectMerging()
-           - retainedRun.size()
            - getMaxRetainedRunFrames()
            - framesInTruncatingMerge
            - inputBuffer.size();
@@ -1271,7 +1256,6 @@ public class SuperSorter
     synchronized (runWorkersLock) {
       return "frames-in=" + inputFramesReadSoFar + "/" + totalInputFrames
              + " frames-buffered=" + inputBuffer.size()
-             + " frames-retained=" + retainedRun.size()
              + " frames-dropped=" + framesDroppedByTruncatingMerges
              + " lvls=" + totalMergingLevels
              + " parts=" +
@@ -1285,16 +1269,9 @@ public class SuperSorter
 
   private static ReadableFrameChannel singleReadableFrameChannel(final Frame frame)
   {
-    return readableFrameChannel(Collections.singletonList(frame));
-  }
-
-  private static ReadableFrameChannel readableFrameChannel(final List<Frame> frames)
-  {
     try {
-      final BlockingQueueFrameChannel channel = new BlockingQueueFrameChannel(frames.size());
-      for (final Frame frame : frames) {
-        channel.writable().write(frame);
-      }
+      final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
+      channel.writable().write(frame);
       channel.writable().close();
       return channel.readable();
     }
