@@ -596,27 +596,33 @@ public class BasicAuthorizerResource
       return null;
     }
     for (int i = 0; i < permissions.size(); i++) {
-      final ResourceAction entry = permissions.get(i);
-      final String error;
-      if (entry == null) {
-        error = StringUtils.format("Permission at index [%d] is null.", i);
-      } else if (entry.getAction() == null) {
-        error = StringUtils.format("Permission at index [%d] is missing an action.", i);
-      } else {
-        final Resource resource = entry.getResource();
-        if (resource == null) {
-          error = StringUtils.format("Permission at index [%d] is missing a resource.", i);
-        } else if (resource.getType() == null) {
-          error = StringUtils.format("Permission at index [%d] is missing a resource type.", i);
-        } else if (resource.getName() == null) {
-          error = StringUtils.format("Permission at index [%d] is missing a resource name.", i);
-        } else {
-          continue;
-        }
+      final String error = findValidationError(permissions.get(i), i);
+      if (error != null) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity(ImmutableMap.of("error", error))
+                       .build();
       }
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.<String, Object>of("error", error))
-                     .build();
+    }
+    return null;
+  }
+
+  private static String findValidationError(final ResourceAction entry, final int index)
+  {
+    if (entry == null) {
+      return StringUtils.format("Permission at index [%d] is null.", index);
+    }
+    final Resource resource = entry.getResource();
+    if (resource == null) {
+      return StringUtils.format("Permission at index [%d] is missing a resource.", index);
+    }
+    if (resource.getType() == null) {
+      return StringUtils.format("Permission at index [%d] is missing a resource type.", index);
+    }
+    if (resource.getName() == null) {
+      return StringUtils.format("Permission at index [%d] is missing a resource name.", index);
+    }
+    if (entry.getAction() == null) {
+      return StringUtils.format("Permission at index [%d] is missing an action.", index);
     }
     return null;
   }

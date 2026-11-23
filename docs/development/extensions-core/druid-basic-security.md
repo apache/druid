@@ -738,7 +738,7 @@ Content: List of JSON Resource-Action objects, e.g.:
 
 The "name" field for resources in the permission definitions are regexes used to match resource names during authorization checks.
 
-Returns a 400 response, naming the index of the offending entry, if any entry in the posted list is missing a `resource`, a resource `type`, a resource `name`, or an `action`.
+Returns a 400 response, naming the index of the first offending entry, if any entry in the posted list is missing a `resource`, a resource `type`, a resource `name`, or an `action`.
 
 Please see [Defining permissions](../../operations/security-user-auth.md#defining-permissions) for more details.
 
@@ -749,7 +749,19 @@ The default output format of this API is deprecated. Each entry is wrapped as `{
 
 Additional query parameters:
 
-- `?simplifyPermissions`: The output is the flat `List<ResourceAction>` format, identical to the POST request body on this path. New clients should set this flag.
+- `?simplifyPermissions`: The output is the flat `List<ResourceAction>` format, identical to the POST request body on this path. New clients should set this flag. For example:
+
+```json
+[
+  {
+    "resource": {
+      "name": "wiki.*",
+      "type": "DATASOURCE"
+    },
+    "action": "READ"
+  }
+]
+```
 
 ##### Cache Load Status
 `GET(/druid-ext/basic-security/authorization/loadStatus)`<br />
