@@ -439,7 +439,7 @@ public class SuperSorterTest
           Assertions.assertEquals(List.of(longRange(0, 7)), result.partitions());
           Assertions.assertEquals(1, result.mergingLevels());
           MatcherAssert.assertThat(result.truncatingMerges(), Matchers.greaterThan(1));
-      assertAllTruncatingMergesTracked(result);
+          assertAllTruncatingMergesTracked(result);
         }
       }
       finally {
