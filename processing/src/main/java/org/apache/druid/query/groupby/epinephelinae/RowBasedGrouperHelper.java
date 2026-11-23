@@ -353,13 +353,15 @@ public class RowBasedGrouperHelper
 
       columnSelectorRow.set(row);
 
-      final Object[] key = new Object[keySize];
-      valueExtractFn.apply(row, key);
-
-      final AggregateResult aggregateResult = grouper.aggregate(new RowBasedKey(key));
-      columnSelectorRow.set(null);
-
-      return aggregateResult;
+      try {
+        final Object[] key = new Object[keySize];
+        valueExtractFn.apply(row, key);
+        return grouper.aggregate(new RowBasedKey(key));
+      }
+      finally {
+        // Extraction or aggregation can throw; do not retain the last row on the processing thread.
+        columnSelectorRow.set(null);
+      }
     };
 
     return new Pair<>(grouper, accumulator);
