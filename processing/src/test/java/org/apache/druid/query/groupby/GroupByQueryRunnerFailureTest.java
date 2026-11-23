@@ -28,6 +28,7 @@ import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -41,9 +42,15 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.CountBufferAggregator;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.groupby.epinephelinae.SpillingGrouper;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -53,6 +60,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -180,6 +188,142 @@ public class GroupByQueryRunnerFailureTest
   public GroupByQueryRunnerFailureTest(QueryRunner<ResultRow> runner)
   {
     this.runner = FACTORY.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+  }
+
+  @Test
+  public void testWorkerReferencesReleasedOnSuccess() throws Exception
+  {
+    assertWorkerReferencesReleased(WorkerFailure.NONE);
+  }
+
+  @Test
+  public void testWorkerReferencesReleasedOnInputFailure() throws Exception
+  {
+    assertWorkerReferencesReleased(WorkerFailure.INPUT);
+  }
+
+  @Test
+  public void testWorkerReferencesReleasedOnAggregationFailure() throws Exception
+  {
+    assertWorkerReferencesReleased(WorkerFailure.AGGREGATION);
+  }
+
+  @Test
+  public void testWorkerReferencesReleasedOnTimeout() throws Exception
+  {
+    assertWorkerReferencesReleased(WorkerFailure.TIMEOUT);
+  }
+
+  private enum WorkerFailure
+  {
+    NONE, INPUT, AGGREGATION, TIMEOUT
+  }
+
+  private void assertWorkerReferencesReleased(final WorkerFailure failure) throws Exception
+  {
+    final QueryProcessingPool workerPool = new ForwardingQueryProcessingPool(
+        Execs.singleThreaded("GroupByQueryRunnerFailureTest-retention-%d")
+    );
+    try {
+      final AggregatorFactory aggregator;
+      if (failure == WorkerFailure.AGGREGATION) {
+        aggregator = new CountAggregatorFactory("rows")
+        {
+          @Override
+          public AggregatorFactory getCombiningFactory()
+          {
+            return this;
+          }
+
+          @Override
+          public BufferAggregator factorizeBuffered(final ColumnSelectorFactory metricFactory)
+          {
+            return new CountBufferAggregator()
+            {
+              @Override
+              public void aggregate(final ByteBuffer buf, final int position)
+              {
+                throw new ISE("Simulated aggregation failure");
+              }
+            };
+          }
+        };
+      } else {
+        aggregator = new LongSumAggregatorFactory("rows", "rows");
+      }
+      final GroupByQuery query = GroupByQuery.builder()
+          .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+          .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
+          .setGranularity(Granularities.ALL)
+          .setAggregatorSpecs(aggregator)
+          .setContext(QueryContext.ofMap(
+              QueryContextParameters.TIMEOUT,
+              failure == WorkerFailure.TIMEOUT ? 500L : 10_000L
+          ))
+          .build();
+      final CountDownLatch inputConsumed = new CountDownLatch(1);
+      final QueryRunner<ResultRow> input = (queryPlus, responseContext) -> Sequences.concat(
+          Sequences.simple(ImmutableList.of(ResultRow.of(1L))),
+          Sequences.simple(() -> {
+            inputConsumed.countDown();
+            if (failure == WorkerFailure.TIMEOUT) {
+              try {
+                Assertions.assertTrue(new CountDownLatch(1).await(10, TimeUnit.SECONDS), "Expected cancellation");
+              }
+              catch (InterruptedException e) {
+                throw new QueryInterruptedException(e);
+              }
+            }
+            if (failure == WorkerFailure.INPUT) {
+              throw new ISE("Simulated input failure after aggregation");
+            }
+            return Collections.<ResultRow>emptyIterator();
+          })
+      );
+      final QueryRunner<ResultRow> mergedRunner = FACTORY.mergeRunners(workerPool, ImmutableList.of(input));
+      if (failure == WorkerFailure.INPUT || failure == WorkerFailure.AGGREGATION) {
+        final RuntimeException exception = Assertions.assertThrows(
+            RuntimeException.class,
+            () -> GroupByQueryRunnerTestHelper.runQuery(FACTORY, mergedRunner, query)
+        );
+        Assertions.assertInstanceOf(ISE.class, exception.getCause().getCause());
+      } else if (failure == WorkerFailure.TIMEOUT) {
+        Assertions.assertThrows(
+            QueryTimeoutException.class,
+            () -> GroupByQueryRunnerTestHelper.runQuery(FACTORY, mergedRunner, query)
+        );
+        Assertions.assertEquals(0, inputConsumed.getCount(), "Worker must aggregate before cancellation");
+      } else {
+        Assertions.assertEquals(
+            ImmutableList.of(ResultRow.of(1L)),
+            GroupByQueryRunnerTestHelper.runQuery(FACTORY, mergedRunner, query)
+        );
+      }
+      workerPool.submit(() -> {
+        // Inspect the idle worker directly, without depending on garbage collection or ThreadLocal key expunging.
+        final Field threadLocalsField = Thread.class.getDeclaredField("threadLocals");
+        threadLocalsField.setAccessible(true);
+        final Object threadLocals = threadLocalsField.get(Thread.currentThread());
+        if (threadLocals != null) {
+          final Field tableField = threadLocals.getClass().getDeclaredField("table");
+          tableField.setAccessible(true);
+          for (final Object entry : (Object[]) tableField.get(threadLocals)) {
+            if (entry != null) {
+              final Field valueField = entry.getClass().getDeclaredField("value");
+              valueField.setAccessible(true);
+              final Object value = valueField.get(entry);
+              Assertions.assertFalse(value instanceof SpillingGrouper, "Worker retained a query grouper");
+              Assertions.assertFalse(value instanceof ResultRow, "Worker retained an input row");
+            }
+          }
+        }
+        return null;
+      }).get(10, TimeUnit.SECONDS);
+    }
+    finally {
+      workerPool.shutdownNow();
+      Assertions.assertTrue(workerPool.awaitTermination(10, TimeUnit.SECONDS));
+    }
   }
 
   @Test

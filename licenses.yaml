@@ -261,7 +261,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.55.6
+version: 2.57.2
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -277,8 +277,10 @@ libraries:
   - software.amazon.awssdk: crt-core
   - software.amazon.awssdk: ec2
   - software.amazon.awssdk: endpoints-spi
+  - software.amazon.awssdk: eventstream
   - software.amazon.awssdk: http-auth
   - software.amazon.awssdk: http-auth-aws
+  - software.amazon.awssdk: http-auth-aws-crt
   - software.amazon.awssdk: http-auth-aws-eventstream
   - software.amazon.awssdk: http-auth-spi
   - software.amazon.awssdk: http-client-spi
@@ -312,37 +314,11 @@ notice: |
 
 ---
 
-name: Amazon Event Stream
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.0.1
-libraries:
-  - software.amazon.eventstream: eventstream
-notice: |
-  AWS SDK for Java 2.0
-  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
----
-
-name: Amazon Event Stream
-license_category: binary
-module: extensions/druid-s3-extensions
-license_name: Apache License version 2.0
-version: 1.0.1
-libraries:
-  - software.amazon.eventstream: eventstream
-notice: |
-  AWS SDK for Java 2.0
-  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
----
-
 name: AWS CRT
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.48.4
+version: 0.48.5
 libraries:
   - software.amazon.awssdk.crt: aws-crt
 notice: |
@@ -355,7 +331,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.22.3
+version: 2.22.4
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-databind
@@ -408,7 +384,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.22.3
+version: 2.22.4
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -468,7 +444,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.50.0
+version: 2.52.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -498,7 +474,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 33.7.2-jre
+version: 33.8.0-jre
 libraries:
   - com.google.guava: guava
 
@@ -863,6 +839,20 @@ notices:
 
 ---
 
+name: Apache Commons Numbers
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - org.apache.commons: commons-numbers-arrays
+notices:
+  - commons-numbers-arrays: |
+      Apache Commons Numbers
+      Copyright 2001-2023 The Apache Software Foundation
+
+---
+
 name: Apache Commons Pool
 license_category: binary
 module: java-core
@@ -1136,7 +1126,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.22.3
+version: 2.22.4
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-properties
 notice: |
@@ -1316,7 +1306,7 @@ name: org.jooq joou-java-6
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.9.5
+version: 0.9.6
 libraries:
   - org.jooq: joou-java-6
 
@@ -1326,7 +1316,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.5.0
+version: 5.5.1
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1338,7 +1328,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.5.0
+version: 5.5.1
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1841,7 +1831,7 @@ name: JSON Small and Fast Parser
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.6.0
+version: 2.6.1
 libraries:
   - net.minidev: json-smart
 
@@ -2300,7 +2290,7 @@ name: Apache Zookeeper
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.8.7
+version: 3.8.8
 libraries:
   - org.apache.zookeeper: zookeeper
   - org.apache.zookeeper: zookeeper-jute
@@ -2574,7 +2564,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.7.1
+version: 7.7.2
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
@@ -2643,7 +2633,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.0
+version: 1.12.1
 libraries:
   - at.yawk.lz4: lz4-java
 
@@ -2684,7 +2674,7 @@ name: RoaringBitmap
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.24
+version: 1.6.25
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
@@ -2706,7 +2696,7 @@ name: JSON Small and Fast Parser
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 2.6.0
+version: 2.6.1
 libraries:
   - net.minidev: json-smart
 ---
@@ -2715,7 +2705,7 @@ name: JSON Small and Fast Parser
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 2.6.0
+version: 2.6.1
 libraries:
   - net.minidev: accessors-smart
 ---
@@ -2876,7 +2866,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.3
+version: 2.22.4
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -2886,7 +2876,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.3
+version: 2.22.4
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
@@ -2899,7 +2889,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.22.3
+version: 2.22.4
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
 notice: |
@@ -2930,7 +2920,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.22.3
+version: 2.22.4
 libraries:
   - com.fasterxml.jackson.datatype: jackson-datatype-jsr310
 notice: |
@@ -3721,7 +3711,7 @@ name: ASM
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 9.11
+version: 9.11.1
 copyright: INRIA, France Telecom
 license_file_path: licenses/bin/asm.BSD3
 libraries:
@@ -3822,7 +3812,7 @@ name: ICU4J
 license_category: binary
 module: java-core
 license_name: Unicode/ICU License
-version: 78.3
+version: 79.1
 copyright: International Business Machines Corporation and others
 license_file_path: licenses/bin/icu4j.ICU
 libraries:
@@ -4073,7 +4063,7 @@ name: Brotli4j
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.20.0
+version: 1.24.0
 libraries:
   - com.aayushatharva.brotli4j: brotli4j
   - com.aayushatharva.brotli4j: service
@@ -4115,7 +4105,7 @@ name: Google Brotli bundled by Brotli4j
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: MIT License
-version: 1.1.0
+version: 1.2.1
 copyright: 2009, 2010, 2013-2016 the Brotli Authors
 license_file_path: licenses/bin/google-brotli.MIT
 
@@ -4343,7 +4333,7 @@ name: stax2-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-2-Clause License
-version: 4.2.2
+version: 4.3.0
 copyright: 2008+, FasterXML, LLC
 license_file_path: licenses/bin/stax2-api.BSD2
 libraries:
@@ -4849,7 +4839,7 @@ name: Reactor Core
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 3.8.7
+version: 3.8.8
 libraries:
   - io.projectreactor: reactor-core
 ---
@@ -7660,7 +7650,7 @@ libraries:
 ---
 
 name: Jackson Datatype JDK8
-version: 2.22.3
+version: 2.22.4
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0

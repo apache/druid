@@ -35,7 +35,8 @@ concurrency:
 
 jobs:
   security_vulnerabilities:
-    if: github.repository == 'apache/druid'
+    # Pull requests from forks get no secrets, and dependency-check fails without an NVD API key.
+    if: github.repository == 'apache/druid' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     name: security vulnerabilities
     runs-on: ubuntu-24.04
     steps:

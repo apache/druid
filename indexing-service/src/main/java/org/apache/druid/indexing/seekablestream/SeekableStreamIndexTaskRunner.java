@@ -479,6 +479,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     Throwable caughtException = null;
 
+    // Set when getRecords() reports that no further progress can be made. The data read so far is still published,
+    // but the task fails with the message of this exception.
+    UnrecoverableStreamReadException unrecoverableReadException = null;
+
     //milliseconds waited for created segments to be handed off
     long handoffWaitMs = 0L;
 
@@ -688,13 +692,24 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           // calling getRecord() ensures that exceptions specific to kafka/kinesis like OffsetOutOfRangeException
           // are handled in the subclasses.
-          List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> records = getRecords(
-              recordSupplier,
-              toolbox
-          );
+          List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> records;
+          try {
+            records = getRecords(recordSupplier, toolbox);
 
-          // note: getRecords() also updates assignment
-          stillReading = !assignment.isEmpty();
+            // note: getRecords() also updates assignment
+            stillReading = !assignment.isEmpty();
+          }
+          catch (UnrecoverableStreamReadException e) {
+            log.error(
+                "Cannot continue reading the stream: %s Stopping reading. Data read up to offsets[%s] will be "
+                + "persisted and published, then the task will exit with FAILED status.",
+                e.getMessage(),
+                currOffsets
+            );
+            unrecoverableReadException = e;
+            records = Collections.emptyList();
+            stillReading = false;
+          }
 
           SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToCheckpoint = null;
           AppenderatorDriverAddResult pushTriggeringAddResult = null;
@@ -1015,6 +1030,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
 
     ingestionState = IngestionState.COMPLETED;
+    if (unrecoverableReadException != null) {
+      final String errorMsg = unrecoverableReadException.getMessage();
+      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg, handoffWaitMs));
+      return TaskStatus.failure(task.getId(), errorMsg);
+    }
     toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
     return TaskStatus.success(task.getId());
   }
@@ -2374,7 +2394,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * @param recordSupplier
    * @param toolbox
    * @return list of records polled, can be empty but cannot be null
-   * @throws Exception
+   * @throws UnrecoverableStreamReadException if no further progress can be made reading the stream. The records read
+   *                                          so far are published and then the task fails.
+   * @throws Exception                        for other errors, in which case the task fails without publishing
    */
   @NotNull
   protected abstract List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> getRecords(

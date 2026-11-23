@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import com.google.common.base.Optional;
-import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -46,7 +45,6 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.Metric;
-import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -69,8 +67,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -434,24 +434,29 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         taskId, runDurationMillis
     );
 
-    // The Indexer serves this task's log over HTTP straight from its own process log file
-    // (see HttpRemoteTaskRunner#streamTaskLog), so the stream can become present before the
-    // expected line has actually been written to that file. Poll until the expected line shows
-    // up, rather than just until the stream is present, to avoid racing against that lag.
-    final String logs = cluster.callApi().waitForResult(
-        () -> {
-          final Optional<InputStream> streamOptional = overlord.bindings()
-                                                                 .getInstance(TaskLogStreamer.class)
-                                                                 .streamTaskLog(taskId, 0);
-          if (!streamOptional.isPresent()) {
-            return "";
-          }
-          try (InputStream stream = streamOptional.get()) {
-            return IOUtils.toString(stream, StandardCharsets.UTF_8);
-          }
-        },
-        logContent -> logContent.contains(expectedLogLine)
-    ).go();
+    // Fetch the log over HTTP from whichever Overlord is actually leading, the same way
+    // runTask/cancelTask above do. The local "overlord" field's bindings only have task state
+    // if that particular instance happens to be leader, which is not true in subclasses where
+    // the leader is a separate container/pod (e.g. KubernetesClusterDockerTest).
+    final URI leaderOverlordUri = cluster.callApi().onLeaderOverlord(OverlordClient::findCurrentLeader);
+    final URI logUri = URI.create(leaderOverlordUri + "/druid/indexer/v1/task/" + taskId + "/log?offset=0");
+
+    // The log can become available on the leader before the expected line has actually been
+    // written to it, so poll until the content shows up rather than just until the request
+    // succeeds.
+    final String logs;
+    try (HttpClient httpClient = HttpClient.newHttpClient()) {
+      logs = cluster.callApi().waitForResult(
+          () -> {
+            final HttpResponse<String> response = httpClient.send(
+                HttpRequest.newBuilder(logUri).GET().build(),
+                HttpResponse.BodyHandlers.ofString()
+            );
+            return response.statusCode() == 200 ? response.body() : "";
+          },
+          logContent -> logContent.contains(expectedLogLine)
+      ).go();
+    }
 
     Assertions.assertFalse(logs.isEmpty());
     Assertions.assertTrue(logs.contains(expectedLogLine), "Actual logs are: " + logs);

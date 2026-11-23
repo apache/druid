@@ -62,3 +62,7 @@ Users must set a strong passphrase to ensure that an attacker is not able to gue
 A compromised passphrase may allow an attacker to read and manipulate session cookies.
 For more details, see [CVE-2024-45384](https://nvd.nist.gov/vuln/detail/CVE-2024-45384).
 :::
+
+### Authentication result context
+
+After a successful login, the pac4j authenticator sets the `AuthenticationResult` context to `{"profile": {"attributes": {...}}}`, where `attributes` holds the claims from the user's OIDC profile. Custom authorizers can read these claims, such as group membership, to make access decisions.

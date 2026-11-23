@@ -164,7 +164,8 @@ public class CliIndexerServerModule implements Module
         oldConfig.isEnableResponseIdentityHeaders(),
         oldConfig.getUriCompliance(),
         oldConfig.isEnforceStrictSNIHostChecking(),
-        oldConfig.isEnableQueryRequestsQueuing()
+        oldConfig.isEnableQueryRequestsQueuing(),
+        oldConfig.getHeaderCacheSize()
     );
   }
 }

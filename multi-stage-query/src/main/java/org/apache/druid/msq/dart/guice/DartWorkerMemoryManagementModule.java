@@ -24,6 +24,7 @@ import com.google.inject.Provides;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Merging;
@@ -47,7 +48,7 @@ public class DartWorkerMemoryManagementModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    // Nothing to do.
+    JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".worker", DartWorkerConfig.class);
   }
 
   @Provides

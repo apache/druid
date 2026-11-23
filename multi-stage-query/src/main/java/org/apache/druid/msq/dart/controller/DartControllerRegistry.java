@@ -29,11 +29,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerHolder;
 import org.apache.druid.msq.exec.ControllerRegistry;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -58,10 +60,17 @@ import java.util.concurrent.TimeUnit;
 @ManageLifecycle
 public class DartControllerRegistry implements ControllerRegistry
 {
+  private static final Logger log = new Logger(DartControllerRegistry.class);
+
   /**
    * Minimum frequency for checking if {@link #cleanupExpiredReports()} needs to be run.
    */
   private static final long MIN_CLEANUP_CHECK_MILLIS = 10_000;
+
+  /**
+   * How long {@link #stop()} waits for canceled controllers to exit.
+   */
+  private static final long STOP_TIMEOUT_MILLIS = 10_000;
 
   private final DartControllerConfig config;
 
@@ -123,6 +132,24 @@ public class DartControllerRegistry implements ControllerRegistry
     if (cleanupExec != null) {
       cleanupExec.shutdown();
     }
+
+    // Cancel any queries that are still running. This registry is stopped in the NORMAL stage, after
+    // ANNOUNCEMENTS and SERVER, so by this point the Broker has been removed from discovery and the
+    // druid.server.http.gracefulShutdownTimeout has already elapsed.
+    final List<ControllerHolder> holders = new ArrayList<>(controllerMap.values());
+    if (!holders.isEmpty()) {
+      log.info("Canceling [%d] queries that are still running.", holders.size());
+
+      // Cancel all controllers in sequence. It would be nicer to do this in parallel, since it involves sending
+      // stopWorker calls to active workers. This would require some restructuring of the code to return Futures,
+      // or an executor here used only for cancellation.
+      for (final ControllerHolder holder : holders) {
+        holder.cancel(CancellationReason.CONTROLLER_SHUTDOWN, null);
+      }
+
+      // Wait for the controllers to exit, so they tell their workers to stop before this server shuts down.
+      awaitControllerCompletion(holders);
+    }
   }
 
   /**
@@ -149,8 +176,16 @@ public class DartControllerRegistry implements ControllerRegistry
   {
     final String dartQueryId = holder.getController().queryId();
 
-    // Remove only if the current mapping for the queryId is this specific controller.
-    final boolean didRemove = controllerMap.remove(dartQueryId, holder);
+    final boolean didRemove;
+    synchronized (this) {
+      // Remove only if the current mapping for the queryId is this specific controller.
+      didRemove = controllerMap.remove(dartQueryId, holder);
+
+      if (didRemove) {
+        // Wake up awaitControllerCompletion.
+        notifyAll();
+      }
+    }
 
     // Add completeReport to completeReports, if present, and if we actually did deregister this specific controller.
     if (didRemove && completeReport != null && config.getMaxRetainedReportCount() > 0) {
@@ -313,5 +348,32 @@ public class DartControllerRegistry implements ControllerRegistry
       }
     }
     return null;
+  }
+
+  /**
+   * Waits up to {@link #STOP_TIMEOUT_MILLIS} for the given controllers to be deregistered.
+   */
+  private void awaitControllerCompletion(final List<ControllerHolder> holders)
+  {
+    final long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(STOP_TIMEOUT_MILLIS);
+
+    synchronized (this) {
+      //noinspection ObjectEquality
+      while (holders.stream().anyMatch(holder -> controllerMap.get(holder.getController().queryId()) == holder)) {
+        final long remainingNanos = deadlineNanos - System.nanoTime();
+        if (remainingNanos <= 0) {
+          log.warn("Canceled queries did not exit within [%,d] ms.", STOP_TIMEOUT_MILLIS);
+          return;
+        }
+
+        try {
+          TimeUnit.NANOSECONDS.timedWait(this, remainingNanos);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          return;
+        }
+      }
+    }
   }
 }

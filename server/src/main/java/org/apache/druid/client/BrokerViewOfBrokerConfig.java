@@ -22,13 +22,16 @@ package org.apache.druid.client;
 import com.google.inject.Inject;
 import jakarta.validation.constraints.NotNull;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
-
-import java.util.Map;
 
 /**
  * Broker view of broker dynamic configuration.
@@ -42,6 +45,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
 {
   private final CoordinatorClient coordinatorClient;
   private final DefaultQueryConfig defaultQueryConfig;
+  private final QueryContextConfig queryContextConfig;
 
   /**
    * The dynamic config plus the merge of {@link DefaultQueryConfig#getContext()} and
@@ -55,12 +59,37 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   @Inject
   public BrokerViewOfBrokerConfig(
       final CoordinatorClient coordinatorClient,
-      final DefaultQueryConfig defaultQueryConfig
+      final DefaultQueryConfig defaultQueryConfig,
+      final QueryContextConfig queryContextConfig
   )
   {
     this.coordinatorClient = coordinatorClient;
     this.defaultQueryConfig = defaultQueryConfig;
-    this.querySnapshot = new QueryConfigSnapshot(QueryContext.of(defaultQueryConfig.getContext()).asMap(), null);
+    this.queryContextConfig = queryContextConfig;
+    this.querySnapshot = new QueryConfigSnapshot(defaultQueryConfig.getContext(), null);
+  }
+
+  /**
+   * Validates the default query context before fetching the dynamic config. This is a lifecycle method rather than a
+   * constructor check because Guice also constructs this class on data servers, through the {@code @Nullable}
+   * parameter of {@link org.apache.druid.server.QueryLifecycleFactory}, but only the Broker manages its lifecycle.
+   * Data servers don't validate query contexts.
+   */
+  @Override
+  @LifecycleStart
+  public void start()
+  {
+    try {
+      QueryContextParameterValidator.validate(
+          defaultQueryConfig.getContext().asMap(),
+          queryContextConfig.isRejectUnknownParameters()
+      );
+    }
+    catch (BadQueryContextException e) {
+      throw new IAE(e, "Invalid default query context [druid.query.default.context]: %s", e.getMessage());
+    }
+
+    super.start();
   }
 
   @Override
@@ -84,7 +113,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   {
     super.setDynamicConfig(updatedConfig);
     querySnapshot = new QueryConfigSnapshot(
-        QueryContext.of(defaultQueryConfig.getContext()).override(updatedConfig.getQueryContext()).asMap(),
+        defaultQueryConfig.getContext().override(updatedConfig.getQueryContext()),
         updatedConfig
     );
   }
@@ -94,7 +123,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
    * {@link BrokerDynamicConfig#getQueryContext()}. Dynamic values take precedence over static defaults.
    */
   @Override
-  public Map<String, Object> getContext()
+  public QueryContext getContext()
   {
     return querySnapshot.getResolvedDefaultQueryContext();
   }
@@ -110,7 +139,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
     final BrokerDynamicConfig dynamicConfig = snapshot.getDynamicConfig();
     return new ContextWithOverrides(
         snapshot.getResolvedDefaultQueryContext(),
-        dynamicConfig == null ? Map.of() : dynamicConfig.getQueryContext().asMap()
+        dynamicConfig == null ? QueryContext.empty() : dynamicConfig.getQueryContext()
     );
   }
 

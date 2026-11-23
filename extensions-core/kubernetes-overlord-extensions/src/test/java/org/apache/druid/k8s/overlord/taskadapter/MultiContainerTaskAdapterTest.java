@@ -39,7 +39,6 @@ import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.Mock;
 import org.junit.jupiter.api.Assertions;
@@ -55,7 +54,6 @@ import java.util.Collections;
 class MultiContainerTaskAdapterTest
 {
   private KubernetesClient client;
-  private StartupLoggingConfig startupLoggingConfig;
   private TaskConfig taskConfig;
   private DruidNode druidNode;
   private ObjectMapper jsonMapper;
@@ -79,7 +77,6 @@ class MultiContainerTaskAdapterTest
         true,
         false
     );
-    startupLoggingConfig = new StartupLoggingConfig();
     taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
   }
 
@@ -95,7 +92,6 @@ class MultiContainerTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         druidNode,
         jsonMapper,
         taskLogs
@@ -147,7 +143,6 @@ class MultiContainerTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         druidNode,
         jsonMapper,
         taskLogs
@@ -203,7 +198,6 @@ class MultiContainerTaskAdapterTest
         testClient,
         config,
         taskConfig,
-        startupLoggingConfig,
         druidNode,
         jsonMapper,
         taskLogs

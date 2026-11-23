@@ -233,7 +233,7 @@ Once everything is ready, then push the branch to `origin`.
 If doing a quarterly release, it will also be necessary to prepare master for the release _after_ the release you are working on, by setting the version to the next release snapshot:
 
 ```bash
-$ mvn versions:set -DnewVersion=38.0.0-SNAPSHOT
+$ mvn -N versions:set-property -Dproperty=revision -DnewVersion=38.0.0-SNAPSHOT -DgenerateBackupPoms=false
 ```
 
 You should also prepare the web-console for the next release, by bumping the [package.json](../web-console/package.json) and [package-lock.json](../web-console/package-lock.json) version:
@@ -329,7 +329,7 @@ These additional tools were largely used to bootstrap the initial `LICENSE`, `LI
 | --- | --- |
 | [generate-license-dependency-reports](bin/generate-license-dependency-reports.py) | Point this to the Druid source root, and give it the location of a temp scratch directory, and it will output Maven dependency reports for Druid. |
 | [check-licenses](bin/check-licenses.py) | Checks `licenses.yaml` against the output of `generate-license-dependency-reports.py`, used by `-Papache-release` when building distribution, to verify that all dependencies are present and match the versions in `licenses.yaml`, and that every `license_file_path` exists and every file in `licenses/bin` is referenced. |
-| [refresh-license-versions](bin/refresh-license-versions.py) | Updates the `version` of each `licenses.yaml` entry whose libraries moved to a new version in the output of `generate-license-dependency-reports.py`, and lists the entries that need a manual edit, such as an entry whose libraries moved to different versions. Use `--dry-run` to only print the changes. |
+| [refresh-license-versions](bin/refresh-license-versions.py) | Updates the `version` of each `licenses.yaml` entry whose libraries moved to a new version in the output of `generate-license-dependency-reports.py`, and lists the entries that need a manual edit, such as an entry whose libraries moved to different versions or a current entry that lists a library no report contains. Use `--dry-run` to only print the changes. |
 | [jar-notice-lister](bin/jar-notice-lister.py) | Point this to an extracted Druid binary distribution, and give it a temp scratch directory, and it will output NOTICE information for all the Druid JAR files. |
 
 
@@ -375,15 +375,16 @@ Before you tag, [check the `licenses.yaml` versions](#refresh-licensesyaml-versi
 Once the release branch is good for an RC, you can build a new tag with:
 
 ```bash
-$ mvn -Pwebsite-docs -DreleaseVersion=37.0.0 -DdevelopmentVersion=38.0.0-SNAPSHOT -Dtag=druid-37.0.0-rc1 -DpushChanges=false -DskipTests -Darguments=-DskipTests clean release:clean release:prepare
+$ git checkout --detach 37.0.0
+$ mvn -N versions:set-property versions:set-scm-tag -Dproperty=revision -DnewVersion=37.0.0 -DnewTag=druid-37.0.0-rc1 -DgenerateBackupPoms=false
+$ git commit -am "Prepare release druid-37.0.0-rc1"
+$ git tag druid-37.0.0-rc1
 $ git push origin tag druid-37.0.0-rc1
 ```
 
 In this example it will create a tag, `druid-37.0.0-rc1`. If this release passes vote then we can add the final `druid-37.0.0` release tag later. 
-We added `website-docs` profile, because otherwise, website module is not updated with rc version. 
+The Druid version is set only by the `revision` property in the root `pom.xml`, so do not use `mvn versions:set` or `release:prepare`, which would replace `${revision}` in every `pom.xml`.
 
-
-**Retain the release.properties file! You will need it when uploading the Maven artifacts for the final release.**
 
 ### Do a clean clone (so the source distribution does not pick up extra files)
 
@@ -504,8 +505,7 @@ Before opening the release vote thread, we create a staged maven repository cont
 
 You can generate a staged maven repo for the RC with the following steps:	
 
-- Copy the `release.properties` that was generated when the RC tag was created back to your repo root (You'll need to change scm.tag in that file to match the specific rc tag you created if you did not specify `-Dtag` when creating the release). If you still have the working copy that build the `tag` available, you may use that.	
-- Run `mvn release:perform`	
+- From the working copy checked out at the RC tag, run `mvn clean deploy -Papache-release -DskipTests -Daether.connector.basic.parallelPut=false -Dgpg.keyname=<your GPG key fingerprint>`	
 
 This will create a staged Maven repo here (login with Apache credentials): https://repository.apache.org/#stagingRepositories	
 
@@ -602,7 +602,7 @@ Anyone can vote on a release. When voting, you should list out what exactly you 
 ```plaintext
 +1 (binding)
 
-- Proper NOTICE, LICENSE, DISCLAIMER files are present in both src and bin packages.
+- Proper NOTICE and LICENSE files are present in both src and bin packages.
 - Verified .asc signatures and .sha512 checksums of both src and bin packages.
 - Source tarball git.version file is present and correct.
 - Source tarball builds and tests pass.

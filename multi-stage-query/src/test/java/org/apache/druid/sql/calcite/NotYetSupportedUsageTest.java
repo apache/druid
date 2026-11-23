@@ -76,7 +76,7 @@ public class NotYetSupportedUsageTest
         if (res != 0) {
           return res;
         }
-        res = -Integer.compare(l.methodNames.size(), r.methodNames.size());
+        res = Integer.compare(r.methodNames.size(), l.methodNames.size());
         if (res != 0) {
           return res;
         }

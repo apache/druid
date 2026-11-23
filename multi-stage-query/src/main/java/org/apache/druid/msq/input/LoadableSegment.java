@@ -86,9 +86,9 @@ public interface LoadableSegment
    * result; close-after-release is a no-op, and closing before the action becomes ready fires any pending ready
    * callbacks (release/get then throw {@link org.apache.druid.common.asyncresource.AsyncResourceCanceledException}).
    * <p>
-   * Delivery accounting is automatic: implementations install an {@link AcquireSegmentAction#setOnRelease} hook on
-   * the returned action, so a successful release updates their counters exactly once with no obligation on the
-   * consumer.
+   * Load accounting is automatic: implementations install an {@link AcquireSegmentAction#setOnRelease} hook on the
+   * returned action, so a successful release counts the load exactly once. The file itself is counted only when the
+   * consumer calls {@link #countHandedOut()}.
    * <p>
    * The {@code acquireMode} selects how the segment is loaded; see {@link AcquireMode}. With {@link AcquireMode#PARTIAL}
    * the returned {@link Segment} is mounted but, for a partial-download (virtual storage) segment, may not be fully
@@ -99,6 +99,14 @@ public interface LoadableSegment
    * @throws DruidException if the segment has already been acquired
    */
   AcquireSegmentAction acquire(AcquireMode acquireMode);
+
+  /**
+   * Counts this segment as a file read, using the row and byte counts recorded when it was acquired. The consumer
+   * should only call this on segments that are handed out for processing to ensure counters don't overcount segments
+   * acquired but subsequently skipped. Does nothing if the segment has not been acquired, or if it has already been
+   * counted.
+   */
+  void countHandedOut();
 
   /**
    * Returns a future for the {@link DataSegment} object. For {@link RegularLoadableSegment}, the future is created

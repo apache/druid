@@ -128,7 +128,8 @@ When you update the version of existing dependencies, you need to update the ver
 also in the `licenses.yaml` file.
 
 `distribution/bin/refresh-license-versions.py` makes that edit from the Maven dependency reports, and lists the entries
-it cannot update on its own, such as an entry whose libraries moved to different versions:
+it cannot update on its own, such as an entry whose libraries moved to different versions. It also lists libraries that
+appear in no report while the rest of their entry ships at the entry's version, so you can remove them:
 
 ```
 distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2

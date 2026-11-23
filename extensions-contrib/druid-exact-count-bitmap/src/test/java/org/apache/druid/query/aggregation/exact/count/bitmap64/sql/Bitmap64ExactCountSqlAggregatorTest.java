@@ -146,6 +146,22 @@ public class Bitmap64ExactCountSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testExactCountOnNonNumericStringLiteralThrowsError()
+  {
+    DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> testQuery(
+            "SELECT BITMAP64_EXACT_COUNT('abc') FROM " + DATA_SOURCE,
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
+
+    Assertions.assertTrue(e.getMessage().contains(
+        "Function [BITMAP64_EXACT_COUNT] argument [1] must be numeric, got string literal ['abc']"));
+  }
+
+  @Test
   public void testExactCountOnPreAggregatedColumn()
   {
     cannotVectorize();
