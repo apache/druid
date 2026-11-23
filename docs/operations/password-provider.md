@@ -27,7 +27,7 @@ Passwords help secure Apache&circledR; Druid systems such as the metadata store 
 
 These passwords have corresponding runtime properties associated with them, for example `druid.metadata.storage.connector.password` corresponds to the metadata store password.
 
-By default users can directly set the passwords in plaintext for runtime properties. For example, `druid.metadata.storage.connector.password=pwd` sets the password to be used by Druid to connect to the metadata store to `pwd`. Alternatively, users can can set passwords as environment variables.
+By default users can directly set the passwords in plaintext for runtime properties. For example, `druid.metadata.storage.connector.password=pwd` sets the password to be used by Druid to connect to the metadata store to `pwd`. Alternatively, users can set passwords as environment variables.
 
 Environment variable passwords allow users to avoid exposing passwords in the `runtime.properties` file. 
 
