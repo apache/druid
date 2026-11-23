@@ -92,7 +92,7 @@ import java.util.function.Consumer;
  * corresponding to a single output partition.
  *
  * "In-memory top-K mode": there is a row limit and the {@link #inputBuffer} fills its share of the buffer (see
- * {@link #getRoomForInputInTopKMode()}). {@link #runNextTruncatingMerge()} merges the whole {@link #inputBuffer} in
+ * {@link #getRoomForInput()}). {@link #runNextTruncatingMerge()} merges the whole {@link #inputBuffer} in
  * memory, keeping only the first rowLimit rows, and puts the output frames (the "retained run") back into the
  * {@link #inputBuffer}. Each of those frames is individually sorted, so later merges treat them like any other input
  * frame. This repeats until all input is read. The final merge then works as in direct mode, so
@@ -516,13 +516,7 @@ public class SuperSorter
       return false;
     }
 
-    final int maxFrames;
-    if (inMemoryTopKEnabled) {
-      maxFrames = Math.min(maxChannelsPerMerger, getRoomForInputInTopKMode());
-    } else {
-      maxFrames = maxChannelsPerMerger;
-    }
-
+    final int maxFrames = Math.min(maxChannelsPerMerger, getRoomForInput());
     if (maxFrames <= 0) {
       return false;
     } else {
@@ -535,7 +529,7 @@ public class SuperSorter
             final IntSet keepReading = result.rhs;
 
             synchronized (runWorkersLock) {
-              inputBuffer.addAll(batch);
+              addToInputBuffer(batch);
               inputFramesReadSoFar += batch.size();
               inputChannelsToRead = keepReading;
 
@@ -597,7 +591,7 @@ public class SuperSorter
         || truncatingMergeRunning
         || inputChannelsToRead.isEmpty()
         || inputBuffer.isEmpty()
-        || getRoomForInputInTopKMode() > 0) {
+        || getRoomForInput() > 0) {
       // Otherwise, the direct merger handles the inputBuffer once all input is read.
       return false;
     }
@@ -642,12 +636,12 @@ public class SuperSorter
         truncatingMergeRunning = false;
 
         if (out.isOverflowed()) {
-          inputBuffer.addAll(mergeInput);
+          addToInputBuffer(mergeInput);
           inMemoryTopKEnabled = false;
         } else {
           final List<Frame> retainedRun = out.getFrames();
           framesDroppedByTruncatingMerges += mergeInput.size() - retainedRun.size();
-          inputBuffer.addAll(retainedRun);
+          addToInputBuffer(retainedRun);
         }
 
         finishInputIfPossible();
@@ -655,6 +649,25 @@ public class SuperSorter
     });
 
     return true;
+  }
+
+  /**
+   * Adds frames to the {@link #inputBuffer}, verifying that it and the running truncating merge stay within
+   * {@link #getMaxInputBufferFramesForDirectMerging()} frames.
+   */
+  @GuardedBy("runWorkersLock")
+  private void addToInputBuffer(final List<Frame> frames)
+  {
+    inputBuffer.addAll(frames);
+
+    final int bufferedFrames = inputBuffer.size() + framesInTruncatingMerge;
+    if (bufferedFrames > getMaxInputBufferFramesForDirectMerging()) {
+      throw DruidException.defensive(
+          "Buffered input frames[%d] exceed max[%d]",
+          bufferedFrames,
+          getMaxInputBufferFramesForDirectMerging()
+      );
+    }
   }
 
   /**
@@ -1231,15 +1244,16 @@ public class SuperSorter
   }
 
   /**
-   * Number of frames the batcher may read in in-memory top-K mode without exceeding the buffer.
+   * Number of frames the batcher may read without exceeding {@link #getMaxInputBufferFramesForDirectMerging()}.
    */
   @GuardedBy("runWorkersLock")
-  private int getRoomForInputInTopKMode()
+  private int getRoomForInput()
   {
-    return getMaxInputBufferFramesForDirectMerging()
-           - getMaxRetainedRunFrames()
-           - framesInTruncatingMerge
-           - inputBuffer.size();
+    int room = getMaxInputBufferFramesForDirectMerging() - inputBuffer.size();
+    if (inMemoryTopKEnabled) {
+      room -= getMaxRetainedRunFrames() + framesInTruncatingMerge;
+    }
+    return room;
   }
 
   @GuardedBy("runWorkersLock")
