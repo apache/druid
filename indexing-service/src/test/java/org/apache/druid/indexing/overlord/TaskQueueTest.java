@@ -82,7 +82,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.DefaultPasswordProvider;
@@ -102,6 +105,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -118,12 +123,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -877,6 +884,39 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Timeout(20)
+  @ParameterizedTest
+  @ValueSource(classes = {AlertEvent.class, ServiceMetricEvent.class, Event.class})
+  public void testFailedWriteCleanupWhenEmitterThrows(final Class<? extends Event> failedEventType) throws Exception
+  {
+    serviceEmitter = spy(serviceEmitter);
+    setUpStatusPersistenceTest();
+    final TestTask task = new TestTask("persist-failure", Intervals.of("2021-01/P1M"));
+    taskQueue.add(task);
+    getLockbox().lock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task, task.interval, null));
+    Assertions.assertEquals(1, getLockbox().findLocksForTask(task).size());
+    doThrow(new ISE("Metadata unavailable")).doCallRealMethod().when(statusPersistenceStorage).setStatus(any());
+    doThrow(new ISE("Emitter unavailable")).when(serviceEmitter).emit(any(failedEventType));
+
+    Assertions.assertDoesNotThrow(() -> taskQueue.shutdownWithSuccess(task.getId(), "test completion"));
+    Assertions.assertTrue(getLockbox().findLocksForTask(task).isEmpty());
+    verify(statusPersistenceRunner, timeout(5000)).shutdown(task.getId(), "test completion", new Object[0]);
+    doCallRealMethod().when(serviceEmitter).emit(any(Event.class));
+
+    taskQueue.syncFromStorage();
+    taskQueue.syncFromStorage();
+    taskQueue.manageQueuedTasks();
+
+    Assertions.assertTrue(statusPersistenceStorage.getStatus(task.getId()).get().isSuccess());
+    Assertions.assertFalse(taskQueue.getActiveTaskInfo(task.getId()).isPresent());
+    verify(statusPersistenceStorage, times(2)).setStatus(any());
+    verify(statusPersistenceRunner, never()).run(any());
+    verify(serviceEmitter, times(1)).emit(argThat((Event event) ->
+        event instanceof ServiceMetricEvent && "task/run/time".equals(((ServiceMetricEvent) event).getMetric())
+    ));
+    Assertions.assertEquals(1L, taskQueue.getSuccessfulTaskCount().values().stream().mapToLong(Long::longValue).sum());
+  }
+
+  @Timeout(20)
   @Test
   public void testFailedCompletionRetainsErrorMessage()
   {
@@ -965,16 +1005,21 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.shutdownWithSuccess(task.getId(), "test completion");
     doCallRealMethod().when(statusPersistenceStorage).setStatus(any());
     final TaskStatus storedStatus = TaskStatus.failure(task.getId(), "completed elsewhere");
+    final List<TaskInfo> snapshot = statusPersistenceStorage.getActiveTaskInfos();
 
     doAnswer(invocation -> {
-      final List<TaskInfo> snapshot = (List<TaskInfo>) invocation.callRealMethod();
       statusPersistenceStorage.setStatus(storedStatus);
       return snapshot;
-    }).doCallRealMethod().when(statusPersistenceStorage).getActiveTaskInfos();
+    }).doReturn(snapshot).doCallRealMethod().when(statusPersistenceStorage).getActiveTaskInfos();
 
     taskQueue.syncFromStorage();
     taskQueue.syncFromStorage();
+    taskQueue.syncFromStorage();
 
+    // A second stale snapshot must not retry again once storage has been found terminal.
+    verify(statusPersistenceStorage, times(2)).getStatus(task.getId());
+    // Storage was already terminal when the retry checked it, so only the initial failure emits an alert.
+    Assertions.assertEquals(1, serviceEmitter.getAlerts().size());
     Assertions.assertEquals(storedStatus, statusPersistenceStorage.getStatus(task.getId()).get());
     Assertions.assertFalse(taskQueue.getActiveTaskInfo(task.getId()).isPresent());
     verify(statusPersistenceStorage, times(2)).setStatus(any());
@@ -1027,6 +1072,9 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.syncFromStorage();
     taskQueue.manageQueuedTasks();
 
+    // The snapshot predates completion, but the successful write must not be retried or alert.
+    verify(statusPersistenceStorage, times(1)).getStatus(task.getId());
+    Assertions.assertTrue(serviceEmitter.getAlerts().isEmpty());
     Assertions.assertFalse(taskQueue.getActiveTaskInfo(task.getId()).isPresent());
     Assertions.assertTrue(statusPersistenceStorage.getStatus(task.getId()).get().isSuccess());
     verify(statusPersistenceStorage, times(1)).setStatus(any());
