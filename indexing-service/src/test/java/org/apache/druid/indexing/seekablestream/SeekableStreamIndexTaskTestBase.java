@@ -676,7 +676,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
     dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
     final DataSegmentPusher dataSegmentPusher =
-        new LocalDataSegmentPusher(dataSegmentPusherConfig, new DeepStorageSegmentConfig(true));
+        new LocalDataSegmentPusher(dataSegmentPusherConfig, new DeepStorageSegmentConfig(true, null));
 
     toolboxFactory = new TaskToolboxFactory(
         null,

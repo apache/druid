@@ -24,8 +24,12 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public class DimensionConverterTest
 {
@@ -138,6 +142,99 @@ public class DimensionConverterTest
         List.of("dataSource", "taskStatus", "taskType"),
         List.copyOf(dims.keySet()),
         "correct Dimension order"
+    );
+  }
+
+  @Test
+  public void testServiceMetricFallsBackToParentService()
+  {
+    final DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), null);
+    final ImmutableMap.Builder<String, String> actual = new ImmutableMap.Builder<>();
+
+    final StatsDMetric statsDMetric = dimensionConverter.addFilteredUserDims(
+        "druid/historical/glacier",
+        "segment/count",
+        ImmutableMap.of("dataSource", "wiki", "tier", "glacier", "priority", "0"),
+        actual
+    );
+
+    Assertions.assertNotNull(statsDMetric);
+    Assertions.assertEquals(StatsDMetric.Type.gauge, statsDMetric.type);
+    Assertions.assertEquals(
+        ImmutableMap.of("dataSource", "wiki", "tier", "glacier", "priority", "0"),
+        actual.build()
+    );
+  }
+
+  @Test
+  public void testServiceMetricMatchesServiceNameExtendedWithoutSlash()
+  {
+    final DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), null);
+    final ImmutableMap.Builder<String, String> actual = new ImmutableMap.Builder<>();
+
+    dimensionConverter.addFilteredUserDims(
+        "druid/historical-hot",
+        "segment/count",
+        ImmutableMap.of("dataSource", "wiki", "tier", "hot", "priority", "0"),
+        actual
+    );
+
+    Assertions.assertEquals(ImmutableMap.of("dataSource", "wiki", "tier", "hot", "priority", "0"), actual.build());
+  }
+
+  @Test
+  public void testServiceMetricPrefersLongestMatchingServicePrefix(@TempDir File tempDir) throws IOException
+  {
+    final File mapFile = new File(tempDir, "metrics.json");
+    new ObjectMapper().writeValue(
+        mapFile,
+        ImmutableMap.of(
+            "druid/historical-segment/count",
+            ImmutableMap.of("dimensions", List.of("tier"), "type", "gauge"),
+            "druid/historical/glacier-segment/count",
+            ImmutableMap.of("dimensions", List.of("dataSource"), "type", "gauge")
+        )
+    );
+    final DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), mapFile.getAbsolutePath());
+    final Map<String, Object> userDims = ImmutableMap.of("dataSource", "wiki", "tier", "glacier");
+
+    final ImmutableMap.Builder<String, String> glacier = new ImmutableMap.Builder<>();
+    dimensionConverter.addFilteredUserDims("druid/historical/glacier/node1", "segment/count", userDims, glacier);
+    Assertions.assertEquals(ImmutableMap.of("dataSource", "wiki"), glacier.build());
+
+    final ImmutableMap.Builder<String, String> other = new ImmutableMap.Builder<>();
+    dimensionConverter.addFilteredUserDims("druid/historical/hot", "segment/count", userDims, other);
+    Assertions.assertEquals(ImmutableMap.of("tier", "glacier"), other.build());
+  }
+
+  @Test
+  public void testServiceMetricPrefersExactServiceMapping()
+  {
+    final DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), null);
+    final ImmutableMap.Builder<String, String> actual = new ImmutableMap.Builder<>();
+
+    dimensionConverter.addFilteredUserDims(
+        "druid/coordinator",
+        "segment/count",
+        ImmutableMap.of("dataSource", "wiki", "tier", "_default_tier"),
+        actual
+    );
+
+    Assertions.assertEquals(ImmutableMap.of("dataSource", "wiki"), actual.build());
+  }
+
+  @Test
+  public void testServiceMetricWithoutMappingForAnyParentServiceIsUnmapped()
+  {
+    final DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), null);
+
+    Assertions.assertNull(
+        dimensionConverter.addFilteredUserDims(
+            "druid/broker/glacier",
+            "segment/count",
+            ImmutableMap.of("dataSource", "wiki"),
+            new ImmutableMap.Builder<>()
+        )
     );
   }
 }

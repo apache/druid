@@ -84,6 +84,16 @@ public interface Grouper<KeyType> extends Closeable
   }
 
   /**
+   * Release references stored on the current aggregation thread after an input task finishes, including on failure
+   * or cancellation. Must be called on the same thread as {@link #aggregate(Object, int)}. The accumulated results
+   * remain available, and the thread may aggregate more input tasks for this grouper later.
+   */
+  default void clearThreadLocalState()
+  {
+    // Most groupers do not store state on processing threads.
+  }
+
+  /**
    * Reset the grouper to its initial state.
    */
   void reset();

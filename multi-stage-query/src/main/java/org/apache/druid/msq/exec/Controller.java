@@ -33,7 +33,6 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Interface for the controller of a multi-stage query. Each Controller is specific to a particular query.
@@ -47,7 +46,7 @@ public interface Controller
    *
    * Controller IDs must be globally unique. For tasks, this is the task ID from {@link MSQControllerTask#getId()}.
    * For Dart, this is {@link org.apache.druid.query.context.QueryContextParameters#DART_QUERY_ID}, set by
-   * {@link SqlEngine#initContextMap(Map)}.
+   * {@link SqlEngine#initContext(QueryContext)}.
    */
   String queryId();
 

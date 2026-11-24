@@ -23,12 +23,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import org.apache.druid.guice.PropertiesModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.TestDruidModule;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.server.security.SensitivePropertiesTest;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -103,12 +105,11 @@ public class StatusResourceTest
 
   private void testHiddenPropertiesWithPropertyFileName(String fileName) throws Exception
   {
-    Injector injector = new StartupInjectorBuilder()
-        .add(
-            new PropertiesModule(Collections.singletonList(fileName)),
-            binder -> binder.bind(SegmentLoaderConfig.class).toInstance(SegmentLoaderConfig.builder().build())
-        )
-        .build();
+    Injector injector = new CoreInjectorBuilder(
+        new StartupInjectorBuilder()
+            .add(new PropertiesModule(Collections.singletonList(fileName)))
+            .build()
+    ).add((Module) SensitivePropertiesTest::bindConfigs).build();
     Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
     Set<String> lowerCasePropertyNames = returnedProperties.keySet()
                                                            .stream()

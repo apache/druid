@@ -588,46 +588,6 @@ Example output:
       "name": "druidRole",
       "permissions": [
         {
-          "resourceAction": {
-            "resource": {
-              "name": "A",
-              "type": "DATASOURCE"
-            },
-            "action": "READ"
-          },
-          "resourceNamePattern": "A"
-        },
-        {
-          "resourceAction": {
-            "resource": {
-              "name": "C",
-              "type": "CONFIG"
-            },
-            "action": "WRITE"
-          },
-          "resourceNamePattern": "C"
-        }
-      ]
-    }
-  ]
-}
-```
-
-The output format of this API when `?full` is specified is deprecated and in later versions will be switched to the output format used when both `?full` and `?simplifyPermissions` flag is set.
-
-The `resourceNamePattern` is a compiled version of the resource name regex. It is redundant and complicates the use of this API for clients such as frontends that edit the authorization configuration, as the permission format in this output does not match the format used for adding permissions to a role.
-
-- `?full?simplifyPermissions`: When both `?full` and `?simplifyPermissions` are set, the permissions in the output will contain only a list of `resourceAction` objects, without the extraneous `resourceNamePattern` field.
-
-```json
-{
-  "name": "druid2",
-  "roles": [
-    {
-      "name": "druidRole",
-      "users": null,
-      "permissions": [
-        {
           "resource": {
             "name": "A",
             "type": "DATASOURCE"
@@ -692,37 +652,31 @@ Example output:
   "name": "druidRole2",
   "permissions": [
     {
-      "resourceAction": {
-        "resource": {
-          "name": "E",
-          "type": "DATASOURCE"
-        },
-        "action": "WRITE"
+      "resource": {
+        "name": "E",
+        "type": "DATASOURCE"
       },
-      "resourceNamePattern": "E"
+      "action": "WRITE"
     }
   ]
 }
 ```
 
-The default output format of this API is deprecated and in later versions will be switched to the output format used when the `?simplifyPermissions` flag is set. The `resourceNamePattern` is a compiled version of the resource name regex. It is redundant and complicates the use of this API for clients such as frontends that edit the authorization configuration, as the permission format in this output does not match the format used for adding permissions to a role.
-
 This API supports the following flags:
 
-- `?full`: The output will contain an extra `users` list, containing the users that currently have this role.
-
-```json
-{"users":["druid"]}
-```
-
-- `?simplifyPermissions`: The permissions in the output will contain only a list of `resourceAction` objects, without the extraneous `resourceNamePattern` field. The `users` field will be null when `?full` is not specified.
+- `?full`: The output will contain additional `users` and `groups` lists, containing the users and group mappings that currently have this role.
 
 Example output:
 
 ```json
 {
   "name": "druidRole2",
-  "users": null,
+  "users": [
+    "druid"
+  ],
+  "groups": [
+    "druidGroupMapping"
+  ],
   "permissions": [
     {
       "resource": {
@@ -734,7 +688,6 @@ Example output:
   ]
 }
 ```
-
 
 `POST(/druid-ext/basic-security/authorization/db/{authorizerName}/roles/{roleName})`<br />
 Create a new role with name \{roleName}.

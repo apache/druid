@@ -67,7 +67,7 @@ public class SegmentStatusInClusterTest
                                          .size(1)
                                          .totalRows(TOTAL_ROWS)
                                          .build();
-    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, null, REALTIME);
+    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, null, REALTIME, !REALTIME);
   }
 
   @Test
@@ -78,7 +78,7 @@ public class SegmentStatusInClusterTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assertions.assertEquals(16, objectMap.size());
+    Assertions.assertEquals(17, objectMap.size());
     Assertions.assertEquals("something", objectMap.get("dataSource"));
     Assertions.assertEquals(INTERVAL.toString(), objectMap.get("interval"));
     Assertions.assertEquals("1", objectMap.get("version"));
@@ -94,6 +94,7 @@ public class SegmentStatusInClusterTest
     Assertions.assertNull(objectMap.get("numRows"));  // From SegmentStatusInCluster constructor
     Assertions.assertEquals(TOTAL_ROWS, objectMap.get("totalRows"));  // From DataSegment
     Assertions.assertEquals(REALTIME, objectMap.get("realtime"));
+    Assertions.assertEquals(!REALTIME, objectMap.get("published"));
 
     final SegmentStatusInCluster deserializedSegment = MAPPER.readValue(
         MAPPER.writeValueAsString(SEGMENT),
@@ -103,6 +104,41 @@ public class SegmentStatusInClusterTest
     Assertions.assertEquals(SEGMENT.getDataSegment().toString(), deserializedSegment.getDataSegment().toString());
     Assertions.assertEquals(OVERSHADOWED, deserializedSegment.isOvershadowed());
     Assertions.assertEquals(REPLICATION_FACTOR, deserializedSegment.getReplicationFactor());
+  }
+
+  @Test
+  public void testPublishedIsNotTiedToRealtime() throws Exception
+  {
+    // Not realtime and not published: a segment that is no longer used but that a Historical still serves.
+    final SegmentStatusInCluster segment =
+        new SegmentStatusInCluster(SEGMENT.getDataSegment(), false, null, null, false, false);
+    Assertions.assertFalse(segment.isRealtime());
+    Assertions.assertFalse(segment.isPublished());
+
+    final SegmentStatusInCluster deserialized =
+        MAPPER.readValue(MAPPER.writeValueAsString(segment), SegmentStatusInCluster.class);
+    Assertions.assertEquals(segment, deserialized);
+    Assertions.assertFalse(deserialized.isPublished());
+  }
+
+  @Test
+  public void testPublishedDefaultsToNotRealtimeWhenAbsent() throws Exception
+  {
+    // A Coordinator on an older version does not send "published".
+    for (boolean realtime : new boolean[]{true, false}) {
+      final Map<String, Object> objectMap = MAPPER.readValue(
+          MAPPER.writeValueAsString(
+              new SegmentStatusInCluster(SEGMENT.getDataSegment(), false, null, null, realtime, realtime)
+          ),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      );
+      Assertions.assertNotNull(objectMap.remove("published"));
+
+      final SegmentStatusInCluster deserialized =
+          MAPPER.readValue(MAPPER.writeValueAsString(objectMap), SegmentStatusInCluster.class);
+      Assertions.assertEquals(realtime, deserialized.isRealtime());
+      Assertions.assertEquals(!realtime, deserialized.isPublished());
+    }
   }
 
   // Previously, the implementation of SegmentStatusInCluster had @JsonCreator/@JsonProperty and @JsonUnwrapped

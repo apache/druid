@@ -41,6 +41,7 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.storage.s3.S3BucketValidator;
 import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
@@ -110,7 +111,15 @@ public class S3InputSource extends CloudObjectInputSource
       @JsonProperty("clientConfig") @Nullable AWSClientConfig awsClientConfig
   )
   {
-    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, objectGlob, systemFields);
+    super(
+        S3StorageDruidModule.SCHEME,
+        uris,
+        prefixes,
+        objects,
+        objectGlob,
+        systemFields,
+        S3BucketValidator.INSTANCE
+    );
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "S3DataSegmentPusherConfig");
     Preconditions.checkNotNull(s3Client, "s3Client");
     this.s3InputSourceConfig = s3InputSourceConfig;

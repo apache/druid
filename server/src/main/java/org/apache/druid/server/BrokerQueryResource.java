@@ -26,8 +26,11 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.ServerViewUtil;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -47,6 +50,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 
 /**
  */
@@ -54,6 +58,7 @@ import java.io.InputStream;
 public class BrokerQueryResource extends QueryResource
 {
   private final TimelineServerView brokerServerView;
+  private final QueryContextConfig queryContextConfig;
 
   @Inject
   public BrokerQueryResource(
@@ -64,7 +69,8 @@ public class BrokerQueryResource extends QueryResource
       QueryResourceQueryResultPusherFactory queryResultPusherFactory,
       ResourceIOReaderWriterFactory resourceIOReaderWriterFactory,
       ServerConfig serverConfig,
-      TimelineServerView brokerServerView
+      TimelineServerView brokerServerView,
+      QueryContextConfig queryContextConfig
   )
   {
     super(
@@ -77,6 +83,13 @@ public class BrokerQueryResource extends QueryResource
         serverConfig
     );
     this.brokerServerView = brokerServerView;
+    this.queryContextConfig = queryContextConfig;
+  }
+
+  @Override
+  protected void validateQueryContext(final Map<String, Object> context)
+  {
+    QueryContextParameterValidator.validate(context, queryContextConfig.isRejectUnknownParameters());
   }
 
   @POST
@@ -97,6 +110,7 @@ public class BrokerQueryResource extends QueryResource
         QueryContextParameters.CLONE_QUERY_MODE.parseOrDefault(cloneQueryModeString);
     try {
       Query<?> query = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
+      validateQueryContext(query.getContext());
       ExecutionVertex ev = ExecutionVertex.of(query);
       return ioReaderWriter.getResponseWriter().ok(
           ServerViewUtil.getTargetLocations(
@@ -107,6 +121,9 @@ public class BrokerQueryResource extends QueryResource
               cloneQueryMode
           )
       );
+    }
+    catch (BadQueryContextException e) {
+      return ioReaderWriter.getResponseWriter().buildNonOkResponse(e.getFailType().getExpectedStatus(), e);
     }
     catch (Exception e) {
       return ioReaderWriter.getResponseWriter().gotError(e);

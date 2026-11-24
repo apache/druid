@@ -21,16 +21,18 @@ package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
+import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.server.security.SensitiveProperties;
 import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.List;
@@ -117,18 +119,19 @@ public abstract class GuiceRunnable implements Runnable
           directSizeBytes != null ? StringUtils.format(", directMemory [%,d]", directSizeBytes) : ""
       );
 
+      // Provisioned at startup even when properties are not logged, so that deprecated configs are warned about
+      final SensitiveProperties sensitiveProperties =
+          injector.getExistingBinding(Key.get(DruidServerConfig.class)) != null
+          ? injector.getInstance(SensitiveProperties.class)
+          : new SensitiveProperties(null, startupLoggingConfig);
+
       if (startupLoggingConfig.isLogProperties()) {
-        final Set<String> maskProperties = Sets.newHashSet(startupLoggingConfig.getMaskProperties());
         final Properties props = injector.getInstance(Properties.class);
 
         for (String propertyName : Ordering.natural().sortedCopy(props.stringPropertyNames())) {
-          String property = props.getProperty(propertyName);
-          for (String masked : maskProperties) {
-            if (propertyName.contains(masked)) {
-              property = "<masked>";
-              break;
-            }
-          }
+          final String property = sensitiveProperties.isSensitive(propertyName)
+                                  ? "<masked>"
+                                  : props.getProperty(propertyName);
           log.info("* %s: %s", propertyName, property);
         }
       }

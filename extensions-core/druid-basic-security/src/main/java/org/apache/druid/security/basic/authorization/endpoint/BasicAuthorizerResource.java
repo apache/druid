@@ -155,12 +155,11 @@ public class BasicAuthorizerResource
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
       @PathParam("userName") final String userName,
-      @QueryParam("full") String full,
-      @QueryParam("simplifyPermissions") String simplifyPermissions
+      @QueryParam("full") String full
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.getUser(authorizerName, userName, full != null, simplifyPermissions != null);
+    return resourceHandler.getUser(authorizerName, userName, full != null);
   }
 
   /**
@@ -340,12 +339,11 @@ public class BasicAuthorizerResource
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
       @PathParam("roleName") final String roleName,
-      @QueryParam("full") String full,
-      @QueryParam("simplifyPermissions") String simplifyPermissions
+      @QueryParam("full") String full
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.getRole(authorizerName, roleName, full != null, simplifyPermissions != null);
+    return resourceHandler.getRole(authorizerName, roleName, full != null);
   }
 
   /**

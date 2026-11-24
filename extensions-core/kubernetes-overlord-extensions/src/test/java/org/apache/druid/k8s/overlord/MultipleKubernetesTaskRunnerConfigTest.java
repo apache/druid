@@ -221,6 +221,18 @@ public class MultipleKubernetesTaskRunnerConfigTest
   }
 
   @Test
+  public void test_fromProperties_withAllowTaskImageTagOverride()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.clusters[0].taskNamespace", "namespace1");
+    props.setProperty("druid.indexer.runner.allowTaskImageTagOverride", "true");
+
+    final MultipleKubernetesTaskRunnerConfig config = MultipleKubernetesTaskRunnerConfig.fromProperties(props);
+
+    Assertions.assertTrue(config.isAllowTaskImageTagOverride());
+  }
+
+  @Test
   public void test_fromProperties_withAdvertisedPlaintextPort()
   {
     final Properties props = new Properties();

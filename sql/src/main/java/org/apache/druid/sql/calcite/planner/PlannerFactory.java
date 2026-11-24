@@ -43,6 +43,7 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -162,7 +163,7 @@ public class PlannerFactory extends PlannerToolbox
       final SqlNode sqlNode,
       final AuthenticationResult authenticationResult,
       final Set<String> authContextKeys,
-      final Map<String, Object> queryContext,
+      final QueryContext queryContext,
       final PlannerHook hook
   )
   {
@@ -199,9 +200,7 @@ public class PlannerFactory extends PlannerToolbox
         statementAndSetContext.getMainStatement(),
         NoopEscalator.getInstance().createEscalatedAuthenticationResult(),
         Set.copyOf(queryContext.keySet()),
-        statementAndSetContext.getSetContext().isEmpty()
-        ? queryContext
-        : QueryContexts.override(queryContext, statementAndSetContext.getSetContext()),
+        QueryContext.of(queryContext).override(statementAndSetContext.getSetContext()),
         null
     );
     thePlanner.validate();
@@ -223,7 +222,7 @@ public class PlannerFactory extends PlannerToolbox
       final String sql,
       final SqlNode sqlNode,
       final AuthenticationResult authenticationResult,
-      final Map<String, Object> queryContext,
+      final QueryContext queryContext,
       final String tableName,
       final DruidTable table
   )
