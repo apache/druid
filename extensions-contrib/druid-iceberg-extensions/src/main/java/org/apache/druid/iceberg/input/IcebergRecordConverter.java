@@ -34,10 +34,15 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Static utility class for converting Iceberg {@link Record} objects to Druid {@link InputRow}.
@@ -61,13 +66,74 @@ public class IcebergRecordConverter
    */
   public static Map<String, Object> convertToMap(Record record, Schema schema, boolean binaryAsString)
   {
+    return convertToMap(record, schema, binaryAsString, true);
+  }
+
+  /**
+   * Same as {@link #convertToMap(Record, Schema, boolean)}, but when {@code discoverNestedFields} is false, the
+   * returned map hides struct, list and map columns from key iteration (and so from schemaless dimension discovery)
+   * while still returning them from {@code get}, so explicitly named dimensions and transforms keep working. This
+   * mirrors {@code ParquetGroupFlattenerMaker#discoverRootFields}, which only discovers primitive root fields
+   * unless schema discovery is enabled.
+   *
+   * @param discoverNestedFields typically {@code DimensionsSpec#useSchemaDiscovery()}
+   */
+  public static Map<String, Object> convertToMap(
+      Record record,
+      Schema schema,
+      boolean binaryAsString,
+      boolean discoverNestedFields
+  )
+  {
     Map<String, Object> result = new LinkedHashMap<>();
+    Set<String> nonDiscoverable = new HashSet<>();
     for (Types.NestedField field : schema.columns()) {
       String name = field.name();
       Object value = record.getField(name);
       result.put(name, convertValue(value, field.type(), binaryAsString));
+      if (!discoverNestedFields && !field.type().isPrimitiveType()) {
+        nonDiscoverable.add(name);
+      }
     }
-    return result;
+    return nonDiscoverable.isEmpty() ? result : new DiscoveryRestrictedMap(result, nonDiscoverable);
+  }
+
+  /**
+   * A read-through view of a row whose iteration skips {@code hiddenKeys} but whose lookups still resolve them.
+   */
+  private static class DiscoveryRestrictedMap extends AbstractMap<String, Object>
+  {
+    private final Map<String, Object> delegate;
+    private final Set<Map.Entry<String, Object>> discoverableEntries;
+
+    DiscoveryRestrictedMap(Map<String, Object> delegate, Set<String> hiddenKeys)
+    {
+      this.delegate = delegate;
+      this.discoverableEntries = new LinkedHashSet<>();
+      for (Map.Entry<String, Object> entry : delegate.entrySet()) {
+        if (!hiddenKeys.contains(entry.getKey())) {
+          discoverableEntries.add(entry);
+        }
+      }
+    }
+
+    @Override
+    public Set<Map.Entry<String, Object>> entrySet()
+    {
+      return Collections.unmodifiableSet(discoverableEntries);
+    }
+
+    @Override
+    public Object get(Object key)
+    {
+      return delegate.get(key);
+    }
+
+    @Override
+    public boolean containsKey(Object key)
+    {
+      return delegate.containsKey(key);
+    }
   }
 
   /**
@@ -84,6 +150,19 @@ public class IcebergRecordConverter
   {
     if (value == null) {
       return null;
+    }
+    if (type instanceof Types.TimestampNanoType) {
+      // Iceberg V3 nanosecond timestamps; Druid timestamps are millis, as for the microsecond type below.
+      if (value instanceof OffsetDateTime) {
+        return ((OffsetDateTime) value).toInstant().toEpochMilli();
+      }
+      if (value instanceof LocalDateTime) {
+        return ((LocalDateTime) value).toInstant(ZoneOffset.UTC).toEpochMilli();
+      }
+      if (value instanceof Long) {
+        return Math.floorDiv((Long) value, 1_000_000L);
+      }
+      return value;
     }
     if (type instanceof Types.TimestampType) {
       if (value instanceof OffsetDateTime) {

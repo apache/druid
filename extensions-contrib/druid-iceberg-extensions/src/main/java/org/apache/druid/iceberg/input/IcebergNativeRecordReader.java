@@ -306,7 +306,12 @@ public class IcebergNativeRecordReader implements InputSourceReader
           if (eqDeleted) {
             continue;
           }
-          Map<String, Object> rowMap = IcebergRecordConverter.convertToMap(record, tableSchema, binaryAsString);
+          Map<String, Object> rowMap = IcebergRecordConverter.convertToMap(
+              record,
+              tableSchema,
+              binaryAsString,
+              inputRowSchema.getDimensionsSpec().useSchemaDiscovery()
+          );
           pending = IcebergRecordConverter.toInputRow(rowMap, inputRowSchema);
           return;
         }

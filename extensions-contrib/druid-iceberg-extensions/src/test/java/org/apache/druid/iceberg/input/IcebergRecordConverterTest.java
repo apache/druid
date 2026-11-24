@@ -19,9 +19,12 @@
 
 package org.apache.druid.iceberg.input;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
@@ -34,6 +37,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collections;
 import java.util.Map;
 
 public class IcebergRecordConverterTest
@@ -81,6 +85,26 @@ public class IcebergRecordConverterTest
   }
 
   @Test
+  public void testNanosecondTimestampsConvertedToMillis()
+  {
+    final Schema schema = new Schema(
+        Types.NestedField.optional(1, "ts_nano", Types.TimestampNanoType.withZone()),
+        Types.NestedField.optional(2, "ts_nano_local", Types.TimestampNanoType.withoutZone()),
+        Types.NestedField.optional(3, "ts_nano_raw", Types.TimestampNanoType.withoutZone())
+    );
+    final Record record = GenericRecord.create(schema);
+    record.setField("ts_nano", OffsetDateTime.of(2024, 1, 2, 3, 4, 5, 123_456_789, ZoneOffset.UTC));
+    record.setField("ts_nano_local", LocalDateTime.of(2024, 1, 2, 3, 4, 5, 123_456_789));
+    record.setField("ts_nano_raw", 1704164645123456789L);
+
+    final Map<String, Object> row = IcebergRecordConverter.convertToMap(record, schema, false);
+
+    Assertions.assertEquals(1704164645123L, row.get("ts_nano"));
+    Assertions.assertEquals(1704164645123L, row.get("ts_nano_local"));
+    Assertions.assertEquals(1704164645123L, row.get("ts_nano_raw"));
+  }
+
+  @Test
   public void testTimestampSpecReadsConvertedTimestamp()
   {
     final Record record = GenericRecord.create(SCHEMA);
@@ -96,6 +120,42 @@ public class IcebergRecordConverterTest
     Assertions.assertEquals(
         1704164645000L,
         IcebergRecordConverter.toInputRow(row, inputRowSchema).getTimestampFromEpoch()
+    );
+  }
+
+  @Test
+  public void testComplexColumnsNotDiscoveredWithoutSchemaDiscovery()
+  {
+    final Schema schema = new Schema(
+        Types.NestedField.optional(1, "id", Types.StringType.get()),
+        Types.NestedField.optional(2, "tags", Types.ListType.ofOptional(3, Types.StringType.get())),
+        Types.NestedField.optional(
+            4,
+            "payload",
+            Types.StructType.of(Types.NestedField.optional(5, "x", Types.StringType.get()))
+        )
+    );
+    final Record record = GenericRecord.create(schema);
+    record.setField("id", "a");
+    record.setField("tags", ImmutableList.of("t1"));
+
+    final Map<String, Object> restricted = IcebergRecordConverter.convertToMap(record, schema, false, false);
+    Assertions.assertEquals(Collections.singleton("id"), restricted.keySet());
+    // Lookups still resolve hidden columns so explicit dimensions and transforms keep working.
+    Assertions.assertEquals(ImmutableList.of("t1"), restricted.get("tags"));
+    Assertions.assertTrue(restricted.containsKey("payload"));
+
+    final Map<String, Object> discovered = IcebergRecordConverter.convertToMap(record, schema, false, true);
+    Assertions.assertEquals(ImmutableSet.of("id", "tags", "payload"), discovered.keySet());
+
+    final InputRowSchema inputRowSchema = new InputRowSchema(
+        new TimestampSpec(null, null, DateTimes.of("2024-01-01")),
+        DimensionsSpec.EMPTY,
+        null
+    );
+    Assertions.assertEquals(
+        ImmutableList.of("id"),
+        IcebergRecordConverter.toInputRow(restricted, inputRowSchema).getDimensions()
     );
   }
 }
