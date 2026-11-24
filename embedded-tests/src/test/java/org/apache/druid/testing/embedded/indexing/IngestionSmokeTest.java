@@ -243,9 +243,13 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
 
     waitForNextCoordinatorCacheSync();
-    waitForNextBrokerCacheSync();
 
-    cluster.callApi().verifySqlQuery("SELECT * FROM sys.segments WHERE datasource='%s'", dataSource, "");
+    // sys.segments may be answered by a Broker that has not yet synced with the Coordinator,
+    // so poll until it is empty instead of waiting for a single Broker sync event.
+    cluster.callApi().waitForResult(
+        () -> cluster.runSql("SELECT * FROM sys.segments WHERE datasource='%s'", dataSource),
+        String::isEmpty
+    ).withTimeoutMillis(60_000).go();
 
     // Kill all unused segments
     final String killTaskId = cluster.callApi().onLeaderOverlord(
@@ -538,14 +542,6 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     eventCollector.latchableEmitter().waitForNextEvent(
         event -> event.hasMetricName("segment/metadataCache/sync/time")
                       .hasService("druid/coordinator")
-    );
-  }
-
-  protected void waitForNextBrokerCacheSync()
-  {
-    eventCollector.latchableEmitter().waitForNextEvent(
-        event -> event.hasMetricName("segment/metadataCache/sync/time")
-                      .hasService("druid/broker")
     );
   }
 
