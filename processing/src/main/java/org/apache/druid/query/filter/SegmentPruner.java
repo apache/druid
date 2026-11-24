@@ -38,16 +38,13 @@ public interface SegmentPruner
   boolean include(DataSegment segment);
 
   /**
-   * The optional {@link SegmentDetail}s that {@link #include(DataSegment)} reads. Callers that fetch segments to prune
+   * The {@link SegmentDetail}s that {@link #include(DataSegment)} reads. Callers that fetch segments to prune
    * should request these.
    * <p>
    * Callers may pass segments that lack some of these details, so {@link #include(DataSegment)} must return true
    * when a detail it needs is absent.
    */
-  default EnumSet<SegmentDetail> getRequiredSegmentDetails()
-  {
-    return SegmentDetail.none();
-  }
+  EnumSet<SegmentDetail> getRequiredSegmentDetails();
 
   /**
    * Filter the given {@link Iterable} of objects containing a {@link DataSegment} (obtained from the converter
