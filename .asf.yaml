@@ -43,6 +43,25 @@ github:
             require_code_owner_review: false
             require_last_push_approval: false
             required_review_thread_resolution: false
+    # The quality-gate job of the CI workflow is a required status check: PRs merge only once it succeeds.
+    - name: "Require CI"
+      target: branch
+      enforcement: active
+      conditions:
+        ref_name:
+          include:
+            - "~DEFAULT_BRANCH"
+          exclude: []
+      bypass_actors:
+        - actor_id: 4
+          actor_type: RepositoryRole
+          bypass_mode: always
+      rules:
+        - type: required_status_checks
+          parameters:
+            strict_required_status_checks_policy: false
+            required_status_checks:
+              - context: quality-gate
 
   # Attempt to make the auto-generated github emails more easily readable in email clients.
   # Configuration adapted from https://github.com/apache/plc4x/blob/develop/.asf.yaml.

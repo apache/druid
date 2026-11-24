@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.dart.controller.sql;
 
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextConfig;
@@ -72,7 +73,56 @@ public class DartSqlEngineTest
     Assertions.assertNotEquals("user-dart-query-id", context.get(QueryContextParameters.DART_QUERY_ID));
   }
 
+  @Test
+  public void testInvalidDefaultContextNamesDartProperty()
+  {
+    final IAE e = Assertions.assertThrows(
+        IAE.class,
+        () -> makeEngine(Map.of("noSuchParameter", 1), new QueryContextConfig(true))
+    );
+    Assertions.assertEquals(
+        "Invalid default query context [druid.msq.dart.query.context]: "
+        + "Unknown query context parameter [noSuchParameter].",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void testInvalidDefaultContextNamesGivenProperty()
+  {
+    final IAE e = Assertions.assertThrows(
+        IAE.class,
+        () -> new DartSqlEngine(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            SERVER_CONFIG,
+            new DefaultQueryConfig(Map.of("noSuchParameter", 1)),
+            null,
+            null,
+            new QueryContextConfig(true),
+            "druid.other.query.context"
+        )
+    );
+    Assertions.assertEquals(
+        "Invalid default query context [druid.other.query.context]: "
+        + "Unknown query context parameter [noSuchParameter].",
+        e.getMessage()
+    );
+  }
+
   private static DartSqlEngine makeEngine(final Map<String, Object> dartDefaults)
+  {
+    return makeEngine(dartDefaults, QueryContextConfig.DEFAULT);
+  }
+
+  private static DartSqlEngine makeEngine(
+      final Map<String, Object> dartDefaults,
+      final QueryContextConfig queryContextConfig
+  )
   {
     return new DartSqlEngine(
         null,
@@ -85,7 +135,7 @@ public class DartSqlEngineTest
         new DefaultQueryConfig(dartDefaults),
         null,
         null,
-        QueryContextConfig.DEFAULT
+        queryContextConfig
     );
   }
 }

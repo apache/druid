@@ -255,7 +255,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               minimumMessageTime,
               maximumMessageTime,
               spec.getDataSchema(),
-              taskTuningConfig
+              taskTuningConfig,
+              exclusiveStartSequenceNumberPartitions
           )
       );
     }
@@ -285,7 +286,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               minimumMessageTime,
               maximumMessageTime,
               spec.getDataSchema(),
-              taskTuningConfig
+              taskTuningConfig,
+              exclusiveStartSequenceNumberPartitions
           )
       );
     }
@@ -2685,7 +2687,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                          taskId,
                                                          seekableStreamIndexTask.getIOConfig()
                                                                                 .getStartSequenceNumbers()
-                                                                                .getPartitionSequenceNumberMap()
+                                                                                .getPartitionSequenceNumberMap(),
+                                                         seekableStreamIndexTask.getIOConfig()
+                                                                                .getStartSequenceNumbers()
+                                                                                .getExclusivePartitions(),
+                                                         seekableStreamIndexTask.getIOConfig().getBaseSequenceName()
                                                      ));
 
                           // update partitionGroups with the publishing task's sequences (if they are greater than what is
@@ -3236,6 +3242,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Map<PartitionIdType, SequenceOffsetType> startingPartitions
   )
   {
+    addDiscoveredTaskToPendingCompletionTaskGroups(
+        groupId,
+        taskId,
+        startingPartitions,
+        Collections.emptySet(),
+        generateSequenceName(startingPartitions, null, null, spec.getDataSchema(), taskTuningConfig)
+    );
+  }
+
+  protected void addDiscoveredTaskToPendingCompletionTaskGroups(
+      int groupId,
+      String taskId,
+      Map<PartitionIdType, SequenceOffsetType> startingPartitions,
+      Set<PartitionIdType> exclusiveStartSequenceNumberPartitions,
+      String baseSequenceName
+  )
+  {
     final CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingCompletionTaskGroups.compute(
         groupId,
         (k, val) -> {
@@ -3247,7 +3270,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
           boolean isTaskGroupPresent = false;
           for (TaskGroup taskGroup : val) {
-            if (taskGroup.startingSequences.equals(startingPartitions)) {
+            if (taskGroup.startingSequences.equals(startingPartitions)
+                && taskGroup.exclusiveStartSequenceNumberPartitions.equals(exclusiveStartSequenceNumberPartitions)
+                && taskGroup.baseSequenceName.equals(baseSequenceName)) {
               isTaskGroupPresent = true;
               break;
             }
@@ -3255,6 +3280,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           if (!isTaskGroupPresent) {
             log.info("Creating new pending completion task group[%s] for discovered task[%s].", groupId, taskId);
 
+            // Keep the task's original sequence name, including for tasks created before the naming change.
             // reading the minimumMessageTime & maximumMessageTime from the publishing task and setting it here is not necessary as this task cannot
             // change to a state where it will read any more events.
             // This is a discovered task, so it would not have been assigned closed partitions initially.
@@ -3264,7 +3290,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 null,
                 null,
                 null,
-                null
+                null,
+                exclusiveStartSequenceNumberPartitions,
+                baseSequenceName
             );
 
             newTaskGroup.tasks.put(taskId, new TaskData());
@@ -3277,7 +3305,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
 
     for (TaskGroup taskGroup : taskGroupList) {
-      if (taskGroup.startingSequences.equals(startingPartitions)) {
+      if (taskGroup.startingSequences.equals(startingPartitions)
+          && taskGroup.exclusiveStartSequenceNumberPartitions.equals(exclusiveStartSequenceNumberPartitions)
+          && taskGroup.baseSequenceName.equals(baseSequenceName)) {
         if (taskGroup.tasks.putIfAbsent(taskId, new TaskData()) == null) {
           log.info(
               "Added discovered task[%s] to taskGroup[%s] with pending completion tasks[%s].",
@@ -3398,22 +3428,24 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // by rehashing the task's sequence name using the most up-to-date class definitions of tuning config and
     // data schema. Recomputing both ensures that forwards-compatible tasks won't be killed (which would occur
     // if the hash generated using the old class definitions was used).
-    String taskSequenceName = generateSequenceName(
+    final String taskSequenceName = generateSequenceName(
         task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap(),
         task.getIOConfig().getMinimumMessageTime(),
         task.getIOConfig().getMaximumMessageTime(),
         task.getDataSchema(),
-        task.getTuningConfig()
+        task.getTuningConfig(),
+        task.getIOConfig().getStartSequenceNumbers().getExclusivePartitions()
     );
 
     if (activelyReadingTaskGroups.get(taskGroupId) != null) {
-      TaskGroup taskGroup = activelyReadingTaskGroups.get(taskGroupId);
+      final TaskGroup taskGroup = activelyReadingTaskGroups.get(taskGroupId);
       return generateSequenceName(
           taskGroup.startingSequences,
           taskGroup.minimumMessageTime,
           taskGroup.maximumMessageTime,
           spec.getDataSchema(),
-          taskTuningConfig
+          taskTuningConfig,
+          taskGroup.exclusiveStartSequenceNumberPartitions
       ).equals(taskSequenceName);
     } else {
       return generateSequenceName(
@@ -3423,7 +3455,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           task.getIOConfig().getMinimumMessageTime(),
           task.getIOConfig().getMaximumMessageTime(),
           spec.getDataSchema(),
-          taskTuningConfig
+          taskTuningConfig,
+          task.getIOConfig().getStartSequenceNumbers().getExclusivePartitions()
       ).equals(taskSequenceName);
     }
   }
@@ -3463,6 +3496,36 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                           + maxMsgTimeStr)
                                  .substring(0, 15);
 
+    return Joiner.on("_").join(baseTaskName(), supervisorId, hashCode);
+  }
+
+  protected String generateSequenceName(
+      Map<PartitionIdType, SequenceOffsetType> startPartitions,
+      DateTime minimumMessageTime,
+      DateTime maximumMessageTime,
+      DataSchema dataSchema,
+      SeekableStreamIndexTaskTuningConfig tuningConfig,
+      @Nullable Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
+  )
+  {
+    final String sequenceName = generateSequenceName(
+        startPartitions,
+        minimumMessageTime,
+        maximumMessageTime,
+        dataSchema,
+        tuningConfig
+    );
+    if (exclusiveStartSequenceNumberPartitions == null || exclusiveStartSequenceNumberPartitions.isEmpty()) {
+      return sequenceName;
+    }
+
+    // An inclusive and an exclusive start at the same offset must not reuse the same pending segment allocation.
+    final List<String> sortedExclusivePartitions = exclusiveStartSequenceNumberPartitions.stream()
+                                                                                         .map(Object::toString)
+                                                                                         .sorted()
+                                                                                         .collect(Collectors.toList());
+    final String exclusivePartitions = String.join(",", sortedExclusivePartitions);
+    final String hashCode = DigestUtils.sha1Hex(sequenceName + exclusivePartitions).substring(0, 15);
     return Joiner.on("_").join(baseTaskName(), supervisorId, hashCode);
   }
 

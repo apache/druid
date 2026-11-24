@@ -95,7 +95,7 @@ Except for the properties above, there are some extra properties which can be cu
 For `druid.cache.expiration` and `druid.cache.timeout` properties, values can be format of `Period` or a number in milliseconds.
 
 ```properties
-# Period format(recomended)
+# Period format(recommended)
 # cache expires after 1 hour
 druid.cache.expiration=PT1H
 

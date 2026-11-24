@@ -2655,6 +2655,11 @@ SRE
 reachability
 ownership_mismatch
 giveup
+Lezer
+MD5
+Hjson
+spec
+dialog
 retryable
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
@@ -2716,6 +2721,10 @@ savepoints
 Scrollable
 updatable
 
+
+- ../docs/release-info/release-notes.md
+dialogs
+
 - ../docs/development/extensions-contrib/tsfile.md
 TsFile
 IoTDB
@@ -2725,3 +2734,4 @@ INT64
 - ../docs/configuration/extensions.md
 druid-tsfile-extensions
 TsFile
+
