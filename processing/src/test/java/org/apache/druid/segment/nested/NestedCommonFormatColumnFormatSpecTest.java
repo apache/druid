@@ -209,7 +209,15 @@ public class NestedCommonFormatColumnFormatSpecTest
   @Test
   public void testEqualsAndHashcode()
   {
-    EqualsVerifier.forClass(NestedCommonFormatColumnFormatSpec.class).usingGetClass().verify();
+    // Inheritance provenance is retained for serialization, not effective format equality.
+    EqualsVerifier.forClass(NestedCommonFormatColumnFormatSpec.class)
+                  .usingGetClass()
+                  .withIgnoredFields(
+                      "inheritedDictionaryCodec",
+                      "inheritedLongCodec",
+                      "inheritedDoubleCodec"
+                  )
+                  .verify();
   }
 
   @Test

@@ -292,9 +292,13 @@ public class NestedInheritedCompressionLevelTest
   }
 
   @Test
-  public void testEquivalentEffectiveFormatsIgnoreInheritanceProvenance()
+  public void testEquivalentEffectiveFormatsIgnoreInheritanceProvenance() throws Exception
   {
-    final IndexSpec indexSpec = IndexSpec.getDefault().getEffectiveSpec();
+    final IndexSpec indexSpec = IndexSpec.builder()
+        .withDimensionCompression(CompressionStrategy.LZ4)
+        .withMetricCompression(CompressionStrategy.ZSTD)
+        .build()
+        .getEffectiveSpec();
 
     final NestedCommonFormatColumnFormatSpec inherited =
         NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, indexSpec);
@@ -311,5 +315,52 @@ public class NestedInheritedCompressionLevelTest
 
     Assertions.assertEquals(inherited, explicit);
     Assertions.assertEquals(inherited.hashCode(), explicit.hashCode());
+
+    final NestedCommonFormatColumnPartSerde.FormatSpec restoredInherited =
+        TestHelper.JSON_MAPPER.readValue(
+            TestHelper.JSON_MAPPER.writeValueAsString(
+                NestedCommonFormatColumnPartSerde.FormatSpec.forSerde(inherited)
+            ),
+            NestedCommonFormatColumnPartSerde.FormatSpec.class
+        );
+
+    final NestedCommonFormatColumnPartSerde.FormatSpec restoredExplicit =
+        TestHelper.JSON_MAPPER.readValue(
+            TestHelper.JSON_MAPPER.writeValueAsString(
+                NestedCommonFormatColumnPartSerde.FormatSpec.forSerde(explicit)
+            ),
+            NestedCommonFormatColumnPartSerde.FormatSpec.class
+        );
+
+    final IndexSpec target = IndexSpec.builder()
+        .withDimensionCompression(CompressionStrategy.LZ4)
+        .withDimensionCompressionLevel(4)
+        .withMetricCompression(CompressionStrategy.ZSTD)
+        .withMetricCompressionLevel(6)
+        .build()
+        .getEffectiveSpec();
+
+    final NestedCommonFormatColumnFormatSpec inheritedTarget =
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(restoredInherited, target);
+
+    final NestedCommonFormatColumnFormatSpec explicitTarget =
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(restoredExplicit, target);
+
+    Assertions.assertEquals(Integer.valueOf(4), inheritedTarget.getInheritedDictionaryCompressionLevel());
+    Assertions.assertEquals(Integer.valueOf(6), inheritedTarget.getInheritedLongCompressionLevel());
+    Assertions.assertEquals(Integer.valueOf(6), inheritedTarget.getInheritedDoubleCompressionLevel());
+
+    Assertions.assertNull(explicitTarget.getInheritedDictionaryCompressionLevel());
+    Assertions.assertNull(explicitTarget.getInheritedLongCompressionLevel());
+    Assertions.assertNull(explicitTarget.getInheritedDoubleCompressionLevel());
+
+    Assertions.assertEquals(
+        inheritedTarget.getDictionaryEncodedColumnCompression(),
+        explicitTarget.getDictionaryEncodedColumnCompression()
+    );
+    Assertions.assertEquals(inheritedTarget.getLongColumnCompression(), explicitTarget.getLongColumnCompression());
+    Assertions.assertEquals(inheritedTarget.getDoubleColumnCompression(), explicitTarget.getDoubleColumnCompression());
+
+    Assertions.assertNotEquals(inheritedTarget, explicitTarget);
   }
 }
