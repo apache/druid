@@ -125,7 +125,7 @@ To keep the previous behavior, pin the old dimension list with `druid.emitter.st
 
 #### MariaDB Connector/J 3.x changes connection URI behavior
 
-The MariaDB JDBC connector has been upgraded from from 2.7.3 to 3.5.10, which has the following impact:
+The MariaDB JDBC connector has been upgraded from 2.7.3 to 3.5.10, which has the following impact:
 
 - For `druid.metadata.storage.connector.connectURI` with `org.mariadb.jdbc.Driver`, use `jdbc:mariadb:`. A legacy `jdbc:mysql:` URI remains usable only if it includes `permitMysqlScheme`. For example, `jdbc:mysql://<host>/druid?permitMysqlScheme`, because metadata storage passes the URI directly to the driver.
 - For MariaDB-backed SQL input sources and JDBC lookups with the default `druid.access.jdbc.enforceAllowedProperties=true`, use `jdbc:mariadb:`. Druid's JDBC property validation does not route `jdbc:mysql:` to the Connector/J 3.x parser, and `permitMysqlScheme` is not in the default `druid.access.jdbc.allowedProperties`, Adding the option alone is not sufficient.

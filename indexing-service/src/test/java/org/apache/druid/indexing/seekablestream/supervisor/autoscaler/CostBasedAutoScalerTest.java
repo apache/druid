@@ -193,6 +193,7 @@ public class CostBasedAutoScalerTest
         .enableTaskAutoScaler(true)
         .lagWeight(1.0)
         .idleWeight(0.0)
+        .useTaskCountBoundariesOnScaleUp(false)
         .build();
     final CostBasedAutoScaler unboundedScaleUpScaler = createAutoScaler(unboundedScaleUpConfig);
     Assertions.assertEquals(
@@ -621,7 +622,7 @@ public class CostBasedAutoScalerTest
         CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DOWN_DELAY,
         cfgWithDefaults.getMinScaleDownDelay()
     );
-    Assertions.assertFalse(cfgWithDefaults.isScaleDownOnTaskRolloverOnly());
+    Assertions.assertTrue(cfgWithDefaults.isScaleDownOnTaskRolloverOnly());
 
     // Test custom config values
     CostBasedAutoScalerConfig cfgWithCustom = CostBasedAutoScalerConfig.builder()
@@ -629,18 +630,18 @@ public class CostBasedAutoScalerTest
                                                                        .taskCountMin(1)
                                                                        .enableTaskAutoScaler(true)
                                                                        .minScaleDownDelay(Duration.standardMinutes(10))
-                                                                       .scaleDownDuringTaskRolloverOnly(true)
+                                                                       .scaleDownDuringTaskRolloverOnly(false)
                                                                        .build();
     Assertions.assertEquals(Duration.standardMinutes(10), cfgWithCustom.getMinScaleDownDelay());
-    Assertions.assertTrue(cfgWithCustom.isScaleDownOnTaskRolloverOnly());
+    Assertions.assertFalse(cfgWithCustom.isScaleDownOnTaskRolloverOnly());
 
-    // computeTaskCountForRollover returns -1 when scaleDownDuringTaskRolloverOnly=false (default)
+    // computeTaskCountForRollover returns -1 when scaleDownDuringTaskRolloverOnly=false
     when(spec.isSuspended()).thenReturn(false);
-    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfgWithDefaults, spec, emitter);
+    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfgWithCustom, spec, emitter);
     Assertions.assertEquals(-1, scaler.computeTaskCountForRollover());
 
     // computeTaskCountForRollover returns -1 when lastKnownMetrics is null (even with scaleDownDuringTaskRolloverOnly=true)
-    CostBasedAutoScaler scalerWithRolloverOnly = new CostBasedAutoScaler(supervisor, cfgWithCustom, spec, emitter);
+    CostBasedAutoScaler scalerWithRolloverOnly = new CostBasedAutoScaler(supervisor, cfgWithDefaults, spec, emitter);
     Assertions.assertEquals(-1, scalerWithRolloverOnly.computeTaskCountForRollover());
   }
 
