@@ -34,6 +34,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
@@ -50,7 +52,6 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
@@ -110,6 +111,7 @@ public class SqlStatementTest
   private PolicyEnforcer policyEnforcer;
   private SqlStatementFactory sqlStatementFactory;
   private SqlToolbox sqlToolbox;
+  private StubServiceEmitter emitter;
 
   @BeforeAll
   public static void setUpClass()
@@ -607,10 +609,11 @@ public class SqlStatementTest
         new DruidHookDispatcher()
     );
 
+    this.emitter = new StubServiceEmitter();
     this.sqlToolbox = new SqlToolbox(
         CalciteTests.createMockSqlEngine(walker, conglomerate),
         plannerFactory,
-        new NoopServiceEmitter(),
+        emitter,
         testRequestLogger,
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         new SqlLifecycleManager()
@@ -699,5 +702,155 @@ public class SqlStatementTest
     finally {
       stmt.close();
     }
+  }
+
+  private static final String PLANNING_TIMEOUT_METRIC = "sqlQuery/planningTimeout/count";
+
+  /**
+   * A statement whose planning blocks until the planning watchdog aborts it, mimicking a pathological query.
+   */
+  private DirectStatement newSpinningStatement(final int maxPlanningTimeMs)
+  {
+    SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
+        .queryContext(
+            QueryContext.of(ImmutableMap.of(QueryContextParameters.MAX_PLANNING_TIME_MS.getName(), maxPlanningTimeMs))
+        )
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+
+    return new DirectStatement(sqlToolbox, sqlReq, null)
+    {
+      @Override
+      protected PlannerResult createPlan(DruidPlanner planner)
+      {
+        final CancelFlag cancelFlag = planner.getPlannerContext().getCancelFlag();
+        while (!cancelFlag.isCancelRequested() && !Thread.currentThread().isInterrupted()) {
+          // spin until the watchdog aborts us
+        }
+        throw new RuntimeException("Preparation aborted");
+      }
+    };
+  }
+
+  /**
+   * A query aborted because planning timed out emits {@code sqlQuery/planningTimeout/count}, alongside
+   * {@code sqlQuery/time}, with the same dimensions.
+   */
+  @Test
+  @Timeout(30)
+  public void testPlanningTimeoutEmitsMetric()
+  {
+    final DirectStatement stmt = newSpinningStatement(100);
+
+    Assertions.assertThrows(QueryTimeoutException.class, stmt::plan);
+    stmt.close();
+
+    final List<ServiceMetricEvent> events = emitter.getMetricEvents(PLANNING_TIMEOUT_METRIC);
+    Assertions.assertEquals(1, events.size());
+    final ServiceMetricEvent event = events.get(0);
+    Assertions.assertEquals(1, event.getValue().intValue());
+    Assertions.assertEquals("false", event.getUserDims().get("success"));
+    Assertions.assertEquals("504", String.valueOf(event.getUserDims().get("statusCode")));
+    Assertions.assertNotNull(event.getUserDims().get("engine"));
+
+    // The id, nativeQueryIds and dataSource dimensions are not asserted: they only exist once the planner context
+    // and authorization are available, and whether the timeout fires before or after that depends on timing.
+    final List<ServiceMetricEvent> timeEvents = emitter.getMetricEvents("sqlQuery/time");
+    Assertions.assertEquals(1, timeEvents.size());
+    Assertions.assertEquals("false", timeEvents.get(0).getUserDims().get("success"));
+    Assertions.assertEquals("504", String.valueOf(timeEvents.get(0).getUserDims().get("statusCode")));
+  }
+
+  /**
+   * The timeout is also reported when planner construction alone exhausts the budget, which fails before the
+   * watchdog is armed.
+   */
+  @Test
+  @Timeout(30)
+  public void testPlanningTimeoutDuringPlannerConstructionEmitsMetric()
+  {
+    SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
+        .queryContext(QueryContext.of(ImmutableMap.of(QueryContextParameters.MAX_PLANNING_TIME_MS.getName(), 50)))
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+
+    final DirectStatement stmt = new DirectStatement(sqlToolbox, sqlReq, null)
+    {
+      @Override
+      protected DruidPlanner createPlanner()
+      {
+        try {
+          Thread.sleep(300);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+        return super.createPlanner();
+      }
+    };
+
+    Assertions.assertThrows(QueryTimeoutException.class, stmt::plan);
+    stmt.close();
+
+    Assertions.assertEquals(1, emitter.getMetricEvents(PLANNING_TIMEOUT_METRIC).size());
+  }
+
+  /**
+   * On the HTTP path the result pusher reports the failure again, converted to a different exception. The metric must
+   * not depend on the type of the exception that happens to be reported last.
+   */
+  @Test
+  @Timeout(30)
+  public void testPlanningTimeoutMetricIsEmittedWhenAnotherFailureIsReportedLater()
+  {
+    final DirectStatement stmt = newSpinningStatement(100);
+
+    Assertions.assertThrows(QueryTimeoutException.class, stmt::plan);
+    stmt.reporter().failed(new RuntimeException("converted"));
+    stmt.close();
+
+    Assertions.assertEquals(1, emitter.getMetricEvents(PLANNING_TIMEOUT_METRIC).size());
+  }
+
+  @Test
+  public void testNoPlanningTimeoutMetricWhenPlanningSucceeds()
+  {
+    SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
+        .queryContext(QueryContext.of(ImmutableMap.of(QueryContextParameters.MAX_PLANNING_TIME_MS.getName(), 60_000)))
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+
+    final DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+    stmt.plan();
+    stmt.close();
+
+    Assertions.assertEquals(0, emitter.getMetricEvents(PLANNING_TIMEOUT_METRIC).size());
+    final List<ServiceMetricEvent> timeEvents = emitter.getMetricEvents("sqlQuery/time");
+    Assertions.assertEquals(1, timeEvents.size());
+    Assertions.assertEquals("true", timeEvents.get(0).getUserDims().get("success"));
+  }
+
+  /**
+   * Only a planning timeout counts: a query that fails to plan for any other reason does not.
+   */
+  @Test
+  public void testNoPlanningTimeoutMetricWhenPlanningFailsForAnotherReason()
+  {
+    SqlQueryPlus sqlReq = queryPlus(
+        "SELECT * FROM druid.does_not_exist",
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
+
+    final DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
+    Assertions.assertThrows(DruidException.class, stmt::plan);
+    stmt.close();
+
+    Assertions.assertEquals(0, emitter.getMetricEvents(PLANNING_TIMEOUT_METRIC).size());
+    final List<ServiceMetricEvent> timeEvents = emitter.getMetricEvents("sqlQuery/time");
+    Assertions.assertEquals(1, timeEvents.size());
+    Assertions.assertEquals("false", timeEvents.get(0).getUserDims().get("success"));
   }
 }

@@ -68,6 +68,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`query/priority`|Assigned lane and priority, only if Laning strategy is enabled. Refer to [Laning strategies](../configuration/index.md#laning-strategies)|`lane`, `dataSource`, `type`|0|
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`|< 1s|
 |`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
+|`sqlQuery/planningTimeout/count`|Emitted with a value of 1 for each SQL query that was aborted because planning exceeded `maxPlanningTimeMs`. These queries also appear in `sqlQuery/time` with `success` set to `false` and `statusCode` 504, but so do other timeouts, so use this metric to count planning timeouts specifically.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`| |
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`serverview/init/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
 |`metadatacache/init/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
@@ -220,6 +221,7 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 |------|-----------|----------|------------|
 |`sqlQuery/time`|Milliseconds taken to complete a SQL.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`|< 1s|
 |`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
+|`sqlQuery/planningTimeout/count`|Emitted with a value of 1 for each SQL query that was aborted because planning exceeded `maxPlanningTimeMs`. These queries also appear in `sqlQuery/time` with `success` set to `false` and `statusCode` 504, but so do other timeouts, so use this metric to count planning timeouts specifically.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`| |
 |`sqlQuery/bytes`|number of bytes returned in SQL response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 
 ## Ingestion metrics

@@ -641,7 +641,7 @@ The following parameters apply to SQL queries only. For how to set them, see [SQ
 
 | | |
 |---|---|
-|**Description**|Maximum wall-clock time, in milliseconds, allowed for planning this query on the Broker. When planning exceeds this budget, planning is aborted and the query fails with an HTTP 504 `Query timeout` error. Use this to guard against pathological queries, such as one with a very large `IN` filter, whose planning time can spike. A non-positive value disables the timeout. To apply a cluster-wide default, set the `druid.query.default.context.maxPlanningTimeMs` runtime property (or the Broker's dynamic `queryContext` config); see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).|
+|**Description**|Maximum wall-clock time, in milliseconds, allowed for planning this query on the Broker. When planning exceeds this budget, planning is aborted and the query fails with an HTTP 504 `Query timeout` error. Use this to guard against pathological queries, such as one with a very large `IN` filter, whose planning time can spike. A non-positive value disables the timeout. Each query aborted this way is counted by the [`sqlQuery/planningTimeout/count`](../operations/metrics.md#query-metrics) metric. To apply a cluster-wide default, set the `druid.query.default.context.maxPlanningTimeMs` runtime property (or the Broker's dynamic `queryContext` config); see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).|
 |**Type**|Long|
 |**Default**|`0`|
 |**Query**|SQL|

@@ -12,6 +12,7 @@
   "mergeBuffer/pendingRequests" : { "dimensions" : [], "type" : "count", "help": "Number of requests waiting to acquire a batch of buffers from the merge buffer pool."},
   "sqlQuery/time" : { "dimensions" : ["dataSource"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to complete a SQL query."},
   "sqlQuery/planningTimeMs" : { "dimensions" : ["dataSource"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to plan a SQL to native query"},
+  "sqlQuery/planningTimeout/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of SQL queries aborted because planning exceeded the maximum planning time."},
   "sqlQuery/bytes" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of bytes returned in the SQL query response."},
   "serverview/init/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Time taken to initialize the server view."},
   "metadatacache/init/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Time taken to initialize the segment metadata cache."},
