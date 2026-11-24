@@ -620,9 +620,7 @@ public class NestedCommonFormatColumnFormatSpec
            && Objects.equals(inheritedDictionaryCompressionLevel, that.inheritedDictionaryCompressionLevel)
            && Objects.equals(inheritedLongCompressionLevel, that.inheritedLongCompressionLevel)
            && Objects.equals(inheritedDoubleCompressionLevel, that.inheritedDoubleCompressionLevel)
-           && inheritedDictionaryCodec == that.inheritedDictionaryCodec
-           && inheritedLongCodec == that.inheritedLongCodec
-           && inheritedDoubleCodec == that.inheritedDoubleCodec
+
            && Objects.equals(bitmapEncoding, that.bitmapEncoding)
            && Objects.equals(longFieldBitmapIndexType, that.longFieldBitmapIndexType)
            && Objects.equals(doubleFieldBitmapIndexType, that.doubleFieldBitmapIndexType);
@@ -644,9 +642,7 @@ public class NestedCommonFormatColumnFormatSpec
         inheritedDictionaryCompressionLevel,
         inheritedLongCompressionLevel,
         inheritedDoubleCompressionLevel,
-        inheritedDictionaryCodec,
-        inheritedLongCodec,
-        inheritedDoubleCodec,
+
         bitmapEncoding,
         longFieldBitmapIndexType,
         doubleFieldBitmapIndexType

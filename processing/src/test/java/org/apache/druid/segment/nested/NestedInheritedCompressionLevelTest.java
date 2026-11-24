@@ -290,4 +290,26 @@ public class NestedInheritedCompressionLevelTest
         merged.getInheritedDoubleCompressionLevel()
     );
   }
+
+  @Test
+  public void testEquivalentEffectiveFormatsIgnoreInheritanceProvenance()
+  {
+    final IndexSpec indexSpec = IndexSpec.getDefault().getEffectiveSpec();
+
+    final NestedCommonFormatColumnFormatSpec inherited =
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, indexSpec);
+
+    final NestedCommonFormatColumnFormatSpec explicit =
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
+            NestedCommonFormatColumnFormatSpec.builder()
+                .setDictionaryEncodedColumnCompression(inherited.getDictionaryEncodedColumnCompression())
+                .setLongColumnCompression(inherited.getLongColumnCompression())
+                .setDoubleColumnCompression(inherited.getDoubleColumnCompression())
+                .build(),
+            indexSpec
+        );
+
+    Assertions.assertEquals(inherited, explicit);
+    Assertions.assertEquals(inherited.hashCode(), explicit.hashCode());
+  }
 }
