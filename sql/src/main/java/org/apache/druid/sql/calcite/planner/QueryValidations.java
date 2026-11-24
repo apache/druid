@@ -63,6 +63,8 @@ public class QueryValidations
         @Override
         public RelNode visit(LogicalJoin join)
         {
+          // A broadcast context rejects RIGHT and FULL joins even when hinted sort_merge: MSQ flattens a sort-merge
+          // join that is the direct left input of a broadcast join into the broadcast plan, ignoring the hint.
           if (join.getJoinType().generatesNullsOnLeft()
               && (plannerContext.getJoinAlgorithm() == JoinAlgorithm.BROADCAST
                   || QueryUtils.getJoinAlgorithm(join, plannerContext) == JoinAlgorithm.BROADCAST)) {
@@ -76,7 +78,31 @@ public class QueryValidations
       final FindRightyJoin shuttle = new FindRightyJoin();
       relNode.accept(shuttle);
       if (shuttle.found != null) {
-        if (plannerContext.getJoinAlgorithm() == JoinAlgorithm.BROADCAST) {
+        final DruidHint.DruidJoinHint joinHint = QueryUtils.getJoinHint(shuttle.found);
+        if (joinHint != null && joinHint.asJoinAlgorithm() == JoinAlgorithm.BROADCAST) {
+          throw new ValidationException(
+              StringUtils.format(
+                  "%s JOIN is not supported by engine[%s] with join hint[%s]. Remove the hint or use join hint[%s].",
+                  shuttle.found.getJoinType(),
+                  plannerContext.getEngine().name(),
+                  DruidHint.DruidJoinHint.BroadcastJoinHint.BROADCAST_JOIN,
+                  DruidHint.DruidJoinHint.SortMergeJoinHint.SORT_MERGE_JOIN
+              )
+          );
+        } else if (joinHint != null) {
+          throw new ValidationException(
+              StringUtils.format(
+                  "%s JOIN is not supported by engine[%s] with %s[%s], even with join hint[%s]. Set %s[%s].",
+                  shuttle.found.getJoinType(),
+                  plannerContext.getEngine().name(),
+                  QueryContextParameters.SQL_JOIN_ALGORITHM,
+                  plannerContext.getJoinAlgorithm(),
+                  DruidHint.DruidJoinHint.SortMergeJoinHint.SORT_MERGE_JOIN,
+                  QueryContextParameters.SQL_JOIN_ALGORITHM,
+                  JoinAlgorithm.SORT_MERGE.toString()
+              )
+          );
+        } else {
           throw new ValidationException(
               StringUtils.format(
                   "%s JOIN is not supported by engine[%s] with %s[%s]. Try %s[%s].",
@@ -86,15 +112,6 @@ public class QueryValidations
                   plannerContext.getJoinAlgorithm(),
                   QueryContextParameters.SQL_JOIN_ALGORITHM,
                   JoinAlgorithm.SORT_MERGE.toString()
-              )
-          );
-        } else {
-          throw new ValidationException(
-              StringUtils.format(
-                  "%s JOIN is not supported by engine[%s] with join hint[%s]. Remove the hint.",
-                  shuttle.found.getJoinType(),
-                  plannerContext.getEngine().name(),
-                  DruidHint.DruidJoinHint.BroadcastJoinHint.BROADCAST_JOIN
               )
           );
         }

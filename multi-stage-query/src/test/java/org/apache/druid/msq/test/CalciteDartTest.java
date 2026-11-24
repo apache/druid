@@ -314,4 +314,25 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         e -> Assertions.assertTrue(e.getMessage().contains("RIGHT JOIN is not supported by engine"), e.getMessage())
     );
   }
+
+  @Test
+  public void testRightJoinWithSortMergeHintUnderBroadcastContextIsRejected()
+  {
+    // The context check rejects this even though the join is hinted sort_merge.
+    testQueryThrows(
+        "SELECT /*+ sort_merge */ f1.dim1, f2.dim1\n"
+        + "FROM foo f1 RIGHT JOIN foo f2 ON f1.dim1 = f2.dim1",
+        QueryContext.ofMap(
+            QueryContextParameters.DEBUG,
+            true,
+            QueryContextParameters.SQL_JOIN_ALGORITHM,
+            JoinAlgorithm.BROADCAST
+        ),
+        DruidException.class,
+        e -> Assertions.assertTrue(
+            e.getMessage().contains("even with join hint[sort_merge]. Set sqlJoinAlgorithm[sortMerge]."),
+            e.getMessage()
+        )
+    );
+  }
 }

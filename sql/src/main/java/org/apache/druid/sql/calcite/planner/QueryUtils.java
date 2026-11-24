@@ -23,6 +23,8 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.segment.column.RowSignature;
+
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -59,6 +61,20 @@ public class QueryUtils
 
   public static JoinAlgorithm getJoinAlgorithm(Join join, PlannerContext plannerContext)
   {
+    final DruidHint.DruidJoinHint joinHint = getJoinHint(join);
+    if (joinHint != null) {
+      return joinHint.asJoinAlgorithm();
+    } else {
+      return plannerContext.getJoinAlgorithm();
+    }
+  }
+
+  /**
+   * Returns the join hint closest to {@code join} (shortest inherit path), or null if it has no join hint.
+   */
+  @Nullable
+  public static DruidHint.DruidJoinHint getJoinHint(Join join)
+  {
     RelHint closestHint = null;
     for (RelHint hint : join.getHints()) {
       if ((closestHint == null || hint.inheritPath.size() < closestHint.inheritPath.size())
@@ -67,10 +83,6 @@ public class QueryUtils
       }
     }
 
-    if (closestHint != null) {
-      return DruidHint.DruidJoinHint.fromString(closestHint.hintName).asJoinAlgorithm();
-    } else {
-      return plannerContext.getJoinAlgorithm();
-    }
+    return closestHint == null ? null : DruidHint.DruidJoinHint.fromString(closestHint.hintName);
   }
 }

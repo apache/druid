@@ -42,11 +42,46 @@ public class QueryValidationsTest
         ValidationException.class,
         () -> QueryValidations.validateLogicalQueryForDruid(
             plannerContext(JoinAlgorithm.SORT_MERGE),
-            rightJoin(ImmutableList.of(RelHint.builder("broadcast").build()))
+            join(JoinRelType.RIGHT, ImmutableList.of(RelHint.builder("broadcast").build()))
         )
     );
     Assertions.assertEquals(
-        "RIGHT JOIN is not supported by engine[test] with join hint[broadcast]. Remove the hint.",
+        "RIGHT JOIN is not supported by engine[test] with join hint[broadcast]. "
+        + "Remove the hint or use join hint[sort_merge].",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void test_rightJoin_broadcastHint_broadcastDefault_reportsHint()
+  {
+    final ValidationException e = Assertions.assertThrows(
+        ValidationException.class,
+        () -> QueryValidations.validateLogicalQueryForDruid(
+            plannerContext(JoinAlgorithm.BROADCAST),
+            join(JoinRelType.RIGHT, ImmutableList.of(RelHint.builder("broadcast").build()))
+        )
+    );
+    Assertions.assertEquals(
+        "RIGHT JOIN is not supported by engine[test] with join hint[broadcast]. "
+        + "Remove the hint or use join hint[sort_merge].",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void test_rightJoin_sortMergeHint_broadcastDefault_isRejected()
+  {
+    final ValidationException e = Assertions.assertThrows(
+        ValidationException.class,
+        () -> QueryValidations.validateLogicalQueryForDruid(
+            plannerContext(JoinAlgorithm.BROADCAST),
+            join(JoinRelType.RIGHT, ImmutableList.of(RelHint.builder("sort_merge").build()))
+        )
+    );
+    Assertions.assertEquals(
+        "RIGHT JOIN is not supported by engine[test] with sqlJoinAlgorithm[broadcast], "
+        + "even with join hint[sort_merge]. Set sqlJoinAlgorithm[sortMerge].",
         e.getMessage()
     );
   }
@@ -56,7 +91,7 @@ public class QueryValidationsTest
   {
     QueryValidations.validateLogicalQueryForDruid(
         plannerContext(JoinAlgorithm.SORT_MERGE),
-        rightJoin(ImmutableList.of())
+        join(JoinRelType.RIGHT, ImmutableList.of())
     );
   }
 
@@ -67,12 +102,86 @@ public class QueryValidationsTest
         ValidationException.class,
         () -> QueryValidations.validateLogicalQueryForDruid(
             plannerContext(JoinAlgorithm.BROADCAST),
-            rightJoin(ImmutableList.of())
+            join(JoinRelType.RIGHT, ImmutableList.of())
         )
     );
     Assertions.assertEquals(
         "RIGHT JOIN is not supported by engine[test] with sqlJoinAlgorithm[broadcast]. "
         + "Try sqlJoinAlgorithm[sortMerge].",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void test_fullJoin_broadcastHint_isRejected()
+  {
+    final ValidationException e = Assertions.assertThrows(
+        ValidationException.class,
+        () -> QueryValidations.validateLogicalQueryForDruid(
+            plannerContext(JoinAlgorithm.SORT_MERGE),
+            join(JoinRelType.FULL, ImmutableList.of(RelHint.builder("broadcast").build()))
+        )
+    );
+    Assertions.assertEquals(
+        "FULL JOIN is not supported by engine[test] with join hint[broadcast]. "
+        + "Remove the hint or use join hint[sort_merge].",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void test_fullJoin_broadcastDefault_isRejected()
+  {
+    final ValidationException e = Assertions.assertThrows(
+        ValidationException.class,
+        () -> QueryValidations.validateLogicalQueryForDruid(
+            plannerContext(JoinAlgorithm.BROADCAST),
+            join(JoinRelType.FULL, ImmutableList.of())
+        )
+    );
+    Assertions.assertEquals(
+        "FULL JOIN is not supported by engine[test] with sqlJoinAlgorithm[broadcast]. "
+        + "Try sqlJoinAlgorithm[sortMerge].",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void test_rightJoin_closestHintSortMerge_isAllowed() throws ValidationException
+  {
+    // The sort_merge hint has the shorter inherit path, so it overrides the inherited broadcast hint.
+    QueryValidations.validateLogicalQueryForDruid(
+        plannerContext(JoinAlgorithm.SORT_MERGE),
+        join(
+            JoinRelType.RIGHT,
+            ImmutableList.of(
+                RelHint.builder("broadcast").inheritPath(0, 0).build(),
+                RelHint.builder("sort_merge").inheritPath(0).build()
+            )
+        )
+    );
+  }
+
+  @Test
+  public void test_rightJoin_closestHintBroadcast_isRejected()
+  {
+    // The broadcast hint has the shorter inherit path, so it overrides the inherited sort_merge hint.
+    final ValidationException e = Assertions.assertThrows(
+        ValidationException.class,
+        () -> QueryValidations.validateLogicalQueryForDruid(
+            plannerContext(JoinAlgorithm.SORT_MERGE),
+            join(
+                JoinRelType.RIGHT,
+                ImmutableList.of(
+                    RelHint.builder("sort_merge").inheritPath(0, 0).build(),
+                    RelHint.builder("broadcast").inheritPath(0).build()
+                )
+            )
+        )
+    );
+    Assertions.assertEquals(
+        "RIGHT JOIN is not supported by engine[test] with join hint[broadcast]. "
+        + "Remove the hint or use join hint[sort_merge].",
         e.getMessage()
     );
   }
@@ -93,12 +202,12 @@ public class QueryValidationsTest
   }
 
   /**
-   * RIGHT join with {@code hints}, as the only node of a logical plan.
+   * Join of {@code joinType} with {@code hints}, as the only node of a logical plan.
    */
-  private static LogicalJoin rightJoin(final ImmutableList<RelHint> hints)
+  private static LogicalJoin join(final JoinRelType joinType, final ImmutableList<RelHint> hints)
   {
     final LogicalJoin join = Mockito.mock(LogicalJoin.class);
-    Mockito.when(join.getJoinType()).thenReturn(JoinRelType.RIGHT);
+    Mockito.when(join.getJoinType()).thenReturn(joinType);
     Mockito.when(join.getHints()).thenReturn(hints);
     Mockito.when(join.accept(ArgumentMatchers.any(RelShuttle.class)))
            .thenAnswer(invocation -> invocation.<RelShuttle>getArgument(0).visit(join));
