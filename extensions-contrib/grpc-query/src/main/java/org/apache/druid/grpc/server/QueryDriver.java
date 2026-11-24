@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.GeneratedMessage;
 import org.apache.calcite.avatica.SqlType;
@@ -40,10 +39,15 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameterValidator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -69,7 +73,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -85,7 +88,7 @@ public class QueryDriver
 {
   private static final Logger log = new Logger(QueryDriver.class);
 
-  private static final String TIME_FIELD_KEY = "timeFieldKey";
+  private static final String TIME_FIELD_KEY = QueryContextParameters.TIME_FIELD_KEY.getName();
 
   /**
    * Internal runtime exception to report request errors.
@@ -103,13 +106,15 @@ public class QueryDriver
   private final QueryConfigProvider queryConfigProvider;
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final QueryScheduler queryScheduler;
+  private final QueryContextConfig queryContextConfig;
 
   public QueryDriver(
       final ObjectMapper jsonMapper,
       final SqlStatementFactory sqlStatementFactory,
       final QueryConfigProvider queryConfigProvider,
       final QueryLifecycleFactory queryLifecycleFactory,
-      final QueryScheduler queryScheduler
+      final QueryScheduler queryScheduler,
+      final QueryContextConfig queryContextConfig
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
@@ -117,6 +122,7 @@ public class QueryDriver
     this.queryConfigProvider = queryConfigProvider;
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.queryScheduler = queryScheduler;
+    this.queryContextConfig = queryContextConfig;
   }
 
   /**
@@ -159,6 +165,18 @@ public class QueryDriver
     catch (JsonProcessingException e) {
       return QueryResponse.newBuilder()
                           .setQueryId("")
+                          .setStatus(QueryStatus.REQUEST_ERROR)
+                          .setErrorMessage(e.getMessage())
+                          .build();
+    }
+    try {
+      QueryContextParameterValidator.validate(query.getContext(), queryContextConfig.isRejectUnknownParameters());
+    }
+    catch (BadQueryContextException e) {
+      // Not parsed, as the context may be the cause of the exception
+      final Object queryId = query.getContext().get(QueryContextParameters.QUERY_ID.getName());
+      return QueryResponse.newBuilder()
+                          .setQueryId(queryId instanceof String ? (String) queryId : "")
                           .setStatus(QueryStatus.REQUEST_ERROR)
                           .setErrorMessage(e.getMessage())
                           .build();
@@ -317,6 +335,7 @@ public class QueryDriver
                        .sql(request.getQuery())
                        .systemDefaultContext(queryConfigProvider.getContext())
                        .queryContext(translateContext(request))
+                       .rejectUnknownParameters(queryContextConfig.isRejectUnknownParameters())
                        .parameters(translateParameters(request))
                        .auth(authResult)
                        .build();
@@ -328,17 +347,11 @@ public class QueryDriver
    * into a number, Boolean, etc. gRPC has no similar feature. Rather than clutter up
    * the gRPC request with typed context values, we rely on the existing code that can
    * translate string values to the desired type on the fly. Thus, we build up a
-   * {@code Map<String, String>}.
+   * {@link QueryContext} of string values.
    */
-  private Map<String, Object> translateContext(QueryRequest request)
+  private QueryContext translateContext(QueryRequest request)
   {
-    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-    if (request.getContextCount() > 0) {
-      for (Map.Entry<String, String> entry : request.getContextMap().entrySet()) {
-        builder.put(entry.getKey(), entry.getValue());
-      }
-    }
-    return builder.build();
+    return QueryContext.builder().putAll(request.getContextMap()).toContext();
   }
 
   /**
@@ -751,20 +764,24 @@ public class QueryDriver
   @SuppressWarnings("unchecked")
   private Class<GeneratedMessage> getProtobufClass(final QueryRequest request)
   {
+    final Class<?> clazz;
     try {
-      return (Class<GeneratedMessage>) Class.forName(request.getProtobufMessageName());
+      // Class name is client-supplied: load without initializing so no static initializer of an arbitrary class runs.
+      clazz = Class.forName(request.getProtobufMessageName(), false, QueryDriver.class.getClassLoader());
     }
-    catch (ClassNotFoundException e) {
+    catch (ClassNotFoundException | LinkageError e) {
       throw new RequestError(
           "The Protobuf class [%s] is not known. Is your protobuf jar on the class path?",
           request.getProtobufMessageName()
       );
     }
-    catch (ClassCastException e) {
+    // The unchecked cast below never fails at runtime, so the type must be checked explicitly.
+    if (!GeneratedMessage.class.isAssignableFrom(clazz)) {
       throw new RequestError(
           "The class [%s] is not a Protobuf",
           request.getProtobufMessageName()
       );
     }
+    return (Class<GeneratedMessage>) clazz;
   }
 }

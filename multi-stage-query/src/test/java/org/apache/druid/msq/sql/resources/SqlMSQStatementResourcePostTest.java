@@ -41,13 +41,14 @@ import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.ExecutionMode;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.storage.NilStorageConnector;
@@ -82,7 +83,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         authorizerMapper,
         new DefaultQueryConfig(Map.of("debug", "false")),
         new ServerConfig(),
-        null
+        null,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
     );
   }
 
@@ -175,12 +177,41 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             false,
             false,
             false,
-            ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.SYNC.name()),
+            QueryContext.ofMap(QueryContextParameters.EXECUTION_MODE, ExecutionMode.SYNC),
             null
         ), SqlStatementResourceTest.makeOkRequest()),
         "The sql statement api currently does not support the provided execution mode [SYNC]. "
         + "Please set [executionMode] to [ASYNC] in the query context",
         Response.Status.BAD_REQUEST
+    );
+  }
+
+  @Test
+  public void testInvalidContextReturnsBadRequest()
+  {
+    SqlStatementResourceTest.assertExceptionMessage(
+        resource.doPost(asyncQuery("SET debug = 2; select * from foo"), SqlStatementResourceTest.makeOkRequest()),
+        "Context parameter [debug] is boolean, which allows only 0/1, '0'/'1', true/false, or 'true'/'false' (in any case), but was given [2]",
+        Response.Status.BAD_REQUEST
+    );
+    // The resource rejects unknown parameters as configured
+    SqlStatementResourceTest.assertExceptionMessage(
+        resource.doPost(asyncQuery("SET useCahce = false; select * from foo"), SqlStatementResourceTest.makeOkRequest()),
+        "Unknown query context parameter [useCahce]. Did you mean [useCache]?",
+        Response.Status.BAD_REQUEST
+    );
+  }
+
+  private static SqlQuery asyncQuery(final String sql)
+  {
+    return new SqlQuery(
+        sql,
+        null,
+        false,
+        false,
+        false,
+        QueryContext.ofMap(QueryContextParameters.EXECUTION_MODE, ExecutionMode.ASYNC),
+        null
     );
   }
 
@@ -193,9 +224,9 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(defaultAsyncContext())
-                    .build(),
+                    .toMap(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -223,9 +254,9 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(defaultAsyncContext())
-                    .build(),
+                    .toMap(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -253,10 +284,10 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(defaultAsyncContext())
-                    .put(MultiStageQueryContext.CTX_FAIL_ON_EMPTY_INSERT, true)
-                    .build(),
+                    .put(QueryContextParameters.FAIL_ON_EMPTY_INSERT, true)
+                    .toMap(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -294,7 +325,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testExplain() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put("sqlQueryId", "queryId");
+    QueryContextParameters.SQL_QUERY_ID.set(context, "queryId");
     Response response = resource.doPost(new SqlQuery(
         "explain plan for select * from foo",
         null,
@@ -350,7 +381,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         authorizerMapper,
         DefaultQueryConfig.NIL,
         new ServerConfig(),
-        null
+        null,
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
     );
 
     String errorMessage = "The sql statement api cannot read from the select destination [durableStorage] provided in "
@@ -358,7 +390,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                           + "configure durable storage as it allows the user to fetch large result sets. "
                           + "Please contact your cluster admin to configure durable storage.";
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
+    QueryContextParameters.SELECT_DESTINATION.set(context, MSQSelectDestination.DURABLESTORAGE.getName());
 
     SqlStatementResourceTest.assertExceptionMessage(resourceWithDurableStorage.doPost(
                                                         new SqlQuery(
@@ -380,8 +412,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testWithDurableStorage() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
-    context.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2);
+    QueryContextParameters.SELECT_DESTINATION.set(context, MSQSelectDestination.DURABLESTORAGE.getName());
+    QueryContextParameters.ROWS_PER_PAGE.set(context, 2);
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
@@ -454,9 +486,9 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testMultipleWorkersWithPageSizeLimiting() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
-    context.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2);
-    context.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 3);
+    QueryContextParameters.SELECT_DESTINATION.set(context, MSQSelectDestination.DURABLESTORAGE.getName());
+    QueryContextParameters.ROWS_PER_PAGE.set(context, 2);
+    QueryContextParameters.MAX_NUM_TASKS.set(context, 3);
 
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
@@ -558,7 +590,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testResultFormat() throws Exception
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.name());
+    QueryContextParameters.SELECT_DESTINATION.set(context, MSQSelectDestination.DURABLESTORAGE.name());
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
@@ -620,7 +652,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   public void testResultFormatWithParamInSelect() throws IOException
   {
     Map<String, Object> context = defaultAsyncContext();
-    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.name());
+    QueryContextParameters.SELECT_DESTINATION.set(context, MSQSelectDestination.DURABLESTORAGE.name());
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
@@ -784,7 +816,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   private static Map<String, Object> defaultAsyncContext()
   {
     Map<String, Object> context = new HashMap<>();
-    context.put(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name());
+    context.put(QueryContextParameters.EXECUTION_MODE.getName(), ExecutionMode.ASYNC.name());
     return context;
   }
 

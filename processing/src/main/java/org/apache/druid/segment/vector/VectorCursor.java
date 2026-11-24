@@ -43,7 +43,7 @@ import org.apache.druid.segment.CursorFactory;
  *   }
  * </pre>
  *
- * @see org.apache.druid.segment.Cursor, the non-vectorized version.
+ * @see org.apache.druid.segment.Cursor the non-vectorized version.
  */
 public interface VectorCursor extends VectorSizeInspector
 {

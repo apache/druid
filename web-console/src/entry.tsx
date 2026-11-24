@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import './bootstrap/ace';
-
 import { OverlaysProvider } from '@blueprintjs/core';
 import { QueryRunner } from 'druid-query-toolkit';
 import { createRoot } from 'react-dom/client';

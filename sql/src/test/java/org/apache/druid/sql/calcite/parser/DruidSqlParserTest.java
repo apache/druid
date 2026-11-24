@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.parser;
 
 import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
@@ -189,5 +190,36 @@ public class DruidSqlParserTest
 
     Assertions.assertTrue(exception.getMessage().contains("Received an unexpected token"));
     Assertions.assertFalse(exception.getMessage().contains("is a reserved keyword"));
+  }
+
+  @Test
+  public void testParse_jsonObjectWithColonPaths()
+  {
+    final SqlNode node = DruidSqlParser.parse(
+        "SELECT JSON_OBJECT('a': x:b, 'c', y:d.e, KEY z:f VALUE 1, KEY 'g' VALUE w:['h'][0])",
+        false
+    ).getMainStatement();
+
+    Assertions.assertEquals(
+        "SELECT JSON_OBJECT(KEY 'a' VALUE `x`:`b`, KEY 'c' VALUE `y`:`d`.`e`, "
+        + "KEY `z`:`f` VALUE 1, KEY 'g' VALUE `w`:['h'][0] NULL ON NULL)",
+        node.toString()
+    );
+  }
+
+  @Test
+  public void testParse_jsonObjectWithColonPathInValueInsideName()
+  {
+    // The inner value x:c allows a colon path, but the outer name still ends before ": z".
+    final SqlNode node = DruidSqlParser.parse(
+        "SELECT JSON_OBJECT(JSON_VALUE(JSON_OBJECT('b': x:c), '$.b') || y : z)",
+        false
+    ).getMainStatement();
+
+    Assertions.assertEquals(
+        "SELECT JSON_OBJECT(KEY JSON_VALUE(JSON_OBJECT(KEY 'b' VALUE `x`:`c` NULL ON NULL), '$.b') || `y` "
+        + "VALUE `z` NULL ON NULL)",
+        node.toString()
+    );
   }
 }

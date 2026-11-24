@@ -29,6 +29,7 @@ import org.apache.druid.server.coordinator.balancer.BalancerSegmentHolder;
 import org.apache.druid.server.coordinator.balancer.ReservoirSegmentSampler;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -82,17 +83,13 @@ public class BalancerStrategyBenchmark
     IntStream.range(0, NUMBER_OF_SERVERS).forEach(i -> segmentList.add(new ArrayList<>()));
     for (int i = 0; i < numberOfSegments; i++) {
       segmentList.get(RANDOM.nextInt(NUMBER_OF_SERVERS)).add(
-          new DataSegment(
-              "test",
-              TEST_SEGMENT_INTERVAL,
-              String.valueOf(i),
-              Collections.emptyMap(),
-              Collections.emptyList(),
-              Collections.emptyList(),
-              null,
-              0,
-              10L
-          )
+          DataSegment.builder(SegmentId.of("test", TEST_SEGMENT_INTERVAL, String.valueOf(i), 0))
+                     .loadSpec(Collections.emptyMap())
+                     .dimensions(Collections.emptyList())
+                     .metrics(Collections.emptyList())
+                     .binaryVersion(0)
+                     .size(10L)
+                     .build()
       );
     }
     

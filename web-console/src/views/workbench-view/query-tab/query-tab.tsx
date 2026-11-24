@@ -18,12 +18,20 @@
 
 import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { EditorView } from '@codemirror/view';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
-import { Loader, QueryErrorPane, SplitterLayout } from '../../../components';
+import {
+  focusEditorAt,
+  getHjsonEditorError,
+  Loader,
+  QueryErrorPane,
+  showEditorError,
+  SplitterLayout,
+} from '../../../components';
 import type { CapacityInfo, DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
 import { DEFAULT_SERVER_QUERY_CONTEXT, Execution, WorkbenchQuery } from '../../../druid-models';
 import {
@@ -37,7 +45,7 @@ import { ExecutionStateCache } from '../../../singletons/execution-state-cache';
 import { WorkbenchHistory } from '../../../singletons/workbench-history';
 import type { WorkbenchRunningPromise } from '../../../singletons/workbench-running-promises';
 import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-promises';
-import type { ColumnMetadata, QueryAction, QuerySlice, RowColumn } from '../../../utils';
+import type { ColumnMetadata, LineColumn, QueryAction, QuerySlice } from '../../../utils';
 import {
   deepGet,
   DruidError,
@@ -187,7 +195,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     return Boolean(queryDuration && queryDuration < 10000);
   }
 
-  const queryInputRef = useRef<{ goToPosition: (rowColumn: RowColumn) => void } | null>(null);
+  const queryInputRef = useRef<EditorView | undefined>(undefined);
 
   const cachedExecutionState = ExecutionStateCache.getState(id);
   const currentRunningPromise = WorkbenchRunningPromises.getPromise(id);
@@ -409,16 +417,19 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     }
   }, [isSuccessfulIngest, incrementMetadataVersion]);
 
-  function moveToPosition(position: RowColumn) {
-    const currentQueryInput = queryInputRef.current;
-    if (!currentQueryInput) return;
-    currentQueryInput.goToPosition(position);
+  function moveToPosition(position: LineColumn) {
+    const editorView = queryInputRef.current;
+    if (!editorView) return;
+    focusEditorAt(editorView, position);
   }
 
   const handleRun = usePermanentCallback(async (preview: boolean, querySlice?: QuerySlice) => {
     const queryIssue = query.getIssue();
     if (queryIssue) {
-      const position = WorkbenchQuery.getRowColumnFromIssue(queryIssue);
+      const position = WorkbenchQuery.getLineColumnFromIssue(queryIssue);
+      if (queryInputRef.current) {
+        showEditorError(queryInputRef.current, getHjsonEditorError(queryIssue));
+      }
 
       AppToaster.show({
         icon: IconNames.ERROR,
@@ -440,7 +451,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
       effectiveQuery = effectiveQuery
         .changeQueryString(querySlice.sql)
         .changeQueryContext({ ...effectiveQuery.queryContext, sliceIndex: querySlice.index })
-        .changePrefixLines(querySlice.startRowColumn.row);
+        .changePrefixLines(querySlice.startLineColumn.line - 1);
     }
 
     if (effectiveQuery.getEffectiveEngine() === 'sql-msq-task') {
@@ -498,7 +509,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               runQuerySlice={slice => void handleRun(false, slice)}
               running={executionState.loading}
               columnMetadata={columnMetadata}
-              editorStateId={id}
+              stateCacheId={id}
             />
           </div>
           <div className="run-bar">

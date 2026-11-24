@@ -351,6 +351,7 @@ class ClusterGroupTuplesTest
         VIRTUAL_COLUMNS,
         List.of(List.of("globex"))
     );
+    Assertions.assertSame(a.virtualColumns(), b.virtualColumns());
     Assertions.assertSame(
         a.virtualColumns().getVirtualColumns()[0],
         b.virtualColumns().getVirtualColumns()[0]

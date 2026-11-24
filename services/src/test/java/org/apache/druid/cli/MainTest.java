@@ -20,12 +20,17 @@
 package org.apache.druid.cli;
 
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.annotations.JSR311Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class MainTest
@@ -47,8 +52,33 @@ public class MainTest
   @MethodSource("runnables")
   public void testSimpleInjection(ServerRunnable runnable)
   {
-    final Injector injector = GuiceInjectors.makeStartupInjector();
-    injector.injectMembers(runnable);
-    Assertions.assertNotNull(runnable.makeInjector(runnable.getNodeRoles(new Properties())));
+    Assertions.assertNotNull(makeInjector(runnable));
+  }
+
+  /**
+   * Jersey routes each request to a single root resource class, so an endpoint is unreachable if its path falls under
+   * a more specific {@code @Path} of another resource class served by the same process.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("runnables")
+  public void testNoShadowedEndpoints(final ServerRunnable runnable)
+  {
+    final Set<Class<?>> resources = makeInjector(runnable).getInstance(
+        Key.get(new TypeLiteral<Set<Class<?>>>() {}, JSR311Resource.class)
+    );
+    Assertions.assertFalse(resources.isEmpty());
+
+    final List<String> shadowedEndpoints = JerseyShadowedEndpoints.find(resources);
+    Assertions.assertTrue(
+        shadowedEndpoints.isEmpty(),
+        () -> "Unreachable endpoints:\n" + String.join("\n", shadowedEndpoints)
+    );
+  }
+
+  private static Injector makeInjector(final ServerRunnable runnable)
+  {
+    final Injector startupInjector = GuiceInjectors.makeStartupInjector();
+    startupInjector.injectMembers(runnable);
+    return runnable.makeInjector(runnable.getNodeRoles(new Properties()));
   }
 }

@@ -151,6 +151,17 @@ public class DruidLogicalValuesRuleTest
     }
 
     @Test
+    public void testGetValueFromNullArrayLiteral()
+    {
+      RexLiteral literal = REX_BUILDER.makeNullLiteral(
+          TYPE_FACTORY.createArrayType(TYPE_FACTORY.createSqlType(SqlTypeName.BIGINT), -1)
+      );
+
+      final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
+      Assertions.assertNull(fromLiteral);
+    }
+
+    @Test
     public void testGetValueFromTimestampLiteral()
     {
       RexLiteral literal = REX_BUILDER.makeTimestampLiteral(new TimestampString("2021-04-01 16:54:31"), 0);

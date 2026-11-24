@@ -264,7 +264,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
   }
 
   /**
-   * schema: struct<string1:string, list:array<int>, ts:timestamp>
+   * schema: {@code struct<string1:string, list:array<int>, ts:timestamp>}
    * data:   {"dim1","[7,8,9]","2000-03-12 15:00:00"}
    */
   @Test

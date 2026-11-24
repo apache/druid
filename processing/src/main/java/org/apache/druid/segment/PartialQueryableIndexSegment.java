@@ -26,10 +26,11 @@ import org.joda.time.Interval;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.util.function.Predicate;
 
 /**
  * {@link Segment} wrapper around a {@link PartialQueryableIndex}. Mirrors {@link QueryableIndexSegment} but wires up
- * the V10-specific {@link V10TimeBoundaryInspector} and {@link V10RowCountInspector} (which answer from
+ * the V10-specific {@link V10TimeBoundaryInspector} (which answer from
  * {@link org.apache.druid.segment.projections.ProjectionMetadata} min/max-time and row-count fields without
  * downloading any column data) and the partial-aware {@link PartialQueryableIndexCursorFactory} (which downloads
  * required files on the supplied download executor before handing back a cursor).
@@ -43,7 +44,6 @@ public class PartialQueryableIndexSegment implements ReferenceCountedSegmentProv
   private final PartialQueryableIndex index;
   private final PartialQueryableIndexCursorFactory cursorFactory;
   private final TimeBoundaryInspector timeBoundaryInspector;
-  private final RowCountInspector rowCountInspector;
   private final SegmentId segmentId;
   private final Closeable onClose;
 
@@ -54,16 +54,33 @@ public class PartialQueryableIndexSegment implements ReferenceCountedSegmentProv
       PartialBundleAcquirer bundleAcquirer
   )
   {
+    this(index, segmentId, onClose, bundleAcquirer, null);
+  }
+
+  /**
+   * @param servableBundles when non-null, the cursor factory only serves the bundles this accepts, as if they were the
+   *                        whole segment (see {@link PartialQueryableIndexCursorFactory}). Other {@link #as} views,
+   *                        such as {@link QueryableIndex}, {@link Metadata}, and {@link RowCountInspector}, still
+   *                        describe the whole segment.
+   */
+  public PartialQueryableIndexSegment(
+      PartialQueryableIndex index,
+      SegmentId segmentId,
+      Closeable onClose,
+      PartialBundleAcquirer bundleAcquirer,
+      @Nullable Predicate<String> servableBundles
+  )
+  {
     this.index = index;
     this.timeBoundaryInspector = V10TimeBoundaryInspector.forBaseProjection(
         index.getBaseProjectionMetadata(),
         index.getDataInterval()
     );
-    this.rowCountInspector = V10RowCountInspector.forBaseProjection(index.getBaseProjectionMetadata());
     this.cursorFactory = new PartialQueryableIndexCursorFactory(
         index,
         timeBoundaryInspector,
-        bundleAcquirer
+        bundleAcquirer,
+        servableBundles
     );
     this.segmentId = segmentId;
     this.onClose = onClose;
@@ -98,8 +115,16 @@ public class PartialQueryableIndexSegment implements ReferenceCountedSegmentProv
       return (T) index;
     } else if (TimeBoundaryInspector.class.equals(clazz)) {
       return (T) timeBoundaryInspector;
-    } else if (RowCountInspector.class.equals(clazz)) {
-      return (T) rowCountInspector;
+    } else if (RowCountInspector.class.equals(clazz)
+               || PhysicalSegmentColumnInspector.class.equals(clazz)
+               || PhysicalSegmentInspector.class.equals(clazz)) {
+      if (index.isFullyDownloaded()) {
+        // If fully downloaded, we can return some additional information.
+        return (T) new QueryableIndexPhysicalSegmentInspector(index);
+      } else {
+        // If not fully downloaded, use the partial inspector, which avoids triggering downloads.
+        return (T) new PartialQueryableIndexPhysicalSegmentInspector(index);
+      }
     } else if (Metadata.class.equals(clazz)) {
       return (T) index.getMetadata();
     }

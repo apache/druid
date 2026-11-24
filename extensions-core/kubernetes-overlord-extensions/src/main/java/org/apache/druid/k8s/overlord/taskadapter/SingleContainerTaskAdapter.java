@@ -31,7 +31,6 @@ import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogs;
 
 import java.io.IOException;
@@ -46,13 +45,12 @@ public class SingleContainerTaskAdapter extends K8sTaskAdapter
       KubernetesClientApi client,
       KubernetesTaskRunnerConfig taskRunnerConfig,
       TaskConfig taskConfig,
-      StartupLoggingConfig startupLoggingConfig,
       DruidNode druidNode,
       ObjectMapper mapper,
       TaskLogs taskLogs
   )
   {
-    super(client, taskRunnerConfig, taskConfig, startupLoggingConfig, druidNode, mapper, taskLogs);
+    super(client, taskRunnerConfig, taskConfig, druidNode, mapper, taskLogs);
   }
 
   public SingleContainerTaskAdapter(
@@ -61,7 +59,6 @@ public class SingleContainerTaskAdapter extends K8sTaskAdapter
       KubernetesClientApi client,
       KubernetesTaskRunnerConfig taskRunnerConfig,
       TaskConfig taskConfig,
-      StartupLoggingConfig startupLoggingConfig,
       DruidNode druidNode,
       ObjectMapper mapper,
       TaskLogs taskLogs
@@ -73,7 +70,6 @@ public class SingleContainerTaskAdapter extends K8sTaskAdapter
         client,
         taskRunnerConfig,
         taskConfig,
-        startupLoggingConfig,
         druidNode,
         mapper,
         taskLogs

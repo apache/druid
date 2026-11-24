@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
@@ -879,6 +880,50 @@ class SegmentLocalCacheManagerPartialAcquireTest
       // Local manager, not picked up by tearDown(); drop + shut down here to release reservations and stop threads.
       disabledManager.drop(partialSegment);
       disabledManager.shutdown();
+    }
+  }
+
+  @Test
+  void testFullAcquireFailsWhenPartialMetadataCannotBeReserved()
+  {
+    // A location smaller than the metadata reservation estimate can't take the partial metadata entry, so
+    // acquireSegment fails before any bundle is reserved. Callers that check for the "not enough disk space" failure
+    // (e.g. QueryVirtualStorageTest) must accept this message as well as the bundle-reservation one.
+    final StorageLocationConfig locConfig = new StorageLocationConfig(cacheRoot, 1024L, null);
+    final SegmentLoaderConfig tinyConfig = SegmentLoaderConfig.builder()
+        .locations(locConfig)
+        .virtualStorage(true)
+        .virtualStoragePartialDownloadsEnabled(true)
+        .virtualStorageMetadataReservationEstimate(2048L)
+        .build();
+    final List<StorageLocation> storageLocations = tinyConfig.toStorageLocations();
+    final SegmentLocalCacheManager tinyManager = new SegmentLocalCacheManager(
+        storageLocations,
+        tinyConfig,
+        StorageLoadingThreadPool.createFromConfig(tinyConfig),
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+
+    try {
+      final DruidException e = Assertions.assertThrows(
+          DruidException.class,
+          () -> tinyManager.acquireSegment(partialSegment, AcquireMode.FULL)
+      );
+      Assertions.assertEquals(DruidException.Category.CAPACITY_EXCEEDED, e.getCategory());
+      Assertions.assertTrue(
+          e.getMessage().startsWith("Unable to reserve partial metadata for segment[" + SEGMENT_ID + "]"),
+          e.getMessage()
+      );
+      Assertions.assertTrue(e.getMessage().contains("ensure enough disk space has been allocated"), e.getMessage());
+      Assertions.assertNull(
+          tinyManager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+          "failed reservation must not leave a cache entry behind"
+      );
+    }
+    finally {
+      tinyManager.shutdown();
     }
   }
 

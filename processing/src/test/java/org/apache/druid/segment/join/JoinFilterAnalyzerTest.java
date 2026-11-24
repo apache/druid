@@ -21,11 +21,12 @@ package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
@@ -56,6 +57,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
@@ -784,6 +786,84 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     ExpressionVirtualColumn actualVirtualColumn = (ExpressionVirtualColumn) actualFilterSplit.getPushDownVirtualColumns()
                                                                                              .iterator().next();
     compareExpressionVirtualColumns(expectedVirtualColumn, actualVirtualColumn);
+  }
+
+  @Test
+  public void test_filterPushDown_pushDownVirtualColumnAvoidsQueryVirtualColumnName()
+  {
+    // Like test_filterPushDown_factExpressionsToRegionToCountryLeftFilterOnChannelAndCountryName, but with a query
+    // virtual column, read only from the base table, that takes the name the pushed-down virtual column would get.
+    final String pushDownName = "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0";
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn(pushDownName, "concat(page, 'x')", ColumnType.STRING, ExprMacroTable.nil())
+    );
+    JoinableClause factExprToRegon = new JoinableClause(
+        FACT_TO_REGION_PREFIX,
+        new IndexedTableJoinable(regionsTable),
+        JoinType.LEFT,
+        JoinConditionAnalysis.forExpression(
+            StringUtils.format(
+                "\"%sregionIsoCode\" == reverse(regionIsoCode) && \"%scountryIsoCode\" == reverse(countryIsoCode)",
+                FACT_TO_REGION_PREFIX,
+                FACT_TO_REGION_PREFIX
+            ),
+            FACT_TO_REGION_PREFIX,
+            ExprMacroTable.nil()
+        )
+    );
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factExprToRegon,
+        regionToCountry(JoinType.LEFT)
+    );
+    Filter originalFilter = new AndFilter(
+        ImmutableList.of(
+            new SelectorFilter("channel", "#en.wikipedia"),
+            new SelectorFilter("rtc.countryName", "States United")
+        )
+    );
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        originalFilter,
+        joinableClauses,
+        virtualColumns
+    );
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.as(CursorFactory.class),
+        null,
+        joinableClauses,
+        joinFilterPreAnalysis
+    );
+
+    JoinTestHelper.verifyCursor(
+        cursorFactory.makeCursorHolder(
+            CursorBuildSpec.builder().setFilter(originalFilter).setVirtualColumns(virtualColumns).build()
+        ),
+        ImmutableList.of(
+            "page",
+            pushDownName,
+            REGION_TO_COUNTRY_PREFIX + "countryName"
+        ),
+        ImmutableList.of(
+            new Object[]{"Old Anatolian Turkish", "Old Anatolian Turkishx", "States United"}
+        )
+    );
+
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
+    Assertions.assertEquals(
+        Optional.of(
+            new AndFilter(
+                ImmutableList.of(
+                    new SelectorFilter("channel", "#en.wikipedia"),
+                    new InDimFilter("_" + pushDownName, ImmutableSet.of("SU")).toFilter()
+                )
+            )
+        ),
+        actualFilterSplit.getBaseTableFilter()
+    );
+    compareExpressionVirtualColumns(
+        new ExpressionVirtualColumn("_" + pushDownName, "reverse(countryIsoCode)", ColumnType.STRING, ExprMacroTable.nil()),
+        (ExpressionVirtualColumn) Iterables.getOnlyElement(actualFilterSplit.getPushDownVirtualColumns())
+    );
   }
 
   @Test
@@ -2016,8 +2096,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
                 false,
                 true,
                 true,
-                QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
-                QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+                QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getLiteralDefault(),
+                QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getLiteralDefault()
             ),
             joinableClauses.getJoinableClauses(),
             VirtualColumns.EMPTY,
@@ -2092,8 +2172,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
                 true,
                 false,
                 true,
-                QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
-                QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+                QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getLiteralDefault(),
+                QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getLiteralDefault()
             ),
             joinableClauses.getJoinableClauses(),
             VirtualColumns.EMPTY,
@@ -2497,8 +2577,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
                 true,
                 true,
                 true,
-                QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
-                QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+                QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER.getLiteralDefault(),
+                QueryContextParameters.JOIN_FILTER_REWRITE_MAX_SIZE.getLiteralDefault()
             ),
             joinableClauses,
             VirtualColumns.EMPTY,

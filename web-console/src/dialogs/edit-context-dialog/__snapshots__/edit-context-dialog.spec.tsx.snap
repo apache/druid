@@ -53,11 +53,14 @@ exports[`EditContextDialog matches snapshot 1`] = `
           class="json-input"
         >
           <div
-            class=" ace_editor ace_hidpi ace-solarized-dark ace_dark"
-            id="ace-editor"
-            style="width: 100%; height: 100%; font-size: 12px;"
+            class="code-editor"
+            style="height: 100%;"
           >
-            <!-- Ace editor, mode: ace/mode/hjson, value: "{\\n\\n}" -->
+            <div
+              class="cm-editor"
+            >
+              <!-- Code editor, language: hjson, value: "{\\n\\n}" -->
+            </div>
           </div>
         </div>
         <div

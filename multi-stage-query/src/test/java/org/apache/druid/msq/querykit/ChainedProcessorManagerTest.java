@@ -33,6 +33,7 @@ import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.processor.FrameProcessorExecutorTest;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.manager.NilFrameProcessor;
+import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.processor.test.SimpleReturningFrameProcessor;
@@ -61,8 +62,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
@@ -189,6 +192,49 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
       }
     }
     Assertions.assertEquals(expectedValues, actualValues);
+  }
+
+  @Test
+  public void test_first_processor_manager_closed_after_exhaustion() throws ExecutionException, InterruptedException
+  {
+    final BlockingQueueFrameChannel outputChannel = new BlockingQueueFrameChannel(3);
+    final ProcessorManager<List<Long>, Long> firstManager =
+        ProcessorManagers.of(() -> new SimpleReturningFrameProcessor<>(ImmutableList.of(1L, 2L, 3L)));
+    final AtomicBoolean firstClosed = new AtomicBoolean(false);
+
+    final ChainedProcessorManager<List<Long>, Long, Long> chainedProcessorManager = new ChainedProcessorManager<>(
+        new ProcessorManager<List<Long>, Long>()
+        {
+          @Override
+          public ListenableFuture<Optional<ProcessorAndCallback<List<Long>>>> next()
+          {
+            return firstManager.next();
+          }
+
+          @Override
+          public Long result()
+          {
+            return firstManager.result();
+          }
+
+          @Override
+          public void close()
+          {
+            firstClosed.set(true);
+            firstManager.close();
+          }
+        },
+        (values) -> createNextProcessors(outputChannel.writable(), values.stream().flatMap(List::stream).collect(Collectors.toList()))
+    );
+
+    exec.runAllFully(
+        chainedProcessorManager,
+        maxOutstandingProcessors,
+        bouncer,
+        null
+    ).get();
+
+    Assertions.assertTrue(firstClosed.get(), "first manager must be closed even after returning all its processors");
   }
 
   @Test

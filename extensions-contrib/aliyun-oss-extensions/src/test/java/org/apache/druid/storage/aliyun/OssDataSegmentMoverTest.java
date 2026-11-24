@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -50,22 +51,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class OssDataSegmentMoverTest
 {
-  private static final DataSegment SOURCE_SEGMENT = new DataSegment(
-      "test",
-      Intervals.of("2013-01-01/2013-01-02"),
-      "1",
-      ImmutableMap.of(
-          "key",
-          "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
-          "bucket",
-          "main"
-      ),
-      ImmutableList.of("dim1", "dim1"),
-      ImmutableList.of("metric1", "metric2"),
-      NoneShardSpec.instance(),
-      0,
-      1
-  );
+  private static final DataSegment SOURCE_SEGMENT = DataSegment.builder(SegmentId.of("test", Intervals.of("2013-01-01/2013-01-02"), "1", 0))
+                                                               .loadSpec(ImmutableMap.of(
+                                                                       "key",
+                                                                       "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+                                                                       "bucket",
+                                                                       "main"
+                                                                   ))
+                                                               .dimensions(ImmutableList.of("dim1", "dim1"))
+                                                               .metrics(ImmutableList.of("metric1", "metric2"))
+                                                               .shardSpec(NoneShardSpec.instance())
+                                                               .binaryVersion(0)
+                                                               .size(1)
+                                                               .build();
 
   @Test
   public void testMove() throws Exception
@@ -137,22 +135,19 @@ public class OssDataSegmentMoverTest
   {
     MockClient mockOssClient = new MockClient();
     OssDataSegmentMover mover = new OssDataSegmentMover(Suppliers.ofInstance(mockOssClient), new OssStorageConfig());
-    mover.move(new DataSegment(
-        "test",
-        Intervals.of("2013-01-01/2013-01-02"),
-        "1",
-        ImmutableMap.of(
-            "key",
-            "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
-            "bucket",
-            "DOES NOT EXIST"
-        ),
-        ImmutableList.of("dim1", "dim1"),
-        ImmutableList.of("metric1", "metric2"),
-        NoneShardSpec.instance(),
-        0,
-        1
-    ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
+    mover.move(DataSegment.builder(SegmentId.of("test", Intervals.of("2013-01-01/2013-01-02"), "1", 0))
+                          .loadSpec(ImmutableMap.of(
+                                  "key",
+                                  "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+                                  "bucket",
+                                  "DOES NOT EXIST"
+                              ))
+                          .dimensions(ImmutableList.of("dim1", "dim1"))
+                          .metrics(ImmutableList.of("metric1", "metric2"))
+                          .shardSpec(NoneShardSpec.instance())
+                          .binaryVersion(0)
+                          .size(1)
+                          .build(), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
   }
 
   @Test
@@ -161,22 +156,19 @@ public class OssDataSegmentMoverTest
     assertThrows(SegmentLoadingException.class, () -> {
       MockClient client = new MockClient();
       OssDataSegmentMover mover = new OssDataSegmentMover(Suppliers.ofInstance(client), new OssStorageConfig());
-      mover.move(new DataSegment(
-          "test",
-          Intervals.of("2013-01-01/2013-01-02"),
-          "1",
-          ImmutableMap.of(
-              "key",
-              "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
-              "bucket",
-              "DOES NOT EXIST"
-          ),
-          ImmutableList.of("dim1", "dim1"),
-          ImmutableList.of("metric1", "metric2"),
-          NoneShardSpec.instance(),
-          0,
-          1
-      ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
+      mover.move(DataSegment.builder(SegmentId.of("test", Intervals.of("2013-01-01/2013-01-02"), "1", 0))
+                            .loadSpec(ImmutableMap.of(
+                                    "key",
+                                    "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+                                    "bucket",
+                                    "DOES NOT EXIST"
+                                ))
+                            .dimensions(ImmutableList.of("dim1", "dim1"))
+                            .metrics(ImmutableList.of("metric1", "metric2"))
+                            .shardSpec(NoneShardSpec.instance())
+                            .binaryVersion(0)
+                            .size(1)
+                            .build(), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
     });
   }
 

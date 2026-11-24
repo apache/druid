@@ -25,6 +25,8 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.Assertions;
@@ -130,9 +132,8 @@ public class CostBasedAutoScalerTest
     Assertions.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(100.0, 10, -5, 0.3)));
     Assertions.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(100.0, -1, 100, 0.3)));
 
-    // Negative pollIdleRatio (metric unavailable) should still allow scaling
-    final int unavailableIdleResult = autoScaler.computeOptimalTaskCount(createMetrics(100.0, 25, 100, -1.0));
-    Assertions.assertTrue(unavailableIdleResult >= 1, "Negative pollIdleRatio should not reject scaling");
+    // Negative pollIdleRatio (metric unavailable) should reject scaling
+    Assertions.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(100.0, 25, 100, -1.0)));
 
     // High idle (underutilized) - should scale down
     final int scaleDownResult = autoScaler.computeOptimalTaskCount(createMetrics(100.0, 25, 100, 0.8));
@@ -192,6 +193,7 @@ public class CostBasedAutoScalerTest
         .enableTaskAutoScaler(true)
         .lagWeight(1.0)
         .idleWeight(0.0)
+        .useTaskCountBoundariesOnScaleUp(false)
         .build();
     final CostBasedAutoScaler unboundedScaleUpScaler = createAutoScaler(unboundedScaleUpConfig);
     Assertions.assertEquals(
@@ -441,7 +443,7 @@ public class CostBasedAutoScalerTest
     Map<String, Map<String, Object>> nonNumberRatio = new HashMap<>();
     Map<String, Object> taskStats3 = new HashMap<>();
     Map<String, Object> autoscalerMetrics = new HashMap<>();
-    autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY, "not-a-number");
+    autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_RUNNING_AVG, "not-a-number");
     taskStats3.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, autoscalerMetrics);
     nonNumberRatio.put("0", Collections.singletonMap("task-0", taskStats3));
     Assertions.assertEquals(
@@ -487,7 +489,7 @@ public class CostBasedAutoScalerTest
     validStats.put("0", group);
     Assertions.assertEquals(
         1500.0,
-        CostBasedAutoScaler.extractMovingAverage(validStats),
+        CostBasedAutoScaler.extractAvgProcessingRate(validStats),
         0.0001,
         "Average 5-minute processing rate should be computed across tasks"
     );
@@ -620,7 +622,7 @@ public class CostBasedAutoScalerTest
         CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DOWN_DELAY,
         cfgWithDefaults.getMinScaleDownDelay()
     );
-    Assertions.assertFalse(cfgWithDefaults.isScaleDownOnTaskRolloverOnly());
+    Assertions.assertTrue(cfgWithDefaults.isScaleDownOnTaskRolloverOnly());
 
     // Test custom config values
     CostBasedAutoScalerConfig cfgWithCustom = CostBasedAutoScalerConfig.builder()
@@ -628,18 +630,18 @@ public class CostBasedAutoScalerTest
                                                                        .taskCountMin(1)
                                                                        .enableTaskAutoScaler(true)
                                                                        .minScaleDownDelay(Duration.standardMinutes(10))
-                                                                       .scaleDownDuringTaskRolloverOnly(true)
+                                                                       .scaleDownDuringTaskRolloverOnly(false)
                                                                        .build();
     Assertions.assertEquals(Duration.standardMinutes(10), cfgWithCustom.getMinScaleDownDelay());
-    Assertions.assertTrue(cfgWithCustom.isScaleDownOnTaskRolloverOnly());
+    Assertions.assertFalse(cfgWithCustom.isScaleDownOnTaskRolloverOnly());
 
-    // computeTaskCountForRollover returns -1 when scaleDownDuringTaskRolloverOnly=false (default)
+    // computeTaskCountForRollover returns -1 when scaleDownDuringTaskRolloverOnly=false
     when(spec.isSuspended()).thenReturn(false);
-    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfgWithDefaults, spec, emitter);
+    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfgWithCustom, spec, emitter);
     Assertions.assertEquals(-1, scaler.computeTaskCountForRollover());
 
     // computeTaskCountForRollover returns -1 when lastKnownMetrics is null (even with scaleDownDuringTaskRolloverOnly=true)
-    CostBasedAutoScaler scalerWithRolloverOnly = new CostBasedAutoScaler(supervisor, cfgWithCustom, spec, emitter);
+    CostBasedAutoScaler scalerWithRolloverOnly = new CostBasedAutoScaler(supervisor, cfgWithDefaults, spec, emitter);
     Assertions.assertEquals(-1, scalerWithRolloverOnly.computeTaskCountForRollover());
   }
 
@@ -674,6 +676,66 @@ public class CostBasedAutoScalerTest
         scaler.computeTaskCountForScaleAction(),
         "No scaling action should be requested when the moving average rate is unavailable"
     );
+  }
+
+  @Test
+  public void testScalingActionSkippedWhenPollIdleRatioNotAvailable()
+  {
+    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
+    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
+    StubServiceEmitter emitter = new StubServiceEmitter();
+    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+
+    when(spec.getId()).thenReturn("test-supervisor");
+    when(spec.getDataSources()).thenReturn(List.of("test-datasource"));
+    when(spec.isSuspended()).thenReturn(false);
+    when(supervisor.getIoConfig()).thenReturn(ioConfig);
+    when(ioConfig.getStream()).thenReturn("test-stream");
+    when(ioConfig.getTaskDuration()).thenReturn(Duration.standardHours(1));
+    when(ioConfig.getTaskCount()).thenReturn(1);
+    when(supervisor.getPartitionCount()).thenReturn(10);
+    when(supervisor.computeLagStats()).thenReturn(new LagStats(100, 100, 100));
+    // Task stats report a processing rate but no poll idle ratio
+    when(supervisor.getStats()).thenReturn(buildTaskStatsForRate(1000.0));
+
+    // usePollIdleRatio defaults to true, so a missing poll idle ratio must skip scaling
+    CostBasedAutoScalerConfig defaultConfig = CostBasedAutoScalerConfig.builder()
+                                                                       .taskCountMax(10)
+                                                                       .taskCountMin(1)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .build();
+    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, defaultConfig, spec, emitter);
+    Assertions.assertEquals(
+        -1,
+        scaler.computeTaskCountForScaleAction(),
+        "No scaling action should be requested when the poll idle ratio is unavailable"
+    );
+    final Map<String, Object> pollIdleRatioUnavailable =
+        Map.of(DruidMetrics.DESCRIPTION, "Poll idle ratio metric not available");
+    emitter.verifyEmitted(CostBasedAutoScaler.INVALID_METRICS_COUNT, pollIdleRatioUnavailable, 1);
+
+    // Poll idle ratio outside [0, 1] is also treated as unavailable
+    Assertions.assertEquals(-1, scaler.computeOptimalTaskCount(createMetrics(100.0, 1, 10, 1.5)));
+    emitter.verifyEmitted(CostBasedAutoScaler.INVALID_METRICS_COUNT, pollIdleRatioUnavailable, 2);
+
+    // Valid poll idle ratio allows scaling and does not emit the invalid metrics count
+    Assertions.assertTrue(scaler.computeOptimalTaskCount(createMetrics(100.0, 1, 10, 0.5)) > 0);
+    emitter.verifyEmitted(CostBasedAutoScaler.INVALID_METRICS_COUNT, 2);
+
+    // With usePollIdleRatio disabled, the poll idle ratio is not required for scaling
+    CostBasedAutoScalerConfig configWithoutPollIdleRatio = CostBasedAutoScalerConfig.builder()
+                                                                                    .taskCountMax(10)
+                                                                                    .taskCountMin(1)
+                                                                                    .enableTaskAutoScaler(true)
+                                                                                    .usePollIdleRatio(false)
+                                                                                    .build();
+    CostBasedAutoScaler scalerWithoutPollIdleRatio =
+        new CostBasedAutoScaler(supervisor, configWithoutPollIdleRatio, spec, emitter);
+    Assertions.assertTrue(
+        scalerWithoutPollIdleRatio.computeTaskCountForScaleAction() > 0,
+        "Scaling should not be skipped when usePollIdleRatio is disabled"
+    );
+    emitter.verifyEmitted(CostBasedAutoScaler.INVALID_METRICS_COUNT, 2);
   }
 
   @Test
@@ -856,7 +918,7 @@ public class CostBasedAutoScalerTest
   private Map<String, Object> buildTaskStatsWithPollIdle(double pollIdleRatio)
   {
     Map<String, Object> autoscalerMetrics = new HashMap<>();
-    autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY, pollIdleRatio);
+    autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_RUNNING_AVG, pollIdleRatio);
 
     Map<String, Object> taskStats = new HashMap<>();
     taskStats.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, autoscalerMetrics);
@@ -865,15 +927,13 @@ public class CostBasedAutoScalerTest
 
   private Map<String, Object> buildTaskStatsWithMovingAverage(double processedRate)
   {
-    Map<String, Object> buildSegments = new HashMap<>();
-    buildSegments.put(FIVE_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, processedRate));
-
-    Map<String, Object> movingAverages = new HashMap<>();
-    movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
-
-    Map<String, Object> taskStats = new HashMap<>();
-    taskStats.put("movingAverages", movingAverages);
-    return taskStats;
+    return Map.of(
+        SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY,
+        Map.of(
+            SeekableStreamIndexTaskRunner.PROCESSING_RATE_RUNNING_AVG,
+            processedRate
+        )
+    );
   }
 
   private Map<String, Object> buildTaskStatsWithMovingAverageForInterval(String intervalName, double processedRate)

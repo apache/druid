@@ -1,0 +1,95 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The Lezer grammar for Hjson (https://hjson.github.io/syntax.html), which includes JSON.
+//
+// Run `script/build-grammars.mjs` (part of `script/build`) after changing it.
+
+// The braces around the root object can be left out
+@top Document { value | rootProperties }
+
+rootProperties { (Property | ",")* }
+
+value {
+  True |
+  False |
+  Null |
+  Number |
+  String |
+  MultilineString |
+  QuotelessString |
+  Object |
+  Array
+}
+
+// Commas are optional between the properties and the items that are on separate lines
+Object { "{" (Property | ",")* "}" }
+
+Property { PropertyName ":" value }
+
+PropertyName { quotelessKey | String }
+
+Array { "[" (value | ",")* "]" }
+
+@skip { space | LineComment | BlockComment }
+
+// A quoteless key (only before a colon on the same line) and a quoteless string (the rest of the line, unless that is a
+// number or a literal) depend on the context, see hjson-tokens.ts
+@external tokens quoteless from "./hjson-tokens" { quotelessKey, QuotelessString }
+
+@skip {} {
+  // A string does not span lines, an unterminated one ends with (and includes) the end of the line
+  String { stringStart (stringContent | Escape | InvalidEscape)* stringEnd }
+}
+
+@local tokens {
+  stringEnd { '"' | "\n" }
+  Escape { "\\" ($["\\/bfnrt] | "u" hex hex hex hex) }
+  InvalidEscape { "\\" _ }
+  hex { $[0-9a-fA-F] }
+  @precedence { Escape, InvalidEscape }
+  @else stringContent
+}
+
+@tokens {
+  space { $[ \t\n\r]+ }
+
+  // The quotes are not nodes of their own so that they are highlighted as part of the string
+  stringStart { '"' }
+
+  LineComment { ("#" | "//") ![\n]* }
+
+  // An unterminated comment lasts until the end of the text
+  BlockComment { "/*" blockCommentRest }
+  blockCommentRest { ![*] blockCommentRest | "*" blockCommentAfterStar | @eof }
+  blockCommentAfterStar { "/" | "*" blockCommentAfterStar | ![/*] blockCommentRest | @eof }
+
+  // An unterminated multiline string lasts until the end of the text
+  MultilineString { "'''" multilineRest }
+  multilineRest { !['] multilineRest | "'" multilineQuote | @eof }
+  multilineQuote { !['] multilineRest | "'" multilineQuotes | @eof }
+  multilineQuotes { "'" | !['] multilineRest | @eof }
+
+  Number { "-"? ("0" | $[1-9] @digit*) ("." @digit+)? ($[eE] $[+\-]? @digit+)? }
+
+  True { "true" }
+  False { "false" }
+  Null { "null" }
+
+  "{" "}" "[" "]" "," ":"
+}
+
+@detectDelim

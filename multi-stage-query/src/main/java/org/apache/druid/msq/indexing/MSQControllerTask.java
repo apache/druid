@@ -61,7 +61,7 @@ import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
@@ -278,7 +278,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
 
     controllerHolder = new ControllerHolder(
         controller,
-        controller.getQueryContext().getString(QueryContexts.CTX_SQL_QUERY_ID, controller.queryId()),
+        controller.getQueryContext().getOrDefault(QueryContextParameters.SQL_QUERY_ID, controller.queryId()),
         getSqlQuery(),
         null,
         DateTimes.nowUtc()
@@ -332,13 +332,8 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   {
     if (isIngestion(querySpec)) {
       return MultiStageQueryContext.validateAndGetTaskLockType(
-          QueryContext.of(
-              // Use the task context and override with the query context
-              QueryContexts.override(
-                  getContext(),
-                  querySpec.getContext().asMap()
-              )
-          ),
+          // The query context takes precedence over the task context.
+          QueryContext.of(getContext()).override(querySpec.getContext()),
           ((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()
       );
     } else {

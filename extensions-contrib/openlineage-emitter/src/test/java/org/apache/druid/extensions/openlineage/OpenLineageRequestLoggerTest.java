@@ -30,8 +30,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -98,7 +100,7 @@ public class OpenLineageRequestLoggerTest
   {
     logger.logSqlQuery(sqlLine(
         "SELECT * FROM \"kttm\"",
-        ImmutableMap.of("sqlQueryId", "qid-1"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "qid-1"),
         ImmutableMap.of("success", true)
     ));
 
@@ -160,7 +162,7 @@ public class OpenLineageRequestLoggerTest
   {
     logger.logSqlQuery(sqlLine(
         "INSERT INTO \"kttm-result\" SELECT * FROM \"kttm\"",
-        ImmutableMap.of("sqlQueryId", "msq-insert-1"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "msq-insert-1"),
         ImmutableMap.of("success", true, "sqlQuery/time", 1200L, "sqlQuery/bytes", 4096L)
     ));
 
@@ -189,7 +191,7 @@ public class OpenLineageRequestLoggerTest
   {
     logger.logSqlQuery(sqlLine(
         "REPLACE INTO \"kttm-result\" OVERWRITE ALL SELECT * FROM \"kttm\"",
-        ImmutableMap.of("sqlQueryId", "msq-replace-1"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "msq-replace-1"),
         ImmutableMap.of("success", true)
     ));
 
@@ -202,7 +204,7 @@ public class OpenLineageRequestLoggerTest
   {
     logger.logSqlQuery(sqlLine(
         "INSERT INTO kttm_result SELECT count(*) FROM kttm",
-        ImmutableMap.of("sqlQueryId", "msq-unquoted-1"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "msq-unquoted-1"),
         ImmutableMap.of("success", true)
     ));
 
@@ -216,7 +218,7 @@ public class OpenLineageRequestLoggerTest
     // Druid normalizes "druid.foo" → "foo" — our AST extraction should match the planner.
     logger.logSqlQuery(sqlLine(
         "INSERT INTO druid.kttm_result SELECT * FROM kttm",
-        ImmutableMap.of("sqlQueryId", "msq-druid-schema-1"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "msq-druid-schema-1"),
         ImmutableMap.of("success", true)
     ));
 
@@ -231,7 +233,7 @@ public class OpenLineageRequestLoggerTest
     // The target table must still be extracted correctly from the outer SqlInsert node.
     logger.logSqlQuery(sqlLine(
         "INSERT INTO kttm_result WITH staged AS (SELECT * FROM kttm) SELECT * FROM staged",
-        ImmutableMap.of("sqlQueryId", "msq-cte-1"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "msq-cte-1"),
         ImmutableMap.of("success", true)
     ));
 
@@ -245,7 +247,7 @@ public class OpenLineageRequestLoggerTest
     // catalog.druid.foo → Druid normalizes to bare name "foo"; AST extraction matches.
     logger.logSqlQuery(sqlLine(
         "INSERT INTO catalog.druid.kttm_result SELECT * FROM kttm",
-        ImmutableMap.of("sqlQueryId", "msq-catalog-1"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "msq-catalog-1"),
         ImmutableMap.of("success", true)
     ));
 
@@ -260,7 +262,7 @@ public class OpenLineageRequestLoggerTest
     // allowSetStatements=true; the SET is dropped and only the main INSERT is inspected.
     logger.logSqlQuery(sqlLine(
         "SET maxNumTasks = 2;\nINSERT INTO kttm_result SELECT * FROM kttm",
-        ImmutableMap.of("sqlQueryId", "msq-set-1"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "msq-set-1"),
         ImmutableMap.of("success", true)
     ));
 
@@ -275,7 +277,7 @@ public class OpenLineageRequestLoggerTest
     // The AST target is a SqlCall, not a SqlIdentifier; emit no event at all.
     logger.logSqlQuery(sqlLine(
         "INSERT INTO EXTERN(s3(bucket => 'x', prefix => 'y')) AS CSV SELECT * FROM kttm",
-        ImmutableMap.of("sqlQueryId", "msq-extern-1"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "msq-extern-1"),
         ImmutableMap.of("success", true)
     ));
 
@@ -287,7 +289,7 @@ public class OpenLineageRequestLoggerTest
   {
     logger.logSqlQuery(sqlLine(
         "INSERT INTO \"kttm-result\" SELECT * FROM \"kttm\"",
-        ImmutableMap.of("sqlQueryId", "msq-fail-1"),
+        QueryContext.ofMap(QueryContextParameters.SQL_QUERY_ID, "msq-fail-1"),
         ImmutableMap.of("success", false, "exception", "Task failed")
     ));
 
@@ -304,7 +306,7 @@ public class OpenLineageRequestLoggerTest
   {
     TestQuery query = new TestQuery(
         new TableDataSource("myDatasource"),
-        ImmutableMap.of("queryId", "native-qid-1")
+        QueryContext.ofMap(QueryContextParameters.QUERY_ID, "native-qid-1")
     );
     logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true, "query/time", 50L, "query/bytes", 512L)));
 
@@ -332,7 +334,12 @@ public class OpenLineageRequestLoggerTest
     // SQL origin is indicated by sqlQueryId in the context facet.
     TestQuery query = new TestQuery(
         new TableDataSource("myDatasource"),
-        ImmutableMap.of("queryId", "native-qid-2", BaseQuery.SQL_QUERY_ID, "parent-sql-id")
+        QueryContext.ofMap(
+            QueryContextParameters.QUERY_ID,
+            "native-qid-2",
+            QueryContextParameters.SQL_QUERY_ID,
+            "parent-sql-id"
+        )
     );
     logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
 
@@ -370,7 +377,7 @@ public class OpenLineageRequestLoggerTest
   {
     TestQuery query = new TestQuery(
         new TableDataSource("myDatasource"),
-        ImmutableMap.of("queryId", "native-qid-excluded")
+        QueryContext.ofMap(QueryContextParameters.QUERY_ID, "native-qid-excluded")
     )
     {
       @Override
@@ -393,7 +400,7 @@ public class OpenLineageRequestLoggerTest
     DataSource unionDs = new UnionDataSource(
         List.of(new TableDataSource("leftTable"), new TableDataSource("rightTable"))
     );
-    TestQuery query = new TestQuery(unionDs, ImmutableMap.of("queryId", "native-multi-1"));
+    TestQuery query = new TestQuery(unionDs, QueryContext.ofMap(QueryContextParameters.QUERY_ID, "native-multi-1"));
     logger.logNativeQuery(nativeLine(query, ImmutableMap.of("success", true)));
 
     Assertions.assertEquals(1, capturedEvents.size());
@@ -408,7 +415,7 @@ public class OpenLineageRequestLoggerTest
   {
     TestQuery query = new TestQuery(
         new TableDataSource("t"),
-        ImmutableMap.of("queryId", "native-facets")
+        QueryContext.ofMap(QueryContextParameters.QUERY_ID, "native-facets")
     );
     logger.logNativeQuery(nativeLine(query, ImmutableMap.of(
         "success", true,
@@ -459,7 +466,7 @@ public class OpenLineageRequestLoggerTest
   {
     TestQuery query = new TestQuery(
         new TableDataSource("t"),
-        ImmutableMap.of("queryId", "native-fail")
+        QueryContext.ofMap(QueryContextParameters.QUERY_ID, "native-fail")
     );
     logger.logNativeQuery(nativeLine(query, ImmutableMap.of(
         "success", false,
@@ -483,7 +490,12 @@ public class OpenLineageRequestLoggerTest
   {
     TestQuery query = new TestQuery(
         new TableDataSource("t"),
-        ImmutableMap.of("queryId", "native-sql-fail", BaseQuery.SQL_QUERY_ID, "parent-sql")
+        QueryContext.ofMap(
+            QueryContextParameters.QUERY_ID,
+            "native-sql-fail",
+            QueryContextParameters.SQL_QUERY_ID,
+            "parent-sql"
+        )
     );
     logger.logNativeQuery(nativeLine(query, ImmutableMap.of(
         "success", false,

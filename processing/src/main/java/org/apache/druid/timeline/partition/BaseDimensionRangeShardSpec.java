@@ -49,11 +49,7 @@ public abstract class BaseDimensionRangeShardSpec implements ShardSpec
   )
   {
     this.dimensions = dimensions.stream().map(DataSegment.stringInterner()::intern).toList();
-    this.virtualColumns = virtualColumns == null
-                          ? VirtualColumns.EMPTY
-                          : VirtualColumns.create(Arrays.stream(virtualColumns.getVirtualColumns())
-                                                        .map(DataSegment.virtualColumnInterner()::intern)
-                                                        .toList());
+    this.virtualColumns = DataSegment.internVirtualColumns(virtualColumns);
     this.start = start;
     this.end = end;
   }

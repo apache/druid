@@ -35,9 +35,14 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
 COPY . /src
 WORKDIR /src
+
+# Optional Druid version override, e.g. --build-arg REVISION=40.0.0-mycompany.
+# When BUILD_FROM_SOURCE is false, the tarball must have been built with the same -Drevision.
+ARG REVISION
 RUN --mount=type=cache,target=/root/.m2,sharing=locked if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
       mvn -B -ff -q \
       install \
+      ${REVISION:+-Drevision=${REVISION}} \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
       -Dmaven.javadoc.skip=true -T1C \
@@ -45,6 +50,7 @@ RUN --mount=type=cache,target=/root/.m2,sharing=locked if [ "$BUILD_FROM_SOURCE"
 
 RUN --mount=type=cache,target=/root/.m2,sharing=locked VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
       -Dexpression=project.version -DforceStdout=true \
+      ${REVISION:+-Drevision=${REVISION}} \
     ) \
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
  && mv /opt/apache-druid-${VERSION} /opt/druid

@@ -23,7 +23,8 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -121,9 +122,9 @@ public class HighPartitionNumberTest extends EmbeddedClusterTestBase
         Resources.DataFile.tinyWiki1Json()
     );
 
-    Map<String, Object> context = Map.of(
-        MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
-        ClusterStatisticsMergeMode.PARALLEL
+    Map<String, Object> context = QueryContext.ofMap(
+        QueryContextParameters.CLUSTER_STATISTICS_MERGE_MODE,
+        ClusterStatisticsMergeMode.PARALLEL.toString()
     );
 
     cluster.callApi().waitForTaskToSucceed(msqApis.submitTaskSql(context, queryLocal).getTaskId(), overlord);
@@ -169,10 +170,10 @@ public class HighPartitionNumberTest extends EmbeddedClusterTestBase
         Resources.DataFile.tinyWiki1Json()
     );
 
-    Map<String, Object> context = Map.of(
-        MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
-        ClusterStatisticsMergeMode.PARALLEL,
-        MultiStageQueryContext.CTX_ROWS_PER_SEGMENT,
+    Map<String, Object> context = QueryContext.ofMap(
+        QueryContextParameters.CLUSTER_STATISTICS_MERGE_MODE,
+        ClusterStatisticsMergeMode.PARALLEL.toString(),
+        QueryContextParameters.ROWS_PER_SEGMENT,
         1
     );
 

@@ -122,7 +122,6 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
    * <li> If there is no overlap, add the candidate segment to the eternity segments result set. </li>
    * There can at most be two such candidate tombstones per datasource  -- one that starts at {@link DateTimes#MIN}
    * and another that ends at {@link DateTimes#MAX}. </li>
-   * </p>
    *
    * @param dataSourcesSnapshot the datasources snapshot for segments timeline
    * @return Map from datasource to set of non-overshadowed eternity tombstones

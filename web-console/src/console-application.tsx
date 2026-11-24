@@ -22,10 +22,15 @@ import classNames from 'classnames';
 import type { JSX } from 'react';
 import React from 'react';
 
-import { initAceDsqlMode } from './ace-modes/dsql';
 import { HeaderBar, Loader } from './components';
+import { QueryContextParametersProvider } from './contexts/query-context-parameters-context';
 import { SqlFunctionsProvider } from './contexts/sql-functions-context';
-import type { ConsoleViewId, QueryContext, QueryWithContext } from './druid-models';
+import type {
+  ConsoleViewId,
+  QueryContext,
+  QueryContextParameterMetadata,
+  QueryWithContext,
+} from './druid-models';
 import type { AvailableFunctions } from './helpers';
 import { Capabilities, maybeGetClusterCapacity } from './helpers';
 import { AppToaster } from './singletons';
@@ -89,6 +94,7 @@ export interface ConsoleApplicationProps {
 export interface ConsoleApplicationState {
   capabilities: Capabilities;
   availableSqlFunctions?: AvailableFunctions;
+  queryContextParameters?: readonly QueryContextParameterMetadata[];
   capabilitiesLoading: boolean;
   hashPath: string;
 }
@@ -143,6 +149,8 @@ export class ConsoleApplication extends React.PureComponent<
           return [Capabilities.FULL, undefined];
         }
 
+        // Only needed for SET completions, so the console does not wait for them
+        void this.loadQueryContextParameters(capabilities);
         return Promise.all([
           Capabilities.detectCapacity(capabilities),
           Capabilities.detectAvailableSqlFunctions(capabilities),
@@ -154,7 +162,6 @@ export class ConsoleApplication extends React.PureComponent<
         }
         const capabilities = data?.[0] || Capabilities.FULL;
         const availableSqlFunctions = data?.[1];
-        initAceDsqlMode(availableSqlFunctions);
         this.setState({
           capabilities,
           availableSqlFunctions,
@@ -162,6 +169,11 @@ export class ConsoleApplication extends React.PureComponent<
         });
       },
     });
+  }
+
+  private async loadQueryContextParameters(capabilities: Capabilities): Promise<void> {
+    const queryContextParameters = await Capabilities.detectQueryContextParameters(capabilities);
+    this.setState({ queryContextParameters });
   }
 
   componentDidMount(): void {
@@ -483,7 +495,7 @@ export class ConsoleApplication extends React.PureComponent<
   }
 
   render() {
-    const { availableSqlFunctions, capabilitiesLoading } = this.state;
+    const { availableSqlFunctions, queryContextParameters, capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {
       return (
@@ -496,7 +508,9 @@ export class ConsoleApplication extends React.PureComponent<
     return (
       <HotkeysProvider>
         <SqlFunctionsProvider availableSqlFunctions={availableSqlFunctions}>
-          <div className="console-application">{this.renderView()}</div>
+          <QueryContextParametersProvider queryContextParameters={queryContextParameters}>
+            <div className="console-application">{this.renderView()}</div>
+          </QueryContextParametersProvider>
         </SqlFunctionsProvider>
       </HotkeysProvider>
     );

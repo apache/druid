@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>39.0.0-SNAPSHOT</version>
+        <version>${revision}</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -104,6 +104,14 @@
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- SigV4A signing for Multi-Region Access Points. The SDK looks these up from the classloader that holds
+             http-auth-aws, which is lib/, so they cannot live in an extension directory -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>http-auth-aws-crt</artifactId>
             <version>${aws.sdk.v2.version}</version>
             <scope>runtime</scope>
         </dependency>

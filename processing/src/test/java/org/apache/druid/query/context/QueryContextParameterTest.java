@@ -1,0 +1,646 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.query.context;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.BadQueryContextException;
+import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameter.Visibility;
+import org.apache.druid.query.context.constraint.Range;
+import org.apache.druid.query.context.docs.ParameterDocumentation;
+import org.apache.druid.query.context.docs.ParameterDocumentation.Engine;
+import org.apache.druid.query.context.docs.ParameterDocumentation.Query;
+import org.apache.druid.query.context.docs.ParameterDocumentation.QueryType;
+import org.apache.druid.query.context.docs.ParameterDocumentation.StatementType;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.apache.druid.query.context.constraint.Range.closedRange;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class QueryContextParameterTest
+{
+  @Test
+  void testDescriptorMetadataAndParsing()
+  {
+    final QueryContextParameter<Integer> parameter = QueryContextParameter
+        .builder("maxThings", Integer.class, value -> QueryContexts.getAsInt("maxThings", value))
+        .constraint(closedRange(0, Integer.MAX_VALUE))
+        .defaultValue(10)
+        .description("Maximum number of things.")
+        .query(Query.JSON)
+        .engine(Engine.NATIVE)
+        .queryType(QueryType.SCAN)
+        .statement(StatementType.SELECT)
+        .defaultDescription("runtime configuration")
+        .since("39.0.0")
+        .build();
+
+    assertEquals("maxThings", parameter.getName());
+    assertEquals(Integer.class, parameter.getValueType());
+    assertEquals(12, parameter.parse("12"));
+    assertEquals(new DefaultValue.Literal<>(10), parameter.getDefaultValue());
+    assertEquals(10, parameter.getLiteralDefault());
+    assertTrue(parameter.isNullable());
+    assertFalse(parameter.isDeprecated());
+    assertNull(parameter.getDeprecationMessage());
+    final ParameterDocumentation docs = parameter.getDocumentation();
+    assertEquals("39.0.0", docs.getSince().orElseThrow());
+    assertEquals("Maximum number of things.", docs.getDescription());
+    assertEquals(Set.of(Query.JSON), docs.getQueries());
+    assertEquals(Set.of(Engine.NATIVE), docs.getEngines());
+    assertEquals(Set.of(QueryType.SCAN), docs.getQueryTypes());
+    assertEquals(Set.of(StatementType.SELECT), docs.getStatementTypes());
+    assertEquals("runtime configuration", docs.getDefaultDescription().orElseThrow());
+    final Range.Constraint<?> constraint = (Range.Constraint<?>) parameter.getConstraints().get(0);
+    assertEquals(0, constraint.getLowerBound());
+    assertEquals(Integer.MAX_VALUE, constraint.getUpperBound());
+    assertEquals("maxThings", parameter.toString());
+  }
+
+  @Test
+  void testValidatorRejectsParsedValue()
+  {
+    final QueryContextParameter<Integer> parameter = QueryContextParameter
+        .builder("maxThings", Integer.class, value -> (Integer) value)
+        .description("Test parameter.")
+        .constraint(closedRange(0, 10))
+        .build();
+
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(-1));
+    assertThrows(BadQueryContextException.class, () -> parameter.validate(-1));
+    assertThrows(BadQueryContextException.class, () -> parameter.validate(11));
+    parameter.validate(0);
+    parameter.validate(10);
+  }
+
+  @Test
+  void testValidateDoesNotInvokeParser()
+  {
+    final AtomicBoolean parserCalled = new AtomicBoolean();
+    final QueryContextParameter<Integer> parameter = QueryContextParameter
+        .builder(
+            "maxThings",
+            Integer.class,
+            value -> {
+              parserCalled.set(true);
+              return Integer.parseInt((String) value);
+            }
+        )
+        .description("Test parameter.")
+        .build();
+
+    assertEquals(1, parameter.validate(1));
+    assertFalse(parserCalled.get());
+
+    assertEquals(1, parameter.parse(1));
+    assertFalse(parserCalled.get());
+
+    assertEquals(1, parameter.parse("1"));
+    assertTrue(parserCalled.get());
+  }
+
+  @Test
+  void testParseOrDefault()
+  {
+    final QueryContextParameter<Integer> parameter = QueryContextParameter
+        .builder("maxThings", Integer.class, value -> QueryContexts.getAsInt("maxThings", value))
+        .description("Test parameter.")
+        .defaultValue(10)
+        .build();
+
+    assertEquals(12, parameter.parseOrDefault("12"));
+    assertEquals(10, parameter.parseOrDefault(null));
+  }
+
+  @Test
+  void testParseOrDefaultRequiresDeclaredDefault()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameter
+        .builder("tag", String.class, value -> (String) value)
+        .description("Test parameter.")
+        .build();
+
+    assertThrows(ISE.class, () -> parameter.parseOrDefault(null));
+  }
+
+  @Test
+  void testRangeRejectsInvalidBounds()
+  {
+    assertThrows(IAE.class, () -> closedRange(1, 0));
+  }
+
+  @Test
+  void testNullableValueSkipsConstraints()
+  {
+    final AtomicBoolean constraintCalled = new AtomicBoolean();
+    final QueryContextParameter<Integer> parameter = QueryContextParameter
+        .builder("required", Integer.class, value -> (Integer) value)
+        .description("Test parameter.")
+        .constraint((_, _) -> constraintCalled.set(true))
+        .build();
+
+    assertNull(parameter.validate(null));
+    assertFalse(constraintCalled.get());
+    parameter.validate(1);
+    assertTrue(constraintCalled.get());
+  }
+
+  @Test
+  void testNonNullableParameterRejectsNull()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameter
+        .builder("required", String.class, String::valueOf)
+        .description("Test parameter.")
+        .nullable(false)
+        .build();
+    final Map<String, Object> context = new HashMap<>();
+
+    assertFalse(parameter.isNullable());
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(null));
+    assertThrows(BadQueryContextException.class, () -> parameter.validate(null));
+    assertThrows(BadQueryContextException.class, () -> parameter.set(context, null));
+    assertTrue(context.isEmpty());
+
+    final QueryContextParameter<String> nullProducingParser = QueryContextParameter
+        .builder("required", String.class, ignored -> null)
+        .description("Test parameter.")
+        .nullable(false)
+        .build();
+    assertThrows(BadQueryContextException.class, () -> nullProducingParser.parse(42));
+  }
+
+  @Test
+  void testIntegerParameterRejectsLossyNumbers()
+  {
+    final QueryContextParameter<Integer> parameter = QueryContextParameters.integerParameter("ints")
+        .description("Test parameter.")
+        .build();
+
+    assertEquals(12, parameter.parse(12L));
+    assertEquals(12, parameter.parse(12.0d));
+    assertEquals(12, parameter.parse(new java.math.BigDecimal("12.00")));
+    assertEquals(12, parameter.parse("12"));
+    assertEquals(Integer.MAX_VALUE, parameter.parse((long) Integer.MAX_VALUE));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(4_294_967_295L));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(Double.NaN));
+    assertEquals(
+        "Query context parameter [ints] must be within the range [-2147483648, 2147483647], but was [5000000000]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse(5_000_000_000L)).getMessage()
+    );
+    assertEquals(
+        "Query context parameter [ints] should be in integer format, but got [12.7]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse(12.7d)).getMessage()
+    );
+    assertEquals(
+        "Query context parameter [ints] should be in integer format, or a human-readable number such as '10 K' or '256 MiB', but got [not-an-int]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("not-an-int")).getMessage()
+    );
+
+    // An overflowing value reports the parameter's own range constraint when one is declared.
+    final QueryContextParameter<Integer> constrained = QueryContextParameters.integerParameter("ints")
+                                                                             .description("Test parameter.")
+                                                                             .constraint(closedRange(1, 100))
+                                                                             .build();
+    assertEquals(
+        "Query context parameter [ints] must be within the range [1, 100], but was [5000000000]",
+        assertThrows(BadQueryContextException.class, () -> constrained.parse("5000000000")).getMessage()
+    );
+  }
+
+  @Test
+  void testLongParameterRejectsLossyNumbers()
+  {
+    final QueryContextParameter<Long> parameter = QueryContextParameters.longParameter("longs")
+        .description("Test parameter.")
+        .build();
+
+    assertEquals(12L, parameter.parse(12));
+    assertEquals(12L, parameter.parse(12.0d));
+    assertEquals(Long.MAX_VALUE, parameter.parse(new BigInteger(String.valueOf(Long.MAX_VALUE))));
+    assertThrows(
+        BadQueryContextException.class,
+        () -> parameter.parse(new BigInteger(String.valueOf(Long.MAX_VALUE)).add(BigInteger.ONE))
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(12.5d));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("9223372036854775808"));
+  }
+
+  @Test
+  void testStringParameterRejectsNonStrings()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameters.stringParameter("strings")
+        .description("Test parameter.")
+        .build();
+
+    assertEquals("value", parameter.parse("value"));
+    assertEquals(
+        "Query context parameter [strings] should be a string, but got [1]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse(1)).getMessage()
+    );
+  }
+
+  @Test
+  void testBooleanParameter()
+  {
+    final QueryContextParameter<Boolean> parameter = QueryContextParameters.USE_RESULT_LEVEL_CACHE;
+    assertEquals(true, parameter.parse(true));
+    assertEquals(true, parameter.parse("true"));
+    assertEquals(true, parameter.parse("TRUE"));
+    assertEquals(false, parameter.parse("False"));
+    assertEquals(true, parameter.parse("1"));
+    assertEquals(false, parameter.parse("0"));
+
+    // Such as from "SET useResultLevelCache = 1"
+    assertEquals(true, parameter.parse(1L));
+    assertEquals(false, parameter.parse(0L));
+    assertEquals(true, parameter.parse(1));
+
+    // Floating-point numbers are rejected, even when equal to 0 or 1
+    final List<Object> invalidValues = List.of(
+        1.0d,
+        0.0f,
+        "1.0",
+        "01",
+        "yes",
+        "",
+        " true",
+        2L,
+        -1L,
+        0.5d,
+        Double.NaN,
+        List.of(true)
+    );
+    for (final Object invalid : invalidValues) {
+      assertEquals(
+          StringUtils.format(
+              "Context parameter [useResultLevelCache] is boolean, which allows only 0/1, '0'/'1', true/false, or 'true'/'false' (in any case), but was given [%s]",
+              invalid
+          ),
+          assertThrows(BadQueryContextException.class, () -> parameter.parse(invalid)).getMessage(),
+          String.valueOf(invalid)
+      );
+    }
+  }
+
+  @Test
+  void testBooleanParameterAcceptsBigInteger() throws Exception
+  {
+    final QueryContextParameter<Boolean> parameter = QueryContextParameters.USE_RESULT_LEVEL_CACHE;
+
+    // A context built by a Java caller
+    assertEquals(true, parameter.parse(BigInteger.ONE));
+    assertEquals(false, parameter.parse(BigInteger.ZERO));
+
+    // A context read from JSON by a mapper that keeps integers as BigInteger
+    final ObjectMapper mapper = new DefaultObjectMapper().enable(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS);
+    final Map<String, Object> context = mapper.readValue(
+        "{\"useResultLevelCache\": 1}",
+        new TypeReference<Map<String, Object>>() {}
+    );
+    assertEquals(BigInteger.class, context.get("useResultLevelCache").getClass());
+    assertEquals(true, QueryContext.of(context).get(parameter));
+
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(BigInteger.TWO));
+  }
+
+  @Test
+  void testIntegerParameterAcceptsHumanReadableNumbers()
+  {
+    final QueryContextParameter<Integer> parameter = QueryContextParameters.integerParameter("ints")
+        .description("Test parameter.")
+        .build();
+
+    // Such as from "SET ints = '1MiB'"
+    assertEquals(1_048_576, parameter.parse("1MiB"));
+    assertEquals(10_000, parameter.parse("10K"));
+    assertEquals(1_073_741_824, parameter.parse("1GiB"));
+
+    // With spaces between the number and the unit
+    assertEquals(1_048_576, parameter.parse("1 MiB"));
+    assertEquals(1_073_741_824, parameter.parse("1  GiB"));
+
+    // Negative numbers, with or without a unit
+    assertEquals(-1, parameter.parse("-1"));
+    assertEquals(-2_000, parameter.parse("-2K"));
+    assertEquals(-2_000_000, parameter.parse("-2 M"));
+    assertEquals(-2 * 1024 * 1024, parameter.parse("-2MiB"));
+    assertEquals(-2 * 1024 * 1024, parameter.parse("-2 MiB"));
+    assertEquals(-10 * 1024, parameter.parse("-10 Ki"));
+    assertEquals(-1_000_000_000, parameter.parse("-1g"));
+    assertEquals(-2_000_000, parameter.parse("-2 m"));
+    assertEquals(-3_000, parameter.parse("-3k"));
+
+    assertEquals(
+        "Query context parameter [ints] must be within the range [-2147483648, 2147483647], but was [2GiB]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("2GiB")).getMessage()
+    );
+    assertEquals(
+        "Query context parameter [ints] should be in integer format, or a human-readable number such as '10 K' or '256 MiB', but got [1 M iB]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("1 M iB")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("--1K"));
+  }
+
+  @Test
+  void testLongParameterAcceptsHumanReadableNumbers()
+  {
+    final QueryContextParameter<Long> parameter = QueryContextParameters.longParameter("longs")
+        .description("Test parameter.")
+        .build();
+
+    // Such as from "SET longs = '5GiB'"
+    assertEquals(2_000_000_000L, parameter.parse("2G"));
+    assertEquals(5L * 1024 * 1024 * 1024, parameter.parse("5GiB"));
+    assertEquals(1024L * 1024 * 1024 * 1024 * 1024, parameter.parse("1PiB"));
+
+    // With spaces between the number and the unit
+    assertEquals(1_048_576L, parameter.parse("1 MiB"));
+    assertEquals(3_000_000_000L, parameter.parse("3   G"));
+
+    // Negative numbers, with or without a unit
+    assertEquals(-1L, parameter.parse("-1"));
+    assertEquals(-2_000L, parameter.parse("-2K"));
+    assertEquals(-5_000_000_000L, parameter.parse("-5 G"));
+    assertEquals(-2L * 1024 * 1024, parameter.parse("-2MiB"));
+    assertEquals(-5L * 1024 * 1024 * 1024, parameter.parse("-5 GiB"));
+    assertEquals(-10L * 1024, parameter.parse("-10 Ki"));
+    assertEquals(-2L * 1024 * 1024 * 1024 * 1024, parameter.parse("-2 Ti"));
+    assertEquals(-3_000_000_000L, parameter.parse("-3g"));
+    assertEquals(-2_000_000L, parameter.parse("-2 m"));
+    assertEquals(-3_000L, parameter.parse("-3k"));
+
+    assertEquals(
+        "Query context parameter [longs] should be in long format, or a human-readable number such as '10 K' or '256 MiB', but got [1 M iB]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("1 M iB")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("--1K"));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("abc"));
+
+    // Beyond the range of a long
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("10000PiB"));
+  }
+
+  @Test
+  void testGroupBySizeParametersAreNonNegativeLongs()
+  {
+    for (final QueryContextParameter<Long> parameter : List.of(
+        QueryContextParameters.MAX_ON_DISK_STORAGE,
+        QueryContextParameters.MIN_SPILL_FILE_SIZE,
+        QueryContextParameters.MAX_SELECTOR_DICTIONARY_SIZE,
+        QueryContextParameters.MAX_MERGING_DICTIONARY_SIZE
+    )) {
+      assertEquals(1_073_741_824L, parameter.parse("1 GiB"), parameter.getName());
+      assertEquals(3_000_000L, parameter.parse("3M"), parameter.getName());
+      assertEquals(4L, parameter.parse(4), parameter.getName());
+      assertEquals(0L, parameter.parse(0), parameter.getName());
+
+      // A negative size is rejected, and a fractional one is no longer truncated
+      assertThrows(BadQueryContextException.class, () -> parameter.parse("-1K"), parameter.getName());
+      assertThrows(BadQueryContextException.class, () -> parameter.parse(-5), parameter.getName());
+      assertThrows(BadQueryContextException.class, () -> parameter.parse(1.5), parameter.getName());
+    }
+  }
+
+  @Test
+  void testSet()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameter
+        .builder("tag", String.class, String::valueOf)
+        .description("Test parameter.")
+        .build();
+    final Map<String, Object> context = new HashMap<>();
+
+    parameter.set(context, "value");
+    assertEquals(Map.of("tag", "value"), context);
+
+    parameter.set(context, null);
+    assertTrue(context.isEmpty());
+  }
+
+  @Test
+  void testValidatorRejectsDefaultValueAtBuildTime()
+  {
+    final QueryContextParameter.Builder<Integer> builder = QueryContextParameter
+        .builder("maxThings", Integer.class, value -> (Integer) value)
+        .constraint(closedRange(0, Integer.MAX_VALUE))
+        .defaultValue(-1);
+
+    assertThrows(IAE.class, builder::build);
+  }
+
+  @Test
+  void testDefaultsApplyToOptionalMetadata()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameter
+        .builder("tag", String.class, String::valueOf)
+        .description("Test parameter.")
+        .deprecated("Use `newTag` instead.")
+        .build();
+
+    assertTrue(parameter.isDeprecated());
+    assertEquals("Use `newTag` instead.", parameter.getDeprecationMessage());
+    assertEquals(DefaultValue.none(), parameter.getDefaultValue());
+    assertNull(parameter.getLiteralDefault());
+    assertNull(parameter.getDocumentation().getSince().orElse(null));
+  }
+
+  @Test
+  void testDefaultFromProperty()
+  {
+    final QueryContextParameter<Long> parameter = QueryContextParameter
+        .builder("maxThings", Long.class, value -> ((Number) value).longValue())
+        .description("Test parameter.")
+        .defaultValue(DefaultValue.fromProperty("druid.test.maxThings"))
+        .build();
+
+    assertEquals(new DefaultValue.FromProperty<>("druid.test.maxThings"), parameter.getDefaultValue());
+    // The code reading the parameter supplies the property value, so there is no literal default to fall back to
+    assertNull(parameter.getLiteralDefault());
+    assertNull(QueryContext.empty().get(parameter));
+    assertEquals(7L, QueryContext.empty().getOrDefault(parameter, 7L));
+    assertThrows(ISE.class, () -> QueryContext.empty().getOrDefault(parameter));
+  }
+
+  @Test
+  void testNoLiteralDefaultLooksLikeAPropertyReference()
+  {
+    // sys.query_context_parameters shows a property default as ${property} in default_value
+    for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
+      final Object literalDefault = parameter.getLiteralDefault();
+      if (literalDefault != null) {
+        assertFalse(String.valueOf(literalDefault).startsWith("${"), parameter.getName());
+      }
+    }
+  }
+
+  @Test
+  void testRequiresDescription()
+  {
+    assertEquals(
+        "Query context parameter [undocumented] must have a description",
+        assertThrows(
+            IAE.class,
+            () -> QueryContextParameter.builder("undocumented", String.class, String::valueOf)
+                                       .visibility(Visibility.SYSTEM)
+                                       .since("39.0.0")
+                                       .build()
+        ).getMessage()
+    );
+  }
+
+  @Test
+  void testHiddenParameterKeepsDocumentation()
+  {
+    final QueryContextParameter<Boolean> parameter = QueryContextParameter
+        .builder("debugSwitch", Boolean.class, value -> Boolean.valueOf(String.valueOf(value)))
+        .description("A switch for debugging.")
+        .since("39.0.0")
+        .visibility(Visibility.HIDDEN)
+        .build();
+
+    assertEquals(Visibility.HIDDEN, parameter.getVisibility());
+    assertEquals("A switch for debugging.", parameter.getDocumentation().getDescription());
+    assertEquals("39.0.0", parameter.getSince());
+  }
+
+  @Test
+  void testRejectsInvalidName()
+  {
+    assertThrows(
+        IAE.class,
+        () -> QueryContextParameter.builder(" parameter", String.class, String::valueOf)
+    );
+  }
+
+  @Test
+  void testRejectsBlankDeprecationMessage()
+  {
+    final QueryContextParameter.Builder<String> builder = QueryContextParameter
+        .builder("parameter", String.class, String::valueOf);
+
+    assertThrows(IAE.class, () -> builder.deprecated(" "));
+  }
+
+  @Test
+  void testAllParametersDeclareSince()
+  {
+    for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
+      assertNotNull(parameter.getSince(), parameter.getName());
+    }
+  }
+
+  /**
+   * Query context values usually arrive in their JSON form, so an enum parameter's value must survive the trip from
+   * enum constant to JSON string and back, whichever path the string takes: Jackson, the parameter's parser, or the
+   * enum's {@code toString()}. This checks, for every constant of every enum parameter in the catalog, that Jackson
+   * reads back what it writes, that {@code toString()} equals the JSON form, and that the parameter parses the JSON
+   * form to the same constant. See the enum requirements on {@link QueryContextParameter}.
+   */
+  @Test
+  void testEnumParametersHaveConsistentJsonForm() throws Exception
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
+      final Class<?> type = parameter.getValueType();
+      if (!type.isEnum()) {
+        continue;
+      }
+      for (final Object constant : type.getEnumConstants()) {
+        final String description = parameter.getName() + " = " + constant;
+        final String json = mapper.writeValueAsString(constant);
+        final String jsonForm = mapper.readValue(json, String.class);
+
+        assertEquals(constant, mapper.readValue(json, type), description);
+        assertEquals(jsonForm, constant.toString(), description);
+        assertEquals(constant, parameter.parse(jsonForm), description);
+      }
+    }
+  }
+
+  @Test
+  void testTypeIsInferredFromValueType()
+  {
+    assertEquals(QueryContextParameter.Type.INTEGER, QueryContextParameters.PRIORITY.getType());
+    assertEquals(QueryContextParameter.Type.ENUM, QueryContextParameters.VECTORIZE.getType());
+    assertEquals("HumanReadableNumber", QueryContextParameter.Type.HUMAN_READABLE_NUMBER.getDisplayName());
+
+    final IAE exception = assertThrows(
+        IAE.class,
+        () -> QueryContextParameter.builder("unmapped", Map.class, value -> (Map<?, ?>) value)
+    );
+    assertEquals("No query context parameter type for value type [java.util.Map]", exception.getMessage());
+  }
+
+  @Test
+  void testSqlTimeZoneStringifiesNonStringValues()
+  {
+    assertEquals("America/Los_Angeles", QueryContextParameters.SQL_TIME_ZONE.parse("America/Los_Angeles"));
+    assertEquals("8", QueryContextParameters.SQL_TIME_ZONE.parse(8));
+  }
+
+  @Test
+  void testEnumParameterWithCustomLookup()
+  {
+    final QueryContextParameter<JoinAlgorithm> parameter = QueryContextParameters.SQL_JOIN_ALGORITHM;
+
+    assertEquals(JoinAlgorithm.SORT_MERGE, parameter.parse("sortMerge"));
+    assertEquals(JoinAlgorithm.BROADCAST, parameter.parse(JoinAlgorithm.BROADCAST));
+    assertEquals(
+        "Query context parameter [sqlJoinAlgorithm] should be one of [broadcast, sortMerge], but got [SORT_MERGE]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("SORT_MERGE")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(1));
+  }
+
+  @Test
+  void testSqlCurrentTimestamp()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameters.SQL_CURRENT_TIMESTAMP;
+    assertEquals("2000-01-01T00:00:00Z", parameter.parse("2000-01-01T00:00:00Z"));
+    // Milliseconds since the epoch are accepted as the equivalent ISO 8601 timestamp
+    assertEquals("2000-01-01T00:00:00.000Z", parameter.parse(946684800000L));
+    assertEquals(
+        "Query context parameter [sqlCurrentTimestamp] should be an ISO 8601 timestamp or milliseconds since the epoch,"
+        + " but got [yesterday]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("yesterday")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(1.5));
+  }
+}

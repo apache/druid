@@ -46,6 +46,7 @@ import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
 
@@ -442,10 +443,7 @@ public class SqlBenchmarkDatasets
 
   private static DataSegment makeSegment(String datasource, Interval interval, int partitionNumber)
   {
-    return DataSegment.builder()
-                      .dataSource(datasource)
-                      .interval(interval)
-                      .version("1")
+    return DataSegment.builder(SegmentId.of(datasource, interval, "1", partitionNumber))
                       .shardSpec(new LinearShardSpec(partitionNumber))
                       .size(0)
                       .build();

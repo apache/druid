@@ -80,8 +80,6 @@ public class DruidUnionRule extends RelOptRule
               -1
           )
       );
-    } else {
-      plannerContext.setPlanningError("SQL requires 'UNION' but only 'UNION ALL' is supported.");
     }
   }
 }

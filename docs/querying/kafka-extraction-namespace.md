@@ -75,6 +75,10 @@ This input topic would be consumed from the beginning, and result in a lookup na
 
 Now when a query uses this extraction namespace, the country codes can be mapped to the full country name at query time.
 
+## Amazon MSK with IAM authentication
+
+The `druid-kafka-extraction-namespace` extension includes the [Amazon MSK Library for AWS Identity and Access Management](https://github.com/aws/aws-msk-iam-auth), so a lookup can read from an MSK cluster that uses IAM access control. Put the properties from [Kafka ingestion](../ingestion/kafka-ingestion.md#amazon-msk-with-iam-authentication) in `kafkaProperties`. Every service that loads the lookup needs IAM credentials with the permissions listed there.
+
 ## Tombstones and Deleting Records
 
 The Kafka lookup extractor treats `null` Kafka messages as tombstones. This means that a record on the input topic with a `null` message payload on Kafka will remove the associated key from the lookup map, effectively deleting it.

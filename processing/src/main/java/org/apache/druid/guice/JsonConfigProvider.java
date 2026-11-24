@@ -58,8 +58,8 @@ import java.util.Properties;
  * <pre>
  *   public class DruidServerConfig
  *   {
- *     @JsonProperty @NotNull public String hostname = null;
- *     @JsonProperty @Min(1025) public int port = 8080;
+ *     &#64;JsonProperty @NotNull public String hostname = null;
+ *     &#64;JsonProperty @Min(1025) public int port = 8080;
  *   }
  * </pre>
  *

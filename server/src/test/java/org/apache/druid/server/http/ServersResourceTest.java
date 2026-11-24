@@ -21,6 +21,7 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -28,6 +29,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,10 +47,9 @@ public class ServersResourceTest
   public void setUp()
   {
     DruidServer dummyServer = new DruidServer("dummy", "host", null, 1234L, null, ServerType.HISTORICAL, "tier", 0);
-    DataSegment segment = DataSegment.builder()
-                                     .dataSource("dataSource")
-                                     .interval(Intervals.of("2016-03-22T14Z/2016-03-22T15Z"))
-                                     .version("v0")
+    DataSegment segment = DataSegment.builder(SegmentId.of("dataSource", Intervals.of("2016-03-22T14Z/2016-03-22T15Z"), "v0", 0))
+                                     .loadSpec(ImmutableMap.of())
+                                     .binaryVersion(null)
                                      .size(1L)
                                      .build();
     dummyServer.addDataSegment(segment);

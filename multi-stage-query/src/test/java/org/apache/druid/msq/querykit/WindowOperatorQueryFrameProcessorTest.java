@@ -38,10 +38,11 @@ import org.apache.druid.msq.indexing.CountingWritableFrameChannel;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.query.operator.window.ranking.WindowRowNumberProcessor;
@@ -186,7 +187,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
         new HashMap<>(
             // This ends up satisfying the criteria of needToProcessBatch() method,
             // so we end up processing the rows we've read, hence writing the 1st frame to the output channel.
-            ImmutableMap.of(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW, 12)
+            QueryContext.ofMap(QueryContextParameters.MAX_ROWS_MATERIALIZED_IN_WINDOW, 12)
         ),
         outputSignature,
         ImmutableList.of(
@@ -292,7 +293,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
                      .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         new HashMap<>(
-            ImmutableMap.of(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW, maxRowsMaterialized)
+            QueryContext.ofMap(QueryContextParameters.MAX_ROWS_MATERIALIZED_IN_WINDOW, maxRowsMaterialized)
         ),
         outputSignature,
         ImmutableList.of(

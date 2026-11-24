@@ -52,6 +52,7 @@ import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.OverlordMode;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -75,8 +76,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -112,6 +113,7 @@ public class OverlordTest
   private Timing timing;
   private CuratorFramework curator;
   private DruidOverlord overlord;
+  private TestDruidLeaderSelector leaderSelector;
   private TaskMaster taskMaster;
   private GlobalTaskLockbox taskLockbox;
   private TaskStorage taskStorage;
@@ -242,6 +244,7 @@ public class OverlordTest
         taskActionClientFactory,
         supervisorManager
     );
+    leaderSelector = new TestDruidLeaderSelector();
     overlord = new DruidOverlord(
         taskMaster,
         new TaskLockConfig(),
@@ -251,11 +254,11 @@ public class OverlordTest
         taskStorage,
         taskActionClientFactory,
         taskRunnerFactory,
-        new CoordinatorOverlordServiceConfig(null, null),
+        OverlordMode.STANDALONE,
         serviceEmitter,
         supervisorManager,
         EasyMock.createNiceMock(OverlordDutyExecutor.class),
-        new TestDruidLeaderSelector(),
+        leaderSelector,
         EasyMock.createNiceMock(SegmentAllocationQueue.class),
         EasyMock.createNiceMock(SegmentMetadataCache.class),
         Set.of(
@@ -296,7 +299,8 @@ public class OverlordTest
         auditManager,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         workerTaskRunnerQueryAdapter,
-        new AuthConfig()
+        new AuthConfig(),
+        TestHelper.JSON_MAPPER
     );
     Response response = overlordResource.getLeader();
     Assertions.assertEquals(druidNode.getHostAndPort(), response.getEntity());
@@ -369,6 +373,23 @@ public class OverlordTest
     Assertions.assertEquals(0, taskMaster.getStats().rowCount());
 
     EasyMock.verify(taskActionClientFactory);
+  }
+
+  @Timeout(60)
+  @Test
+  public void testBecomeLeaderAfterStopIsIgnored() throws Exception
+  {
+    overlord.start();
+    while (!overlord.isLeader()) {
+      Thread.sleep(10);
+    }
+
+    overlord.stop();
+    Assertions.assertFalse(taskMaster.isHalfOrFullLeader());
+
+    // Simulate a becomeLeader() callback that the leader selector delivers after stop().
+    leaderSelector.listener.becomeLeader();
+    Assertions.assertFalse(taskMaster.isHalfOrFullLeader());
   }
 
   /* Wait until the task with given taskId has the given Task Status
@@ -600,11 +621,25 @@ public class OverlordTest
       listener.becomeLeader();
     }
 
+    /**
+     * Calls {@link Listener#stopBeingLeader()} from another thread and waits for it, as K8sDruidLeaderSelector
+     * does, so callers that hold a lock needed by stopBeingLeader() fail here instead of deadlocking.
+     */
     @Override
     public void unregisterListener()
     {
       leader = null;
-      listener.stopBeingLeader();
+
+      final Thread thread = new Thread(listener::stopBeingLeader);
+      thread.start();
+      try {
+        thread.join(10_000);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+      Assertions.assertFalse(thread.isAlive(), "stopBeingLeader() did not finish");
     }
   }
 }

@@ -24,10 +24,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.DimFilters;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.segment.FilteredSegment;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -121,6 +125,31 @@ public class FilteredDataSource implements DataSource
   public SegmentMapFunction createSegmentMapFunction(Query query)
   {
     return base.createSegmentMapFunction(query).thenMap(segment -> new FilteredSegment(segment, filter));
+  }
+
+  @Nullable
+  @Override
+  public SegmentPruner createSegmentPruner(@Nullable DimFilter filter, VirtualColumns virtualColumns)
+  {
+    final DimFilter baseFilter =
+        filter == null && this.filter == null ? null : DimFilters.conjunction(filter, this.filter);
+    return base.createSegmentPruner(baseFilter, virtualColumns);
+  }
+
+  @Override
+  public Set<String> getReservedColumns()
+  {
+    final Set<String> names = new HashSet<>(base.getReservedColumns());
+    if (filter != null) {
+      names.addAll(filter.getRequiredColumns());
+    }
+    return names;
+  }
+
+  @Override
+  public boolean mayFilterRows()
+  {
+    return filter != null || base.mayFilterRows();
   }
 
   @Override

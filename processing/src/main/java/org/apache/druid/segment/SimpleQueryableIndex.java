@@ -33,14 +33,12 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ConstantColumns;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.file.SegmentFileMapper;
+import org.apache.druid.segment.projections.ClusteredColumnInspector;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
@@ -74,6 +72,8 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   private final Map<String, ColumnHolderTable> projectionColumns;
   @Nullable
   private final ClusteredValueGroupsBaseTableSchema clusteredBaseSummary;
+  @Nullable
+  private final ClusteredColumnInspector clusteredColumnInspector;
   private final List<ColumnHolderTable> clusterGroupColumns;
   private final SegmentFileMapper fileMapper;
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
@@ -92,6 +92,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
         bitmapFactory,
         ColumnHolderTable.fromSupplierMap(columns),
         fileMapper,
+        null,
         null,
         null,
         null,
@@ -118,6 +119,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
         metadata,
         projectionTablesFromMaps(projectionColumns),
         null,
+        null,
         null
     );
   }
@@ -134,7 +136,8 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       @Nullable Metadata metadata,
       @Nullable Map<String, ColumnHolderTable> projectionColumns,
       @Nullable ClusteredValueGroupsBaseTableSchema clusteredBaseSummary,
-      @Nullable List<ColumnHolderTable> clusterGroupColumns
+      @Nullable List<ColumnHolderTable> clusterGroupColumns,
+      @Nullable ClusteredColumnInspector clusteredColumnInspector
   )
   {
     // For clustered base tables, the top-level columns map is empty; all column data lives under per-cluster-group
@@ -163,7 +166,12 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     this.projectionColumns = projectionColumns == null || projectionColumns.isEmpty()
                              ? Collections.emptyMap()
                              : projectionColumns;
+    DruidException.conditionalDefensive(
+        (clusteredBaseSummary == null) == (clusteredColumnInspector == null),
+        "Clustered column capabilities must be provided exactly when the clustered summary is"
+    );
     this.clusteredBaseSummary = clusteredBaseSummary;
+    this.clusteredColumnInspector = clusteredColumnInspector;
     this.clusterGroupColumns = clusterGroupColumns == null
                                ? Collections.emptyList()
                                : List.copyOf(clusterGroupColumns);
@@ -239,29 +247,19 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
 
   /**
    * Clustered segments store no top-level columns, so the default holder-based lookup would report null for every
-   * logical column. Resolve instead from the summary's typed clustering signature (clustering columns) and the first
-   * cluster group's sub-index (data columns + {@code __time} — all groups share the same per-group shape). Group
-   * sub-indexes have a null summary and fall through to the default holder-based path, as do non-clustered segments.
+   * logical column. Resolve instead from {@link ClusteredColumnInspector}, which combines every cluster group's
+   * column descriptors without reading column data. Group sub-indexes have a null summary and fall through to the
+   * default holder-based path, as do non-clustered segments.
    */
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    if (clusteredBaseSummary == null) {
+    if (clusteredColumnInspector != null) {
+      return clusteredColumnInspector.getColumnCapabilities(column);
+    } else {
       return QueryableIndex.super.getColumnCapabilities(column);
     }
-    final ColumnType clusteringType = clusteredBaseSummary.getClusteringColumns().getColumnType(column).orElse(null);
-    if (clusteringType != null) {
-      return clusteringType.is(ValueType.STRING)
-             ? ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities()
-             : ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(clusteringType);
-    }
-    final List<TableClusterGroupSpec> groups = clusteredBaseSummary.getClusterGroups();
-    if (groups.isEmpty()) {
-      return null;
-    }
-    final QueryableIndex firstGroupIndex = getClusterGroupQueryableIndex(groups.get(0), false);
-    return firstGroupIndex == null ? null : firstGroupIndex.getColumnCapabilities(column);
   }
 
   @VisibleForTesting
@@ -341,6 +339,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
         groupColumns,
         fileMapper,
         groupMetadata,
+        null,
         null,
         null,
         null
@@ -429,6 +428,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
         projectionColumns.get(name),
         fileMapper,
         projectionMetadata,
+        null,
         null,
         null,
         null

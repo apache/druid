@@ -40,12 +40,12 @@ import java.util.Map;
  * Announcement creates following in the pod def...
  *
  * Labels -
- * druidDiscoveryAnnouncement-<nodeRole.getJsonName()> = true
+ * druidDiscoveryAnnouncement-{@code <nodeRole.getJsonName()>} = true
  * druidDiscoveryAnnouncement-id-hash = hashEncodeStringForLabelValue(host:port)
  * druidDiscoveryAnnouncement-cluster-identifier = <clusterIdentifier>
  *
  * Annotation -
- * druidNodeInfo-<nodeRole.getJsonName()> = json_serialize(DiscoveryDruidNode)
+ * druidNodeInfo-{@code <nodeRole.getJsonName()>} = json_serialize(DiscoveryDruidNode)
  *
  * Note that, a node can have multiple roles e.g. coordinator can take up overlord's role as well.
  */

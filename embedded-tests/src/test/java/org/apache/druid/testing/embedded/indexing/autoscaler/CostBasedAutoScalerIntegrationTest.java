@@ -29,6 +29,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -75,8 +76,13 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
   @Override
   public EmbeddedDruidCluster createCluster()
   {
+    // Emit supervisor lag metrics frequently so that tests can wait on them
+    overlord.addProperty("druid.monitoring.emissionPeriod", "PT1s");
     return super
         .createCluster()
+        // Emit monitor metrics frequently so that the Kafka consumer reports the
+        // poll-idle-ratio within the short lifetime of the tasks in these tests
+        .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
         .useDefaultTimeoutForLatchableEmitter(600);
   }
 
@@ -255,13 +261,18 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMax(4)
         .lagWeight(0.5)
         .idleWeight(0.5)
+        .usePollIdleRatio(false)
         .scaleActionPeriodMillis(10L)
         .minScaleDownDelay(Duration.standardSeconds(1))
         .build();
 
     // Keep task duration short so all generated segments can be published promptly while the auto-scaler observes them.
     final SupervisorSpec supervisor = createKafkaSupervisor(kafkaServer)
-        .withTuningConfig(t -> t.withMaxRowsPerSegment(maxRowsPerSegment))
+        .withTuningConfig(
+            // Refresh lag as often as allowed so that the auto-scaler does not act on stale lag for long
+            t -> t.withMaxRowsPerSegment(maxRowsPerSegment)
+                  .withOffsetFetchPeriod(Period.seconds(5))
+        )
         .withIoConfig(
             ioConfig -> ioConfig
                 .withTaskCount(1)
@@ -288,16 +299,37 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     Assertions.assertTrue(getCurrentTaskCount(supervisor.getId()) > 1);
     waitUntilPublishedRecordsAreIngested(totalRecords);
 
-    // Let the tasks work through the lag.
-    // Do not publish any more records so that the idleness causes scale-down
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/autoScaler/updatedCount")
+    // Do not publish any more records so that the idleness causes scale-down.
+    // The auto-scaler may have already scaled down and back up while the records were being ingested,
+    // so wait until it sees both zero lag and idle tasks, after which the only stable task count is 1.
+    overlord.latchableEmitter().waitForNextEvent(
+        event -> event.hasMetricName("ingest/kafka/lag")
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
-                      .hasValueMatching(Matchers.equalTo(1L))
+                      .hasValueMatching(Matchers.equalTo(0L))
     );
+    overlord.latchableEmitter().waitForNextEvent(
+        event -> event instanceof ServiceMetricEvent metricEvent
+                 && CostBasedAutoScaler.AVG_PROCESSING_RATE_METRIC.equals(metricEvent.getMetric())
+                 && supervisor.getId().equals(metricEvent.getUserDims().get(DruidMetrics.SUPERVISOR_ID))
+                 && metricEvent.getValue().doubleValue() == 0,
+        600_000L
+    );
+
+    // Wait for the final scale-down, if it has not happened yet. Flush the emitter first
+    // so that scale-down events emitted while the records were being ingested are not matched.
+    overlord.latchableEmitter().flush();
+    if (getCurrentTaskCount(supervisor.getId()) != 1) {
+      overlord.latchableEmitter().waitForEvent(
+          event -> event.hasMetricName("task/autoScaler/updatedCount")
+                        .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
+                        .hasValueMatching(Matchers.equalTo(1L))
+      );
+    }
     Assertions.assertEquals(1, getCurrentTaskCount(supervisor.getId()));
 
-    cluster.callApi().postSupervisor(supervisor.createSuspendedSpec());
+    // Suspend using the API rather than by re-posting the original spec, so that the
+    // supervisor is suspended with the task count that it is currently running with
+    suspendSupervisor(supervisor.getId());
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     Assertions.assertEquals("10000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
@@ -386,6 +418,17 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
                 .withAutoScalerConfig(autoScalerConfig)
         )
         .build(dataSource, topic);
+  }
+
+  private void suspendSupervisor(String supervisorId)
+  {
+    cluster.callApi().serviceClient().onLeaderOverlord(
+        mapper -> new RequestBuilder(
+            HttpMethod.POST,
+            StringUtils.format("/druid/indexer/v1/supervisor/%s/suspend", supervisorId)
+        ),
+        new TypeReference<Map<String, Object>>() {}
+    );
   }
 
   private int getCurrentTaskCount(String supervisorId)

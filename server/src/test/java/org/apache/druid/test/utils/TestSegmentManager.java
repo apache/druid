@@ -56,10 +56,7 @@ public class TestSegmentManager
    */
   public static DataSegment createDataSegmentForTest(final SegmentId segmentId)
   {
-    return DataSegment.builder()
-                      .dataSource(segmentId.getDataSource())
-                      .interval(segmentId.getInterval())
-                      .version(segmentId.getVersion())
+    return DataSegment.builder(SegmentId.of(segmentId.getDataSource(), segmentId.getInterval(), segmentId.getVersion(), segmentId.getPartitionNum()))
                       .shardSpec(new NumberedShardSpec(segmentId.getPartitionNum(), 0))
                       .size(0)
                       .build();

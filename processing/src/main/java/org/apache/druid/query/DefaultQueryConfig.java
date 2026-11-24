@@ -21,7 +21,6 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.Nonnull;
 import java.util.Collections;
@@ -52,11 +51,11 @@ public class DefaultQueryConfig implements QueryConfigProvider
    * runtime property values (store in this class) override by query context parameter passed in with the query
    */
   @JsonProperty
-  private final Map<String, Object> context;
+  private final QueryContext context;
 
   @Override
   @Nonnull
-  public Map<String, Object> getContext()
+  public QueryContext getContext()
   {
     return context;
   }
@@ -64,10 +63,6 @@ public class DefaultQueryConfig implements QueryConfigProvider
   @JsonCreator
   public DefaultQueryConfig(@JsonProperty("context") Map<String, Object> context)
   {
-    if (context == null) {
-      this.context = ImmutableMap.of();
-    } else {
-      this.context = context;
-    }
+    this.context = QueryContext.of(context);
   }
 }

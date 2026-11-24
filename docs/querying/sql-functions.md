@@ -1495,7 +1495,7 @@ Returns the following:
 
 Converts a value into the specified data type.
 
-* **Syntax:** `CAST(value AS TYPE)`
+* **Syntax:** `CAST(value AS TYPE)` or `value::TYPE`
 * **Function type:** Scalar, other
 
 <details>
@@ -1519,6 +1519,31 @@ Returns the following:
 </details>
 
 [Learn more](sql-scalar.md#other-scalar-functions)
+
+## CBRT
+
+Calculates the cube root of `expr`.
+
+* **Syntax:** `CBRT(expr)`
+* **Function type:** Scalar, numeric
+
+<details>
+<summary>Example</summary>
+
+The following example calculates the cube root of 27.
+
+```sql
+SELECT CBRT(27) AS "cube_root"
+```
+Returns the following:
+
+| `cube_root` |
+| -- |
+| `3` |
+
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## CEIL
 
@@ -1706,6 +1731,30 @@ Returns the following:
 | `cosine` |  
 | -- |
 | `0.5000000000000001` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
+
+## COSH
+
+Calculates the hyperbolic cosine of `expr`.
+
+* **Syntax:** `COSH(expr)`
+* **Function type:** Scalar, numeric
+
+<details>
+<summary>Example</summary>
+
+The following example calculates the hyperbolic cosine of `1`.
+
+```sql
+SELECT COSH(1) AS "hyperbolic_cosine"
+```
+Returns the following:
+
+| `hyperbolic_cosine` |
+| -- |
+| `1.5430806348152437` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -3402,6 +3451,7 @@ Extracts a primitive value from an expression at a specified path.
 If you include `RETURNING` and specify a SQL type (such as `VARCHAR`, `BIGINT`, `DOUBLE`) the function plans the query using the suggested type.
 If `RETURNING` isn't included, the function attempts to infer the type based on the context.
 If the function can't infer the type, it defaults to `VARCHAR`.  Primitive arrays can also be returned, but only if `RETURNING` is specified as an `ARRAY` type, e.g. `RETURNING VARCHAR ARRAY`.
+You can also write `expr:path` as shorthand for `JSON_VALUE(expr, '$.path')`, such as `geo_ip:city`.
 
 * **Syntax:** `JSON_VALUE(expr, path [RETURNING sqlType])`
 * **Function type:** JSON
@@ -5214,6 +5264,30 @@ Returns the following:
 
 [Learn more](sql-scalar.md#numeric-functions)
 
+## SINH
+
+Calculates the hyperbolic sine of `expr`.
+
+* **Syntax:** `SINH(expr)`
+* **Function type:** Scalar, numeric
+
+<details>
+<summary>Example</summary>
+
+The following example calculates the hyperbolic sine of `1`.
+
+```sql
+SELECT SINH(1) AS "hyperbolic_sine"
+```
+Returns the following:
+
+| `hyperbolic_sine` |
+| -- |
+| `1.1752011936438014` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
+
 ## SQRT
 
 Calculates the square root of a numeric expression.
@@ -5525,6 +5599,30 @@ Returns the following:
 | `tangent` |  
 | -- |
 | `1.7320508075688767` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
+
+## TANH
+
+Calculates the hyperbolic tangent of `expr`.
+
+* **Syntax:** `TANH(expr)`
+* **Function type:** Scalar, numeric
+
+<details>
+<summary>Example</summary>
+
+The following example calculates the hyperbolic tangent of `1`.
+
+```sql
+SELECT TANH(1) AS "hyperbolic_tangent"
+```
+Returns the following:
+
+| `hyperbolic_tangent` |
+| -- |
+| `0.7615941559557649` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)

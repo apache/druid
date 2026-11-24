@@ -78,7 +78,6 @@ public class GlueIcebergCatalog extends IcebergCatalog
         mapper
     );
     this.caseSensitive = caseSensitive == null ? true : caseSensitive;
-    this.catalog = retrieveCatalog();
   }
 
   @Override

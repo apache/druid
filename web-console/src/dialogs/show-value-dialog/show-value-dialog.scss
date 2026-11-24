@@ -32,8 +32,9 @@
     display: flex;
     flex-direction: column;
 
-    .ace-editor {
+    .code-editor {
       flex: 1;
+      height: 100%;
     }
 
     .#{$bp-ns}-input {

@@ -19,7 +19,9 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class DecoupledPlanningCalciteUnionQueryTest extends CalciteUnionQueryTest
@@ -34,5 +36,23 @@ public class DecoupledPlanningCalciteUnionQueryTest extends CalciteUnionQueryTes
   protected QueryTestBuilder testBuilder()
   {
     return decoupledExtension.testBuilder();
+  }
+
+  @Test
+  public void testUnionAllLookups()
+  {
+    // Lookups cannot be arms of a UnionDataSource, so the union runs one query per arm. The coupled planner rejects
+    // this query outright, so the case only arises here.
+    skipVectorize();
+    testBuilder()
+        .sql(
+            "SELECT COUNT(*) FROM (\n"
+            + "SELECT k FROM lookup.lookyloo\n"
+            + "UNION ALL\n"
+            + "SELECT k FROM lookup.lookyloo\n"
+            + ")"
+        )
+        .expectedResults(ImmutableList.of(new Object[]{8L}))
+        .run();
   }
 }

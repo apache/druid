@@ -24,7 +24,6 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
@@ -38,6 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChestTestHelper;
@@ -56,6 +56,7 @@ import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFacto
 import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -629,11 +630,11 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(
         objectMapper,
-        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true))
+        query.withOverriddenContext(QueryContext.ofMap(QueryContextParameters.RESULT_AS_ARRAY, true))
     );
     final ObjectMapper mapsObjectMapper = toolChest.decorateObjectMapper(
         objectMapper,
-        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
+        query.withOverriddenContext(QueryContext.ofMap(QueryContextParameters.RESULT_AS_ARRAY, false))
     );
 
     final Object[] rowObjects = {DateTimes.of("2000").getMillis(), "foo", 100, 10.0};
@@ -719,11 +720,11 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(
         objectMapper,
-        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true))
+        query.withOverriddenContext(QueryContext.ofMap(QueryContextParameters.RESULT_AS_ARRAY, true))
     );
     final ObjectMapper mapsObjectMapper = toolChest.decorateObjectMapper(
         objectMapper,
-        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
+        query.withOverriddenContext(QueryContext.ofMap(QueryContextParameters.RESULT_AS_ARRAY, false))
     );
 
     final Object[] rowObjects = {
@@ -806,11 +807,11 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(
         objectMapper,
-        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true))
+        query.withOverriddenContext(QueryContext.ofMap(QueryContextParameters.RESULT_AS_ARRAY, true))
     );
     final ObjectMapper mapsObjectMapper = toolChest.decorateObjectMapper(
         objectMapper,
-        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
+        query.withOverriddenContext(QueryContext.ofMap(QueryContextParameters.RESULT_AS_ARRAY, false))
     );
 
     final Object[] rowObjects = {DateTimes.of("2000").getMillis(), "foo", 100, 10.0};
@@ -1182,7 +1183,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
                 100
             )
         )
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, "true"))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN, true))
         .build();
 
     final GroupByQuery query2 = GroupByQuery
@@ -1240,10 +1241,10 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
             )
         );
     final GroupByQuery query1 = builder
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, "true"))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN, true))
         .build();
     final GroupByQuery query2 = builder
-        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, "false"))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN, false))
         .build();
 
     final ObjectMapper mapper = TestHelper.makeJsonMapper();

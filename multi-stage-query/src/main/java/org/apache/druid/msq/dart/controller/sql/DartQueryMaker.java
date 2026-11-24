@@ -48,7 +48,7 @@ import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -254,7 +254,7 @@ public class DartQueryMaker implements QueryMaker
                 "maxQueryReportSize[%,d] exceeded. "
                 + "Try limiting the result set for your query, or run it with %s[false]",
                 limit,
-                QueryContexts.CTX_FULL_REPORT
+                QueryContextParameters.FULL_REPORT
             )
         ),
         plannerContext.getJsonMapper(),

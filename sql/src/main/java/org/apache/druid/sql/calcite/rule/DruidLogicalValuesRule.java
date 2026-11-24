@@ -132,6 +132,11 @@ public class DruidLogicalValuesRule extends RelOptRule
           throw InvalidSqlInput.exception("Expected a NULL literal, but got non-null constant [%s]", literal);
         }
         return null;
+      case ARRAY:
+        if (literal.isNull()) {
+          return null;
+        }
+        // fall through to reject non-null array literals
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:

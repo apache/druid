@@ -43,6 +43,13 @@
     <property name="message" value="Prohibit @author tags in Javadoc"/>
     <property name="fileExtensions" value="java"/>
   </module>
+  <module name="RegexpSingleline">
+    <property name="format" value="^\s*///"/>
+    <property name="minimum" value="0"/>
+    <property name="maximum" value="0"/>
+    <property name="message" value="Use /** */ Javadoc comments, not /// Markdown documentation comments"/>
+    <property name="fileExtensions" value="java"/>
+  </module>
 
   <module name="TreeWalker">
     <module name="SuppressionCommentFilter">

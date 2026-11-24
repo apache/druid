@@ -21,51 +21,46 @@
 .flexible-query-input {
   position: relative;
 
-  .ace-container {
+  .editor-container {
     position: absolute;
     width: 100%;
     height: 100%;
+
+    & > .code-editor {
+      height: 100%;
+    }
   }
 
   .sub-query-highlight {
-    position: absolute;
     background: $gray1;
   }
 
+  // See SubQueryMarker in sub-query-markers.ts, it is on the line number (which has room on its left for it)
   .sub-query-gutter-marker {
+    position: relative;
     cursor: pointer;
 
-    &:before {
-      content: '';
+    .sub-query-run-button {
       position: absolute;
-      top: 3px;
+      top: 2px;
       left: 2px;
       width: 12px;
       height: 12px;
-      background: $blue3;
       border-radius: 2px;
+      background: $blue3;
+      color: $white;
+
+      svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        fill: currentColor;
+      }
     }
 
-    &:after {
-      content: '';
-      position: absolute;
-      top: 6px;
-      left: 5px;
-      width: 0;
-      height: 0;
-      border-top: 3px solid transparent;
-      border-bottom: 3px solid transparent;
-      border-left: 6px solid $white;
-    }
-
-    &:hover {
-      &:before {
-        background: $blue2;
-      }
-
-      &:after {
-        border-left-color: $gray5;
-      }
+    &:hover .sub-query-run-button {
+      background: $blue2;
+      color: $gray5;
     }
   }
 }

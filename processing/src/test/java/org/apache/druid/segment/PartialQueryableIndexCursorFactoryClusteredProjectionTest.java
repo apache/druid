@@ -44,6 +44,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Predicate;
 
 /**
  * Partial (on-demand) download coverage for a segment that is <em>both</em> clustered <em>and</em> carries an aggregate
@@ -191,12 +193,87 @@ class PartialQueryableIndexCursorFactoryClusteredProjectionTest extends PartialQ
     }
   }
 
+  @Test
+  void testUnservedProjectionFallsBackToServedGroups() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "combo_unserved_projection")) {
+      final PartialQueryableIndexCursorFactory factory = factory(opened.index(), ACME_BUNDLE::equals);
+      // this spec matches the projection when it's servable (see testProjectionMatchDownloadsOnlyProjectionBundle)
+      final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
+                                                     .setGroupingColumns(List.of("tenant"))
+                                                     .setAggregators(List.of(new LongSumAggregatorFactory("sum_x", "x")))
+                                                     .setPhysicalColumns(Set.of("tenant", "x"))
+                                                     .build();
+
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(aggSpec);
+           CursorHolder holder = asyncHolder.release()) {
+        // only the served acme group answers (2 of the 3 rows)
+        final Cursor cursor = holder.asCursor();
+        int rows = 0;
+        while (!cursor.isDone()) {
+          rows++;
+          cursor.advance();
+        }
+        Assertions.assertEquals(2, rows);
+        final Set<String> downloaded = opened.mapper().getDownloadedFiles();
+        Assertions.assertTrue(downloaded.contains(ACME_BUNDLE + "/x"), "got: " + downloaded);
+        Assertions.assertTrue(
+            downloaded.stream().noneMatch(f -> f.startsWith(PROJECTION_BUNDLE + "/")
+                                               || f.startsWith(GLOBEX_BUNDLE + "/")),
+            "unserved bundles must not download; got: " + downloaded
+        );
+      }
+    }
+  }
+
+  @Test
+  void testServedProjectionWithUnservedGroups() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "combo_served_projection")) {
+      final PartialQueryableIndexCursorFactory factory = factory(opened.index(), PROJECTION_BUNDLE::equals);
+      final CursorBuildSpec aggSpec = CursorBuildSpec.builder()
+                                                     .setGroupingColumns(List.of("tenant"))
+                                                     .setAggregators(List.of(new LongSumAggregatorFactory("sum_x", "x")))
+                                                     .setPhysicalColumns(Set.of("tenant", "x"))
+                                                     .build();
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(aggSpec);
+           CursorHolder holder = asyncHolder.release()) {
+        Assertions.assertNotNull(holder.asCursor(), "the served projection answers");
+      }
+
+      // a spec the projection can't answer would need the unserved groups, so it reads nothing
+      final CursorBuildSpec spec = CursorBuildSpec.builder()
+                                                  .setFilter(new EqualityFilter("tenant", ColumnType.STRING, "acme", null))
+                                                  .build();
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(spec);
+           CursorHolder holder = asyncHolder.release()) {
+        Assertions.assertTrue(scanRegion(holder).isEmpty());
+      }
+      final Set<String> downloaded = opened.mapper().getDownloadedFiles();
+      Assertions.assertTrue(
+          downloaded.stream().noneMatch(f -> f.startsWith(ACME_BUNDLE + "/") || f.startsWith(GLOBEX_BUNDLE + "/")),
+          "unserved groups must not download; got: " + downloaded
+      );
+    }
+  }
+
   private PartialQueryableIndexCursorFactory factory(PartialQueryableIndex index)
+  {
+    return factory(index, null);
+  }
+
+  private PartialQueryableIndexCursorFactory factory(
+      PartialQueryableIndex index,
+      @Nullable Predicate<String> servableBundles
+  )
   {
     return new PartialQueryableIndexCursorFactory(
         index,
         QueryableIndexTimeBoundaryInspector.create(index),
-        noOpAcquirer(directExec())
+        noOpAcquirer(directExec()),
+        servableBundles
     );
   }
 

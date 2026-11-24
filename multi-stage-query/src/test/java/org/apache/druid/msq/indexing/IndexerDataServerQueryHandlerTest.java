@@ -20,7 +20,6 @@
 package org.apache.druid.msq.indexing;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
@@ -38,11 +37,11 @@ import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.FilteredDataSource;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
@@ -54,6 +53,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -126,7 +126,10 @@ public class IndexerDataServerQueryHandlerTest
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2003/2004"))))
         .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-        .context(ImmutableMap.of(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, 1, MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.toString()))
+        .context(QueryContext.builder()
+            .put(QueryContextParameters.NUM_RETRIES_ON_MISSING_SEGMENTS, 1)
+            .put(QueryContextParameters.INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.toString())
+            .toMap())
         .build();
     target = spy(
         new IndexerDataServerQueryHandler(
@@ -225,11 +228,8 @@ public class IndexerDataServerQueryHandlerTest
         .isHandoffComplete(DATASOURCE1, IndexerDataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2));
     doReturn(ImmutableList.of(
         new ImmutableSegmentLoadInfo(
-            DataSegment.builder()
-                       .interval(SEGMENT_2.getInterval())
-                       .version(SEGMENT_2.getVersion())
+            DataSegment.builder(SegmentId.of(DATASOURCE1, SEGMENT_2.getInterval(), SEGMENT_2.getVersion(), 0))
                        .shardSpec(new NumberedShardSpec(SEGMENT_2.getPartitionNumber(), SEGMENT_2.getPartitionNumber()))
-                       .dataSource(DATASOURCE1)
                        .size(1)
                        .build(),
         ImmutableSet.of(DRUID_SERVER_2)
@@ -304,7 +304,7 @@ public class IndexerDataServerQueryHandlerTest
         .isHandoffComplete(DATASOURCE1, IndexerDataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_1));
 
     ScanQuery queryWithRetry =
-        query.withOverriddenContext(ImmutableMap.of(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, 3));
+        query.withOverriddenContext(QueryContext.ofMap(QueryContextParameters.NUM_RETRIES_ON_MISSING_SEGMENTS, 3));
 
     Assertions.assertThrows(DruidException.class, () ->
         target.fetchRowsFromDataServer(

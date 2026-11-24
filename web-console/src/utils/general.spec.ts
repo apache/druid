@@ -30,7 +30,7 @@ import {
   hashJoaat,
   moveElement,
   moveToIndex,
-  offsetToRowColumn,
+  offsetToLineColumn,
   OVERLAY_OPEN_SELECTOR,
   parseCsvLine,
   swapElements,
@@ -195,26 +195,30 @@ describe('general', () => {
     });
   });
 
-  describe('offsetToRowColumn', () => {
+  describe('offsetToLineColumn', () => {
     it('works', () => {
       const str = 'Hello\nThis is a test\nstring.';
-      expect(offsetToRowColumn(str, -6)).toBeUndefined();
-      expect(offsetToRowColumn(str, 666)).toBeUndefined();
-      expect(offsetToRowColumn(str, 3)).toEqual({
-        row: 0,
-        column: 3,
+      expect(offsetToLineColumn(str, -6)).toBeUndefined();
+      expect(offsetToLineColumn(str, 666)).toBeUndefined();
+      expect(offsetToLineColumn(str, 0)).toEqual({
+        line: 1,
+        column: 1,
       });
-      expect(offsetToRowColumn(str, 5)).toEqual({
-        row: 0,
-        column: 5,
+      expect(offsetToLineColumn(str, 3)).toEqual({
+        line: 1,
+        column: 4,
       });
-      expect(offsetToRowColumn(str, 24)).toEqual({
-        row: 2,
-        column: 3,
+      expect(offsetToLineColumn(str, 5)).toEqual({
+        line: 1,
+        column: 6,
       });
-      expect(offsetToRowColumn(str, str.length)).toEqual({
-        row: 2,
-        column: 7,
+      expect(offsetToLineColumn(str, 24)).toEqual({
+        line: 3,
+        column: 4,
+      });
+      expect(offsetToLineColumn(str, str.length)).toEqual({
+        line: 3,
+        column: 8,
       });
     });
   });

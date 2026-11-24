@@ -15,11 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import yaml
+import licenses_yaml
+import os
+import re
 import sys
 import argparse
 
 outfile = None
+
+# Category B licenses from https://www.apache.org/legal/resolved.html, in any spelling check-licenses.py accepts.
+# Binaries under these licenses must be labelled in the README with a link to their homepage.
+CATEGORY_B_LICENSE_PATTERN = re.compile(
+    r'CDDL|Common Development and Distribution|Eclipse Public|\bEPL\b|Mozilla Public|\bMPL\b|Open Font', re.IGNORECASE
+)
 
 def print_outfile(string):
     print(string, file=outfile)
@@ -128,6 +136,9 @@ def print_license(license):
             else:
                 print_outfile("      * {}".format(source_path))
 
+    if is_non_empty(license, 'homepage'):
+        print_outfile("      * {}".format(license['homepage']))
+
     if 'libraries' in license:
         for library in license['libraries']:
             if type(library) is not dict:
@@ -143,13 +154,9 @@ def print_license_name_underbar(license_name):
         underbar += "="
     print_outfile("{}\n".format(underbar))
 
-def generate_license(apache_license_v2, license_yaml, exclude_module_prefixes):
-    print_log_to_stderr("=== Generating the contents of LICENSE.BINARY file ===\n")
-
-    # Print Apache license first.
-    print_outfile(apache_license_v2)
+def load_licenses(license_yaml, exclude_module_prefixes):
     with open(license_yaml, encoding='utf-8') as registry_file:
-        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.Loader))
+        licenses_list = licenses_yaml.load_all(registry_file)
 
     # Filter out entries whose module matches any of the excluded prefixes. Used by the release build
     # to skip contrib extension entries (module: extensions-contrib/*) since contrib extensions are not
@@ -164,7 +171,9 @@ def generate_license(apache_license_v2, license_yaml, exclude_module_prefixes):
             else:
                 filtered.append(license)
         licenses_list = filtered
+    return licenses_list
 
+def print_licenses_by_name(licenses_list):
     # Group licenses by license_name, license_category, and then module.
     licenses_map = {}
     for license in licenses_list:
@@ -190,6 +199,29 @@ def generate_license(apache_license_v2, license_yaml, exclude_module_prefixes):
                     print_outfile("")
                 print_outfile("")
 
+def generate_license(apache_license_v2, licenses_list):
+    print_log_to_stderr("=== Generating the contents of LICENSE.BINARY file ===\n")
+
+    # Print Apache license first.
+    print_outfile(apache_license_v2)
+    print_licenses_by_name(licenses_list)
+
+def generate_labels(licenses_list):
+    print_log_to_stderr("=== Generating the Category B labels for README.BINARY ===\n")
+    labelled = [
+        license for license in licenses_list
+        if license['license_category'] == 'binary' and CATEGORY_B_LICENSE_PATTERN.search(license['license_name'])
+    ]
+    missing_homepage = [license['name'] for license in labelled if not is_non_empty(license, 'homepage')]
+    if missing_homepage:
+        raise Exception("licenses.yaml entries under a Category B license need a homepage: {}".format(missing_homepage))
+
+    print_outfile("\nLicenses")
+    print_outfile("--------\n")
+    print_outfile("This product bundles the following components under weak copyleft licenses. LICENSE lists all bundled")
+    print_outfile("components, and the licenses directory contains the license texts.\n")
+    print_licenses_by_name(labelled)
+
 
 if __name__ == "__main__":
     try:
@@ -206,14 +238,25 @@ if __name__ == "__main__":
                  '(--exclude-module-prefix=extensions-contrib/) since contrib extensions are not '
                  'bundled in the Apache release binary. Omit to disable filtering (include everything).'
         )
+        parser.add_argument(
+            '--labels-path',
+            help='Also write the README labels for Category B licensed binaries to this path.'
+        )
         args = parser.parse_args()
 
         with open(args.apache_license, encoding="ascii") as apache_license_file:
             apache_license_v2 = apache_license_file.read()
         license_yaml = args.license_yaml
 
+        licenses_list = load_licenses(license_yaml, args.exclude_module_prefix)
+
         with open(args.out_path, "w", encoding="utf-8") as outfile:
-            generate_license(apache_license_v2, license_yaml, args.exclude_module_prefix)
+            generate_license(apache_license_v2, licenses_list)
+
+        if args.labels_path:
+            os.makedirs(os.path.dirname(os.path.abspath(args.labels_path)), exist_ok=True)
+            with open(args.labels_path, "w", encoding="utf-8") as outfile:
+                generate_labels(licenses_list)
 
     except KeyboardInterrupt:
         print('Interrupted, closing.')

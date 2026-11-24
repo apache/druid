@@ -26,6 +26,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,17 +69,14 @@ public class BalancerStrategyTest
   @BeforeEach
   public void setUp()
   {
-    this.proposedDataSegment = new DataSegment(
-        "datasource1",
-        Intervals.utc(0, 1),
-        "",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        11L
-    );
+    this.proposedDataSegment = DataSegment.builder(SegmentId.of("datasource1", Intervals.utc(0, 1), "", 0))
+                                          .loadSpec(new HashMap<>())
+                                          .dimensions(new ArrayList<>())
+                                          .metrics(new ArrayList<>())
+                                          .shardSpec(NoneShardSpec.instance())
+                                          .binaryVersion(0)
+                                          .size(11L)
+                                          .build();
   }
 
 

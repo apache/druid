@@ -377,7 +377,7 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
             onValueChange={sql => setFormula(sql)}
             columns={columns}
             placeholder="SQL expression"
-            editorHeight={250}
+            height={250}
             autoFocus
           />
         </FormGroup>

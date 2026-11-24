@@ -19,10 +19,9 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 
 /**
  * If there's a subquery, run it instead of the outer query
@@ -41,8 +40,8 @@ public class SubqueryQueryRunner<T> implements QueryRunner<T>
   {
     DataSource dataSource = queryPlus.getQuery().getDataSource();
     boolean forcePushDownNestedQuery = queryPlus.getQuery()
-                                                .context().getBoolean(
-                                                    GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY,
+                                                .context().getOrDefault(
+                                                    QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY,
                                                     false
                                                 );
     if (dataSource instanceof QueryDataSource && !forcePushDownNestedQuery) {
@@ -55,9 +54,11 @@ public class SubqueryQueryRunner<T> implements QueryRunner<T>
         newQuery = queryPlus.withQuery(
             queryPlus.getQuery()
                      .withOverriddenContext(
-                         ImmutableMap.of(
-                             GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false,
-                             GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY, true
+                         QueryContext.ofMap(
+                             QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY,
+                             false,
+                             QueryContextParameters.EXECUTING_NESTED_QUERY,
+                             true
                          )
                      )
         );

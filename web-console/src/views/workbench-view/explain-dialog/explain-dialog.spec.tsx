@@ -27,6 +27,7 @@ let explainState: QueryState<QueryExplanation[] | string> = QueryState.INIT;
 
 jest.mock('../../../hooks', () => {
   return {
+    ...jest.requireActual('../../../hooks'),
     useQueryManager: () => [explainState],
   };
 });

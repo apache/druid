@@ -19,7 +19,6 @@
 
 package org.apache.druid.client;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Ordering;
 import org.apache.druid.client.cache.CacheConfig;
@@ -36,6 +35,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -44,6 +44,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -56,6 +57,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
@@ -165,16 +167,13 @@ public class CachingClusteredClientPerfTest
     return new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(Collections.singletonList(interval)),
-        ImmutableMap.of(BaseQuery.QUERY_ID, "testQuery")
+        QueryContext.ofMap(QueryContextParameters.QUERY_ID, "testQuery")
     );
   }
 
   private DataSegment makeDataSegment(String dataSource, Interval interval, String version, int partition)
   {
-    return DataSegment.builder()
-                      .dataSource(dataSource)
-                      .interval(interval)
-                      .version(version)
+    return DataSegment.builder(SegmentId.of(dataSource, interval, version, partition))
                       .shardSpec(new LinearShardSpec(partition))
                       .size(1)
                       .build();

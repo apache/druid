@@ -35,5 +35,9 @@ public enum ResultSerializationMode
    */
   FRAMES;
 
+  /**
+   * @deprecated Use {@link org.apache.druid.query.context.QueryContextParameters#SERIALIZATION} instead.
+   */
+  @Deprecated(since = "39.0.0", forRemoval = true)
   public static final String CTX_SERIALIZATION_PARAMETER = "serialization";
 }

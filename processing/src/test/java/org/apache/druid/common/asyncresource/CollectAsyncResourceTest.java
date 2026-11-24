@@ -97,6 +97,59 @@ public class CollectAsyncResourceTest
   }
 
   @Test
+  public void testSourceFailureFailsWithoutWaitingForOtherSources()
+  {
+    final AtomicInteger fired = new AtomicInteger();
+    final AtomicInteger aCancel = new AtomicInteger();
+    final AtomicInteger bClose = new AtomicInteger();
+    final SettableAsyncResource<String> a = new SettableAsyncResource<>();
+    final SettableAsyncResource<String> b = new SettableAsyncResource<>();
+    final SettableAsyncResource<String> c = new SettableAsyncResource<>();
+    a.setCanceler(aCancel::incrementAndGet);
+    b.set("b", bClose::incrementAndGet);
+
+    final AsyncResource<List<String>> collected = AsyncResources.collect(List.of(a, b, c));
+    collected.addReadyCallback(fired::incrementAndGet);
+
+    // a is still pending, but c's failure must not wait for it.
+    final RuntimeException failure = new RuntimeException("boom");
+    c.setException(failure);
+
+    Assertions.assertTrue(collected.isReady());
+    Assertions.assertEquals(1, fired.get());
+    Assertions.assertSame(failure, Assertions.assertThrows(RuntimeException.class, collected::get));
+    Assertions.assertEquals(0, aCancel.get(), "sources must stay open until the collected resource is closed");
+    Assertions.assertEquals(0, bClose.get(), "sources must stay open until the collected resource is closed");
+
+    collected.close();
+    Assertions.assertEquals(1, aCancel.get(), "close must cancel the pending source");
+    Assertions.assertEquals(1, bClose.get(), "close must close the ready source");
+  }
+
+  @Test
+  public void testAlreadyFailedSourcesFailOnConstructionWithTheFirstFailure()
+  {
+    final AtomicInteger cCancel = new AtomicInteger();
+    final SettableAsyncResource<String> a = new SettableAsyncResource<>();
+    final SettableAsyncResource<String> b = new SettableAsyncResource<>();
+    final SettableAsyncResource<String> c = new SettableAsyncResource<>();
+    final RuntimeException failure = new RuntimeException("boom");
+    a.setException(failure);
+    b.setException(new RuntimeException("second"));
+    c.setCanceler(cCancel::incrementAndGet);
+
+    // Both failures fire inline while registering; failing the collected resource twice would throw out of collect.
+    final AsyncResource<List<String>> collected = AsyncResources.collect(List.of(a, b, c));
+
+    Assertions.assertTrue(collected.isReady());
+    Assertions.assertSame(failure, Assertions.assertThrows(RuntimeException.class, collected::get));
+    Assertions.assertEquals(0, cCancel.get());
+
+    collected.close();
+    Assertions.assertEquals(1, cCancel.get());
+  }
+
+  @Test
   public void testCloseClosesAllReadySources()
   {
     final AtomicInteger aClose = new AtomicInteger();
@@ -162,8 +215,8 @@ public class CollectAsyncResourceTest
     collected.addReadyCallback(fired::incrementAndGet);
     Assertions.assertFalse(collected.isReady(), "one source is still pending");
 
-    // The already-ready source counted toward readiness, so closing the pending one brings the internal count to the
-    // source count and runs the collect body against sources this close just tore down. That must stay harmless.
+    // Closing the pending source fires its ready callback while this close is still tearing the sources down. That
+    // must stay harmless.
     collected.close();
 
     Assertions.assertEquals(1, fired.get());

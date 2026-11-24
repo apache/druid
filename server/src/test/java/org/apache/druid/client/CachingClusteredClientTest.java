@@ -83,6 +83,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -171,9 +172,7 @@ import java.util.stream.IntStream;
 @MethodSource("constructorFeeder")
 public class CachingClusteredClientTest
 {
-  private static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of(
-      QueryContexts.FINALIZE_KEY, false
-  );
+  private static final Map<String, Object> CONTEXT = QueryContext.ofMap(QueryContextParameters.FINALIZE, false);
   private static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.of());
   private static final String DATA_SOURCE = "test";
   private static final ObjectMapper JSON_MAPPER = CachingClusteredClientTestUtils.createObjectMapper();
@@ -1639,7 +1638,7 @@ public class CachingClusteredClientTest
     );
 
     final Map<String, Object> context = new HashMap<>(CONTEXT);
-    context.put(QueryContexts.SECONDARY_PARTITION_PRUNING_KEY, enableSegmentPruning);
+    context.put(QueryContextParameters.SECONDARY_PARTITION_PRUNING.getName(), enableSegmentPruning);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .filters(filter)
@@ -2166,11 +2165,11 @@ public class CachingClusteredClientTest
         Query capturedQuery = capturedQueryPlus.getQuery();
         final QueryContext queryContext = capturedQuery.context();
         if (expectBySegment) {
-          Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.BY_SEGMENT_KEY));
+          Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.BY_SEGMENT.getName()));
         } else {
           Assertions.assertTrue(
-              queryContext.get(QueryContexts.BY_SEGMENT_KEY) == null ||
-              !queryContext.getBoolean(QueryContexts.BY_SEGMENT_KEY)
+              !queryContext.has(QueryContextParameters.BY_SEGMENT) ||
+              !queryContext.getOrDefault(QueryContextParameters.BY_SEGMENT, false)
           );
         }
       }
@@ -3020,20 +3019,17 @@ public class CachingClusteredClientTest
   public void testIfNoneMatch()
   {
     Interval interval = Intervals.of("2016/2017");
-    final DataSegment dataSegment = new DataSegment(
-        "dataSource",
-        interval,
-        "ver",
-        ImmutableMap.of(
-            "type", "hdfs",
-            "path", "/tmp"
-        ),
-        ImmutableList.of("product"),
-        ImmutableList.of("visited_sum"),
-        NoneShardSpec.instance(),
-        9,
-        12334
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("dataSource", interval, "ver", 0))
+                                               .loadSpec(ImmutableMap.of(
+                                                       "type", "hdfs",
+                                                       "path", "/tmp"
+                                                   ))
+                                               .dimensions(ImmutableList.of("product"))
+                                               .metrics(ImmutableList.of("visited_sum"))
+                                               .shardSpec(NoneShardSpec.instance())
+                                               .binaryVersion(9)
+                                               .size(12334)
+                                               .build();
     final ServerSelector selector = new ServerSelector(
         dataSegment,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
@@ -3062,20 +3058,17 @@ public class CachingClusteredClientTest
     final Interval interval = Intervals.of("2016-01-01/2016-01-02");
     final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
     final Interval queryInterval2 = Intervals.of("2016-01-01T18:00:00/2016-01-02T18:00:00");
-    final DataSegment dataSegment = new DataSegment(
-        "dataSource",
-        interval,
-        "ver",
-        ImmutableMap.of(
-            "type", "hdfs",
-            "path", "/tmp"
-        ),
-        ImmutableList.of("product"),
-        ImmutableList.of("visited_sum"),
-        NoneShardSpec.instance(),
-        9,
-        12334
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("dataSource", interval, "ver", 0))
+                                               .loadSpec(ImmutableMap.of(
+                                                       "type", "hdfs",
+                                                       "path", "/tmp"
+                                                   ))
+                                               .dimensions(ImmutableList.of("product"))
+                                               .metrics(ImmutableList.of("visited_sum"))
+                                               .shardSpec(NoneShardSpec.instance())
+                                               .binaryVersion(9)
+                                               .size(12334)
+                                               .build();
     final ServerSelector selector = new ServerSelector(
         dataSegment,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
@@ -3113,20 +3106,17 @@ public class CachingClusteredClientTest
   {
     final Interval interval = Intervals.of("2016-01-01/2016-01-02");
     final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
-    final DataSegment dataSegment = new DataSegment(
-            "dataSource",
-            interval,
-            "ver",
-            ImmutableMap.of(
-                    "type", "hdfs",
-                    "path", "/tmp"
-            ),
-            ImmutableList.of("product"),
-            ImmutableList.of("visited_sum"),
-            NoneShardSpec.instance(),
-            9,
-            12334
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("dataSource", interval, "ver", 0))
+                                               .loadSpec(ImmutableMap.of(
+                                                           "type", "hdfs",
+                                                           "path", "/tmp"
+                                                   ))
+                                               .dimensions(ImmutableList.of("product"))
+                                               .metrics(ImmutableList.of("visited_sum"))
+                                               .shardSpec(NoneShardSpec.instance())
+                                               .binaryVersion(9)
+                                               .size(12334)
+                                               .build();
     final ServerSelector selector = new ServerSelector(
             dataSegment,
             new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
@@ -3139,7 +3129,12 @@ public class CachingClusteredClientTest
     final TimeBoundaryQuery queryInclude = Druids.newTimeBoundaryQueryBuilder()
             .dataSource(DATA_SOURCE)
             .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
-            .context(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "include"))
+            .context(
+                QueryContext.ofMap(
+                    QueryContextParameters.REALTIME_SEGMENTS_MODE,
+                    QueryContexts.RealtimeSegmentsMode.INCLUDE
+                )
+            )
             .randomQueryId()
             .build();
 
@@ -3147,7 +3142,12 @@ public class CachingClusteredClientTest
     final TimeBoundaryQuery queryExclusive = Druids.newTimeBoundaryQueryBuilder()
             .dataSource(DATA_SOURCE)
             .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
-            .context(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "exclusive"))
+            .context(
+                QueryContext.ofMap(
+                    QueryContextParameters.REALTIME_SEGMENTS_MODE,
+                    QueryContexts.RealtimeSegmentsMode.EXCLUSIVE
+                )
+            )
             .randomQueryId()
             .build();
 
@@ -3155,7 +3155,7 @@ public class CachingClusteredClientTest
     final TimeBoundaryQuery queryLegacyTrue = Druids.newTimeBoundaryQueryBuilder()
             .dataSource(DATA_SOURCE)
             .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
-            .context(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, true))
+            .context(QueryContext.ofMap(QueryContextParameters.REALTIME_SEGMENTS_ONLY, true))
             .randomQueryId()
             .build();
 
@@ -3176,17 +3176,14 @@ public class CachingClusteredClientTest
   {
     final Interval interval = Intervals.of("2016-01-01/2016-01-02");
     final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
-    final DataSegment dataSegment = new DataSegment(
-            "dataSource",
-            interval,
-            "ver",
-            ImmutableMap.of("type", "hdfs", "path", "/tmp"),
-            ImmutableList.of("product"),
-            ImmutableList.of("visited_sum"),
-            NoneShardSpec.instance(),
-            9,
-            12334
-    );
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of("dataSource", interval, "ver", 0))
+                                               .loadSpec(ImmutableMap.of("type", "hdfs", "path", "/tmp"))
+                                               .dimensions(ImmutableList.of("product"))
+                                               .metrics(ImmutableList.of("visited_sum"))
+                                               .shardSpec(NoneShardSpec.instance())
+                                               .binaryVersion(9)
+                                               .size(12334)
+                                               .build();
 
     // selector backed only by a realtime server — isRealtimeSegment() == true
     final DruidServer realtimeServer = new DruidServer(
@@ -3204,7 +3201,12 @@ public class CachingClusteredClientTest
     final TimeBoundaryQuery queryExclude = Druids.newTimeBoundaryQueryBuilder()
             .dataSource(DATA_SOURCE)
             .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
-            .context(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "exclude"))
+            .context(
+                QueryContext.ofMap(
+                    QueryContextParameters.REALTIME_SEGMENTS_MODE,
+                    QueryContexts.RealtimeSegmentsMode.EXCLUDE
+                )
+            )
             .randomQueryId()
             .build();
 
@@ -3212,7 +3214,12 @@ public class CachingClusteredClientTest
     final TimeBoundaryQuery queryInclude = Druids.newTimeBoundaryQueryBuilder()
             .dataSource(DATA_SOURCE)
             .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
-            .context(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "include"))
+            .context(
+                QueryContext.ofMap(
+                    QueryContextParameters.REALTIME_SEGMENTS_MODE,
+                    QueryContexts.RealtimeSegmentsMode.INCLUDE
+                )
+            )
             .randomQueryId()
             .build();
 

@@ -246,7 +246,7 @@ public class ChangeRequestHttpSyncer<T>
       log.debug("Sending sync request to server[%s]", logIdentity);
 
       ListenableFuture<InputStream> syncRequestFuture = httpClient.go(
-          new Request(HttpMethod.GET, new URL(baseServerURL, req))
+          new Request(HttpMethod.GET, baseServerURL.toURI().resolve(req).toURL())
               .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
               .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
           responseHandler,

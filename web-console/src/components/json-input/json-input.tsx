@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-import type { Ace } from 'ace-builds';
+import type { EditorView } from '@codemirror/view';
 import classNames from 'classnames';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
-import React, { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
-import AceEditor from 'react-ace';
+import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
 
-import { getHjsonCompletions } from '../../ace-completions/hjson-completions';
-import { usePermanentCallback } from '../../hooks';
-import type { JsonCompletionRule } from '../../utils';
+import { hjson } from '../../editor-languages/hjson';
+import type { JsonCompletionRule, LineColumn } from '../../utils';
+import type { EditorError } from '../code-editor/code-editor';
+import { CodeEditor, focusEditorAt, showEditorError } from '../code-editor/code-editor';
 
 import './json-input.scss';
 
@@ -34,16 +34,33 @@ function parseHjson(str: string): any {
   return Hjson.parse(str);
 }
 
-export function extractRowColumnFromHjsonError(
-  error: Error,
-): { row: number; column: number } | undefined {
+function lineColumnFromHjsonMessage(message: string): LineColumn | undefined {
   // Message would be something like:
   // `Found '}' where a key name was expected at line 26,7`
-  // Use this to extract the row and column (subtract 1) and jump the cursor to the right place on click
-  const m = /line (\d+),(\d+)/.exec(error.message);
+  const m = /line (\d+),(\d+)/.exec(message);
   if (!m) return;
 
-  return { row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
+  return { line: Number(m[1]), column: Number(m[2]) };
+}
+
+export function extractLineColumnFromHjsonError(error: Error): LineColumn | undefined {
+  // Use this to extract the line and column and jump the cursor to the right place on click
+  return lineColumnFromHjsonMessage(error.message);
+}
+
+/**
+ * The error to mark in the editor for an Hjson error message, undefined if the message has no position
+ */
+export function getHjsonEditorError(message: string): EditorError | undefined {
+  const position = lineColumnFromHjsonMessage(message);
+  if (!position) return;
+
+  // The mark shows where the error is, so the position (and the text after it, following ">>>") is left out
+  const positionIndex = message.search(/\sat line \d+,\d+/);
+  return {
+    position,
+    message: positionIndex === -1 ? message : message.slice(0, positionIndex).trimEnd(),
+  };
 }
 
 function stringifyJson(item: any): string {
@@ -70,10 +87,11 @@ interface InternalValue {
 interface JsonInputProps {
   value: any;
   onChange?: (value: any) => void;
+  readOnly?: boolean;
   setError?: (error: Error | undefined) => void;
   placeholder?: string;
-  focus?: boolean;
-  width?: string;
+  autoFocus?: boolean;
+  /** A CSS height, defaults to 8vh */
   height?: string;
   showLineNumbers?: boolean;
   issueWithValue?: (value: any) => string | undefined;
@@ -83,10 +101,10 @@ interface JsonInputProps {
 export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
   const {
     onChange,
+    readOnly,
     setError,
     placeholder,
-    focus,
-    width,
+    autoFocus,
     height,
     showLineNumbers,
     value,
@@ -98,7 +116,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
     stringified: stringifyJson(value),
   }));
   const [showErrorIfNeeded, setShowErrorIfNeeded] = useState(false);
-  const aceEditor = useRef<Ace.Editor | undefined>(undefined);
+  const editorViewRef = useRef<EditorView | undefined>(undefined);
 
   const showValue = useEffectEvent((value: any) => {
     if (deepEqual(value, internalValue.lastShownValue)) return;
@@ -112,105 +130,73 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
     showValue(value);
   }, [value]);
 
-  // Ace reads the completers once, when autocompletion is enabled, so they must not change. The callback always sees
-  // the latest props.
-  const getCompletions = usePermanentCallback<Ace.Completer['getCompletions']>(
-    (_editor, session, pos, prefix, callback) => {
-      if (!jsonCompletions) {
-        callback(null, []);
-        return;
-      }
-      const allText = session.getValue();
-      const line = session.getLine(pos.row);
-      const charBeforePrefix = line[pos.column - prefix.length - 1];
+  const handleInputChange = (inputJson: string) => {
+    let value: any;
+    let error: Error | undefined;
+    try {
+      value = parseHjson(inputJson);
+    } catch (e) {
+      error = e;
+    }
 
-      const lines = allText.split('\n').slice(0, pos.row + 1);
-      const lastLineIndex = lines.length - 1;
-      lines[lastLineIndex] = lines[lastLineIndex].slice(0, pos.column - prefix.length - 1);
-      callback(
-        null,
-        getHjsonCompletions({
-          jsonCompletions,
-          textBefore: lines.join('\n'),
-          charBeforePrefix,
-          prefix,
-        }),
-      );
-    },
-  );
-  const completers = useMemo<Ace.Completer[]>(() => [{ getCompletions }], [getCompletions]);
+    if (!error && issueWithValue) {
+      const issue = issueWithValue(value);
+      if (issue) {
+        value = undefined;
+        error = new Error(issue);
+      }
+    }
+
+    setInternalValue({
+      lastShownValue: value ?? internalValue.lastShownValue,
+      error,
+      stringified: inputJson,
+    });
+
+    setError?.(error);
+    if (!error) {
+      onChange?.(value);
+    }
+
+    if (showErrorIfNeeded) {
+      setShowErrorIfNeeded(false);
+    }
+  };
 
   const internalValueError = internalValue.error;
+  const shownError = showErrorIfNeeded ? internalValueError : undefined;
+  useEffect(() => {
+    if (!editorViewRef.current) return;
+    showEditorError(
+      editorViewRef.current,
+      shownError ? getHjsonEditorError(shownError.message) : undefined,
+    );
+  }, [shownError]);
+
   return (
     <div className={classNames('json-input', { invalid: showErrorIfNeeded && internalValueError })}>
-      <AceEditor
-        mode="hjson"
-        theme="solarized_dark"
-        onChange={(inputJson: string) => {
-          let value: any;
-          let error: Error | undefined;
-          try {
-            value = parseHjson(inputJson);
-          } catch (e) {
-            error = e;
-          }
-
-          if (!error && issueWithValue) {
-            const issue = issueWithValue(value);
-            if (issue) {
-              value = undefined;
-              error = new Error(issue);
-            }
-          }
-
-          setInternalValue({
-            lastShownValue: value ?? internalValue.lastShownValue,
-            error,
-            stringified: inputJson,
-          });
-
-          setError?.(error);
-          if (!error) {
-            onChange?.(value);
-          }
-
-          if (showErrorIfNeeded) {
-            setShowErrorIfNeeded(false);
-          }
-        }}
+      <CodeEditor
+        ref={editorViewRef}
+        language={hjson({ jsonCompletions })}
+        onChange={handleInputChange}
+        readOnly={readOnly}
         onBlur={() => setShowErrorIfNeeded(true)}
-        readOnly={!onChange}
-        focus={focus}
-        fontSize={12}
-        width={width || '100%'}
-        height={height || '8vh'}
-        showPrintMargin={false}
-        showGutter={Boolean(showLineNumbers)}
+        autoFocus={autoFocus}
+        style={{ height: height || '8vh' }}
+        showLineNumbers={showLineNumbers}
         value={internalValue.stringified}
         placeholder={placeholder}
-        editorProps={{ completers }}
-        enableBasicAutocompletion={Boolean(jsonCompletions)}
-        enableLiveAutocompletion={Boolean(jsonCompletions)}
-        setOptions={{
-          showLineNumbers: Boolean(showLineNumbers),
-          tabSize: 2,
-          newLineMode: 'unix',
-        }}
-        onLoad={editor => {
-          aceEditor.current = editor;
-        }}
       />
       {showErrorIfNeeded && internalValueError && (
         <div
           className="json-error"
           onClick={() => {
-            if (!aceEditor.current || !internalValueError) return;
+            if (!editorViewRef.current || !internalValueError) return;
 
-            const rc = extractRowColumnFromHjsonError(internalValueError);
-            if (!rc) return;
+            const position = extractLineColumnFromHjsonError(internalValueError);
+            if (!position) return;
 
-            aceEditor.current.focus(); // Grab the focus
-            aceEditor.current.getSelection().moveCursorTo(rc.row, rc.column);
+            focusEditorAt(editorViewRef.current, position);
           }}
         >
           {internalValueError.message}

@@ -587,6 +587,7 @@ public class ThreadingTaskRunner
       this.state = RunnerTaskState.PENDING;
     }
 
+    @Override
     public Task getTask()
     {
       return task;

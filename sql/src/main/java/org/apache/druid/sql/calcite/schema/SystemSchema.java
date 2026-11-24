@@ -55,9 +55,11 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -93,6 +95,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -154,6 +157,7 @@ public class SystemSchema extends AbstractTableSchema
       .add("projections", ColumnType.STRING)
       .add("last_compaction_state", ColumnType.STRING)
       .add("replication_factor", ColumnType.LONG)
+      .add("binary_version", ColumnType.LONG)
       .build();
 
   /**
@@ -261,6 +265,8 @@ public class SystemSchema extends AbstractTableSchema
   private final HttpClient httpClient;
   private final Provider<SqlEngineRegistry> sqlEngineRegistryProvider;
   private final PlannerConfig plannerConfig;
+  private final QueryConfigProvider queryConfigProvider;
+  private final Properties properties;
   private final AuthenticationResult authenticationResult;
   private final Set<String> allTableNames;
 
@@ -277,6 +283,8 @@ public class SystemSchema extends AbstractTableSchema
       final HttpClient httpClient,
       final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
       final PlannerConfig plannerConfig,
+      final QueryConfigProvider queryConfigProvider,
+      final Properties properties,
       final AuthenticationResult authenticationResult,
       final Set<String> allTableNames
   )
@@ -293,6 +301,8 @@ public class SystemSchema extends AbstractTableSchema
     this.httpClient = httpClient;
     this.sqlEngineRegistryProvider = sqlEngineRegistryProvider;
     this.plannerConfig = plannerConfig;
+    this.queryConfigProvider = queryConfigProvider;
+    this.properties = properties;
     this.authenticationResult = authenticationResult;
     this.allTableNames = allTableNames;
   }
@@ -330,6 +340,13 @@ public class SystemSchema extends AbstractTableSchema
           authorizerMapper,
           httpClient,
           jsonMapper,
+          authenticationResult
+      );
+      case SystemQueryContextParametersTable.TABLE_NAME -> new SystemQueryContextParametersTable(
+          jsonMapper,
+          queryConfigProvider,
+          properties,
+          authorizerMapper,
           authenticationResult
       );
       case QUERIES_TABLE -> new QueriesTable(
@@ -441,10 +458,11 @@ public class SystemSchema extends AbstractTableSchema
           : new HashSet<>();
 
       // Get segments from metadata segment cache (if enabled in SQL planner config), else directly from
-      // Coordinator. This may include both published and realtime segments.
-      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments(dataSourceFilter);
+      // Coordinator. This may include both published and realtime segments. Fetched on first read, so a scan that is
+      // never read holds no Coordinator response.
+      final Closer closer = Closer.create();
       final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments))
+          .from(() -> getAuthorizedPublishedSegments(closer.register(metadataView.getSegments(dataSourceFilter))))
           .transform(val -> {
             final DataSegment segment = val.getDataSegment();
             final AvailableSegmentMetadata availableSegmentMetadata =
@@ -472,14 +490,23 @@ public class SystemSchema extends AbstractTableSchema
               numRows = 0L;
             }
 
-            long isRealtime = val.isRealtime() ? 1 : 0;
+            // The Coordinator returns the published segments and, if centralized datasource schema is enabled, the
+            // segments that are served but not published. Those are realtime segments, and segments that are no
+            // longer used but that a Historical has not dropped yet.
+            boolean isPublished = val.isPublished();
 
-            // set of segments returned from Coordinator include published and realtime segments
-            // so realtime segments are not published and vice versa
-            boolean isPublished = !val.isRealtime();
+            // The flag from the Coordinator does not say who serves a published segment: it is unset even for one
+            // that has not been handed off yet and is served only by realtime tasks. The Broker knows which servers
+            // serve the segment, so prefer what it knows.
+            final long isRealtime;
+            if (availableSegmentMetadata != null && numReplicas > 0) {
+              isRealtime = availableSegmentMetadata.isRealtime();
+            } else {
+              isRealtime = val.isRealtime() ? 1 : 0;
+            }
 
-            // is_active is true for published segments that are not overshadowed or else they should be realtime
-            boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();
+            // is_active is documented as (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1
+            final boolean isActive = (isPublished && !val.isOvershadowed()) || isRealtime == 1;
 
             return new Object[]{
                 segment.getId(),
@@ -504,7 +531,11 @@ public class SystemSchema extends AbstractTableSchema
                 // If the segment is unpublished, we won't have this information yet.
                 // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
                 // This should be automatically updated in the next Coordinator poll.
-                val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
+                val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor(),
+                // 0 is the placeholder version of realtime segments that have not been handed off yet
+                segment.getBinaryVersion() == null || segment.getBinaryVersion() == 0
+                ? null
+                : (long) segment.getBinaryVersion()
             };
           });
 
@@ -541,7 +572,11 @@ public class SystemSchema extends AbstractTableSchema
                 segment.getMetrics(),
                 segment.getProjections(),
                 null, // unpublished segments from realtime tasks will not be compacted yet
-                REPLICATION_FACTOR_UNKNOWN // If the segment is unpublished, we won't have this information yet.
+                REPLICATION_FACTOR_UNKNOWN, // If the segment is unpublished, we won't have this information yet.
+                // 0 is the placeholder version of realtime segments that have not been handed off yet
+                segment.getBinaryVersion() == null || segment.getBinaryVersion() == 0
+                ? null
+                : (long) segment.getBinaryVersion()
             };
           });
 
@@ -549,7 +584,7 @@ public class SystemSchema extends AbstractTableSchema
           Iterables.concat(publishedSegments, availableSegments)
       );
 
-      return Linq4j.asEnumerable(allSegments)
+      return Linq4j.asEnumerable(() -> wrap(allSegments.iterator(), closer))
                    .where(Objects::nonNull)
                    .select(row -> projectSegmentsRow(row, projects, jsonMapper));
     }

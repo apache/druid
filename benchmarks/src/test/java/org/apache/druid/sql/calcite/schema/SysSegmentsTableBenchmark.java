@@ -35,12 +35,12 @@ import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
+import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.collections.StupidResourceHolder;
 import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -73,6 +73,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -170,7 +171,7 @@ public class SysSegmentsTableBenchmark
           new LinearShardSpec(0)
       );
       final DataSegment segment = DataSegment.builder(segmentId).size(1000L).build();
-      segments.add(new SegmentStatusInCluster(segment, false, 1, 100L, false));
+      segments.add(new SegmentStatusInCluster(segment, false, 1, 100L, false, true));
     }
     // sys.segments serves published segments sorted by SegmentId (datasource-prefixed).
     segments.sort(Comparator.naturalOrder());
@@ -180,12 +181,12 @@ public class SysSegmentsTableBenchmark
     final NoopCoordinatorClient coordinatorClient = new NoopCoordinatorClient()
     {
       @Override
-      public ListenableFuture<CloseableIterator<SegmentStatusInCluster>> fetchAllUsedSegmentsWithOvershadowedStatus(
+      public ListenableFuture<ResourceHolder<Iterator<SegmentStatusInCluster>>> fetchAllUsedSegmentsWithOvershadowedStatus(
           Set<String> watchedDataSources,
           boolean includeRealtimeSegments
       )
       {
-        return Futures.immediateFuture(CloseableIterators.withEmptyBaggage(publishedSegments.iterator()));
+        return Futures.immediateFuture(StupidResourceHolder.create(publishedSegments.iterator()));
       }
     };
 

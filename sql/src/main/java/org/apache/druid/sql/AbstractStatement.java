@@ -20,7 +20,8 @@
 package org.apache.druid.sql;
 
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -33,9 +34,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerHook;
 
 import java.io.Closeable;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -68,12 +67,11 @@ public abstract class AbstractStatement implements Closeable
   protected final Set<String> authContextKeys;
 
   /**
-   * Mutable copy of the query context provided by the user, can be modified during
-   * planning. Modifications are possible up to the point where the context is passed
-   * to a native query. At that point, the context becomes immutable and can be changed
-   * only by copying the entire native query.
+   * The query context of this statement: the context from {@link SqlQueryPlus#context()} after the engine's changes
+   * from {@link org.apache.druid.sql.calcite.run.SqlEngine#initContext}, without {@code bySegment}, and with a
+   * {@code sqlQueryId}. Planning works on its own copy, see {@link PlannerContext}.
    */
-  protected final Map<String, Object> queryContext;
+  protected final QueryContext queryContext;
   protected PlannerContext plannerContext;
   protected DruidPlanner.AuthResult authResult;
   protected PlannerHook hook;
@@ -88,26 +86,33 @@ public abstract class AbstractStatement implements Closeable
     this.reporter = new SqlExecutionReporter(this, remoteAddress);
     this.queryPlus = queryPlus;
     this.authContextKeys = queryPlus.authContextKeys();
-    this.queryContext = new HashMap<>(queryPlus.context());
-    sqlToolbox.engine.initContextMap(this.queryContext);
+
+    QueryContext context = sqlToolbox.engine.initContext(queryPlus.context());
+
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
     // so, overwrite any user specified context to avoid exceptions down the line
-    if (this.queryContext.remove(QueryContexts.BY_SEGMENT_KEY) != null) {
+    if (context.has(QueryContextParameters.BY_SEGMENT)) {
       log.warn("'bySegment' results are not supported for SQL queries, ignoring query context parameter");
+      context = context.override(QueryContextParameters.BY_SEGMENT, null);
     }
-    this.queryContext.putIfAbsent(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
+
+    if (!context.has(QueryContextParameters.SQL_QUERY_ID)) {
+      context = context.override(QueryContextParameters.SQL_QUERY_ID, UUID.randomUUID().toString());
+    }
+
+    this.queryContext = context;
   }
 
   public String sqlQueryId()
   {
-    return QueryContexts.parseString(queryContext, QueryContexts.CTX_SQL_QUERY_ID);
+    return queryContext.get(QueryContextParameters.SQL_QUERY_ID);
   }
 
   /**
-   * Returns the context as it evolves during planning. In general, this copy <i>will not</i>
-   * be the same as the one from {@code getQuery().context()}.
+   * Returns the context of this statement, see {@link #queryContext}. In general, this <i>will not</i>
+   * be the same as the one from {@code getQuery().context()}, which planning adds to.
    */
-  public Map<String, Object> context()
+  public QueryContext context()
   {
     return queryContext;
   }

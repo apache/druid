@@ -46,8 +46,8 @@ import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -59,7 +59,6 @@ import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.Transform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.utils.CollectionUtils;
@@ -105,7 +104,7 @@ public final class SegmentGenerationUtils
     // base-table mode, the destination supplies the base-table shape
     if (destination.getBaseTable() != null) {
       final Granularity queryGranularity =
-          query.context().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper);
+          query.context().getGranularity(QueryContextParameters.SQL_INSERT_QUERY_GRANULARITY.getName(), jsonMapper);
       final BaseTableProjectionSpec declared =
           destination.getBaseTable().withQueryGranularity(queryGranularity);
       // The query may produce columns the base table does not declare, which happens when the target table does not
@@ -160,10 +159,10 @@ public final class SegmentGenerationUtils
   )
   {
     final Granularity insertQueryGranularity =
-        query.context().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper);
+        query.context().getGranularity(QueryContextParameters.SQL_INSERT_QUERY_GRANULARITY.getName(), jsonMapper);
     if (isRollupQuery) {
       final String queryGranularityString =
-          query.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
+          query.context().getOrDefault(QueryContextParameters.TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
 
       if (timeIsGroupByDimension((GroupByQuery) query, columnMappings) && !queryGranularityString.isEmpty()) {
         try {
@@ -184,7 +183,7 @@ public final class SegmentGenerationUtils
    * The logic here is roundabout. First, we check which column in the {@link GroupByQuery} corresponds to the
    * output column {@link ColumnHolder#TIME_COLUMN_NAME}, using our {@link ColumnMappings}. Then, we check for the
    * presence of an optimization done in {@link DruidQuery#toGroupByQuery()}, where the context parameter
-   * {@link GroupByQuery#CTX_TIMESTAMP_RESULT_FIELD} and various related parameters are set when one of the dimensions
+   * {@link QueryContextParameters#TIMESTAMP_RESULT_FIELD} and various related parameters are set when one of the dimensions
    * is detected to be a time-floor. Finally, we check that the name of that dimension, and the name of our time field
    * from {@link ColumnMappings}, are the same.
    */
@@ -194,7 +193,7 @@ public final class SegmentGenerationUtils
 
     if (positions.size() == 1) {
       final String queryTimeColumn = columnMappings.getQueryColumnName(positions.getInt(0));
-      return queryTimeColumn.equals(groupByQuery.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
+      return queryTimeColumn.equals(groupByQuery.context().get(QueryContextParameters.TIMESTAMP_RESULT_FIELD));
     } else {
       return false;
     }
@@ -209,7 +208,7 @@ public final class SegmentGenerationUtils
    * aggregations.
    * - The query must not finalize aggregations, because rollup requires inserting the intermediate type of
    * complex aggregations, not the finalized type. (So further rollup is possible.)
-   * - The query must explicitly disable {@link GroupByQueryConfig#CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING}, because
+   * - The query must explicitly disable {@link QueryContextParameters#GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING}, because
    * groupBy on multi-value dimensions implicitly unnests, which is not desired behavior for rollup at ingestion time
    * (rollup expects multi-value dimensions to be treated as arrays).
    */
@@ -217,7 +216,7 @@ public final class SegmentGenerationUtils
   {
     return query instanceof GroupByQuery
            && !MultiStageQueryContext.isFinalizeAggregations(query.context())
-           && !query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
+           && !query.context().getOrDefault(QueryContextParameters.GROUP_BY_ENABLE_MULTI_VALUE_UNNESTING, true);
   }
 
   /**
@@ -318,8 +317,8 @@ public final class SegmentGenerationUtils
           + "separation between multi-value strings and true arrays. In either[mvd] or[array] mode, you can write "
           + "out multi-value string dimensions using ARRAY_TO_MV. "
           + "See https://druid.apache.org/docs/latest/querying/arrays#arrayingestmode for more details.",
-          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
-          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
+          QueryContextParameters.ARRAY_INGEST_MODE,
+          QueryContextParameters.ARRAY_INGEST_MODE
       );
     }
 

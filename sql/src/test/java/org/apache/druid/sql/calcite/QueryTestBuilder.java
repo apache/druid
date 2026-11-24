@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.segment.column.RowSignature;
@@ -101,6 +102,7 @@ public class QueryTestBuilder
   protected List<ResourceAction> expectedResources;
   protected ResultsVerifier expectedResultsVerifier;
   protected boolean skipVectorize;
+  protected boolean captureHook;
   protected boolean queryCannotVectorize;
   protected Predicate<List<Query<?>>> verifyNativeQueries = xs -> true;
   protected AuthConfig authConfig = new AuthConfig();
@@ -225,6 +227,15 @@ public class QueryTestBuilder
     return this;
   }
 
+  /**
+   * Captures the planner artifacts of the query with a {@link org.apache.druid.sql.calcite.planner.PlannerCaptureHook}.
+   */
+  public QueryTestBuilder captureHook(boolean captureHook)
+  {
+    this.captureHook = captureHook;
+    return this;
+  }
+
   public QueryTestBuilder verifyNativeQueries(Predicate<List<Query<?>>> verifyNativeQueries)
   {
     this.verifyNativeQueries = verifyNativeQueries;
@@ -309,8 +320,7 @@ public class QueryTestBuilder
 
   public boolean isDecoupledMode()
   {
-    String mode = (String) queryContext.getOrDefault(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, "");
-    return QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equalsIgnoreCase(mode);
+    return QueryContext.of(queryContext).isDecoupledMode();
   }
 
 }

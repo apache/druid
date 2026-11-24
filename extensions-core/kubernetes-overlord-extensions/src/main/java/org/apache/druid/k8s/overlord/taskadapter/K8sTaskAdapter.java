@@ -47,7 +47,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.ForkingTaskRunner;
 import org.apache.druid.indexing.overlord.QuotableWhiteSpaceSplitter;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -59,7 +58,6 @@ import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogs;
 
 import java.io.IOException;
@@ -94,7 +92,6 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   protected final String podSourceNamespace;
   protected final KubernetesTaskRunnerConfig taskRunnerConfig;
   protected final TaskConfig taskConfig;
-  protected final StartupLoggingConfig startupLoggingConfig;
   protected final DruidNode node;
   protected final ObjectMapper mapper;
   protected final TaskLogs taskLogs;
@@ -103,13 +100,12 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       KubernetesClientApi client,
       KubernetesTaskRunnerConfig taskRunnerConfig,
       TaskConfig taskConfig,
-      StartupLoggingConfig startupLoggingConfig,
       DruidNode node,
       ObjectMapper mapper,
       TaskLogs taskLogs
   )
   {
-    this(client, taskRunnerConfig.getNamespace(), client, taskRunnerConfig, taskConfig, startupLoggingConfig, node, mapper, taskLogs);
+    this(client, taskRunnerConfig.getNamespace(), client, taskRunnerConfig, taskConfig, node, mapper, taskLogs);
   }
 
   public K8sTaskAdapter(
@@ -118,7 +114,6 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       KubernetesClientApi client,
       KubernetesTaskRunnerConfig taskRunnerConfig,
       TaskConfig taskConfig,
-      StartupLoggingConfig startupLoggingConfig,
       DruidNode node,
       ObjectMapper mapper,
       TaskLogs taskLogs
@@ -129,7 +124,6 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     this.podSourceNamespace = podSourceNamespace;
     this.taskRunnerConfig = taskRunnerConfig;
     this.taskConfig = taskConfig;
-    this.startupLoggingConfig = startupLoggingConfig;
     this.node = node;
     this.mapper = mapper;
     this.taskLogs = taskLogs;
@@ -157,7 +151,8 @@ public abstract class K8sTaskAdapter implements TaskAdapter
         javaOpts(task),
         taskConfig.getTaskDir(task.getId()),
         taskRunnerConfig.getCpuCoreInMicro(),
-        node.isEnableTlsPort()
+        node.isEnableTlsPort(),
+        task.getId()
     );
     PodSpec podSpec = pod.getSpec();
     massageSpec(podSpec, taskRunnerConfig.getPrimaryContainerName());
@@ -329,6 +324,17 @@ public abstract class K8sTaskAdapter implements TaskAdapter
                 "metadata.name"
             )).build()).build()
     );
+
+    // Pass the task id through the environment rather than as a command argument: the command is flattened into a
+    // single "sh -c" string, which would split task ids containing spaces. peon.sh forwards it to CliPeon as --taskId.
+    if (context.getTaskId() != null) {
+      envVars.add(
+          new EnvVarBuilder()
+              .withName(DruidK8sConstants.TASK_ID_ENV)
+              .withValue(context.getTaskId())
+              .build()
+      );
+    }
 
     if (taskContents.length() < DruidK8sConstants.MAX_ENV_VARIABLE_KBS) {
       envVars.add(
@@ -505,11 +511,9 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     command.add("--loadBroadcastDatasourceMode");
     command.add(task.getBroadcastDatasourceLoadingSpec().getMode().toString());
 
-    command.add("--taskId");
-    command.add(task.getId());
     log.info(
         "Peon Command for K8s job: %s",
-        ForkingTaskRunner.getMaskedCommand(startupLoggingConfig.getMaskProperties(), command)
+        String.join(" ", command)
     );
     return command;
   }

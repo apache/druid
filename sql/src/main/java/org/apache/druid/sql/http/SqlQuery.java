@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.api.container.ContainerException;
 import com.sun.jersey.api.core.HttpContext;
 import org.apache.commons.io.IOUtils;
@@ -61,7 +60,7 @@ public class SqlQuery
   private final boolean header;
   private final boolean typesHeader;
   private final boolean sqlTypesHeader;
-  private final Map<String, Object> context;
+  private final QueryContext queryContext;
   private final List<SqlParameter> parameters;
 
   @JsonCreator
@@ -80,7 +79,7 @@ public class SqlQuery
     this.header = header;
     this.typesHeader = typesHeader;
     this.sqlTypesHeader = sqlTypesHeader;
-    this.context = context == null ? ImmutableMap.of() : context;
+    this.queryContext = QueryContext.of(context);
     this.parameters = parameters == null ? ImmutableList.of() : parameters;
 
     if (typesHeader && !header) {
@@ -141,12 +140,12 @@ public class SqlQuery
   @JsonProperty
   public Map<String, Object> getContext()
   {
-    return context;
+    return queryContext.asMap();
   }
 
   public QueryContext queryContext()
   {
-    return QueryContext.of(context);
+    return queryContext;
   }
 
   @JsonProperty
@@ -170,14 +169,14 @@ public class SqlQuery
            sqlTypesHeader == sqlQuery.sqlTypesHeader &&
            Objects.equals(query, sqlQuery.query) &&
            resultFormat == sqlQuery.resultFormat &&
-           Objects.equals(context, sqlQuery.context) &&
+           Objects.equals(queryContext, sqlQuery.queryContext) &&
            Objects.equals(parameters, sqlQuery.parameters);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, resultFormat, header, typesHeader, sqlTypesHeader, context, parameters);
+    return Objects.hash(query, resultFormat, header, typesHeader, sqlTypesHeader, queryContext, parameters);
   }
 
   @Override
@@ -189,7 +188,7 @@ public class SqlQuery
            ", header=" + header +
            ", typesHeader=" + typesHeader +
            ", sqlTypesHeader=" + sqlTypesHeader +
-           ", context=" + context +
+           ", context=" + queryContext +
            ", parameters=" + parameters +
            '}';
   }

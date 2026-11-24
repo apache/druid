@@ -66,7 +66,8 @@ public class TestAWSCredentialsProvider
         new AWSProxyConfig(),
         new AWSEndpointConfig(),
         new AWSClientConfig(),
-        new S3StorageConfig(new NoopServerSideEncryption(), null)
+        new S3StorageConfig(new NoopServerSideEncryption(), null),
+        new S3IntermediateRoleConfig()
     );
 
     s3Module.getAmazonS3Client(
@@ -101,7 +102,8 @@ public class TestAWSCredentialsProvider
         new AWSProxyConfig(),
         new AWSEndpointConfig(),
         new AWSClientConfig(),
-        new S3StorageConfig(new NoopServerSideEncryption(), null)
+        new S3StorageConfig(new NoopServerSideEncryption(), null),
+        new S3IntermediateRoleConfig()
     );
 
     s3Module.getAmazonS3Client(

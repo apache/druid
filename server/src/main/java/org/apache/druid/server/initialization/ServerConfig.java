@@ -37,7 +37,6 @@ import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
 import org.eclipse.jetty.http.UriCompliance;
@@ -57,6 +56,13 @@ import java.util.zip.Deflater;
 public class ServerConfig
 {
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
+
+  /**
+   * Default for {@link org.eclipse.jetty.server.HttpConfiguration#setHeaderCacheSize(int)}, which disables the cache.
+   * Jetty's own default of 1024 costs about 100KB of heap for each persistent connection, which is far more than the
+   * few small allocations per request that it saves. See {@link #getHeaderCacheSize()}.
+   */
+  public static final int DEFAULT_HEADER_CACHE_SIZE = 0;
 
   /**
    * The ServerConfig is normally created using {@link org.apache.druid.guice.JsonConfigProvider} binding.
@@ -114,7 +120,8 @@ public class ServerConfig
         false,
         uriCompliance,
         enforceStrictSNIHostChecking,
-        true
+        true,
+        DEFAULT_HEADER_CACHE_SIZE
     );
   }
 
@@ -143,7 +150,8 @@ public class ServerConfig
       boolean enableResponseIdentityHeaders,
       @Nullable UriCompliance uriCompliance,
       boolean enforceStrictSNIHostChecking,
-      boolean enableQueryRequestsQueuing
+      boolean enableQueryRequestsQueuing,
+      int headerCacheSize
   )
   {
     this.numThreads = numThreads;
@@ -171,6 +179,7 @@ public class ServerConfig
     this.uriCompliance = uriCompliance != null ? uriCompliance : UriCompliance.LEGACY;
     this.enforceStrictSNIHostChecking = enforceStrictSNIHostChecking;
     this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
+    this.headerCacheSize = headerCacheSize;
   }
 
   public ServerConfig()
@@ -222,7 +231,7 @@ public class ServerConfig
   private String maxSubqueryBytes = SubqueryGuardrailHelper.LIMIT_DISABLED_VALUE;
 
   @JsonProperty
-  private boolean useNestedForUnknownTypeInSubquery = QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
+  private boolean useNestedForUnknownTypeInSubquery = false;
 
   @JsonProperty
   @Min(1)
@@ -233,7 +242,7 @@ public class ServerConfig
 
   @JsonProperty
   @NotNull
-  private Period gracefulShutdownTimeout = Period.ZERO;
+  private Period gracefulShutdownTimeout = Period.seconds(30);
 
   @JsonProperty
   @NotNull
@@ -285,6 +294,15 @@ public class ServerConfig
 
   @JsonProperty
   private boolean enforceStrictSNIHostChecking = true;
+
+  /**
+   * Capacity of the header cache that Jetty's HTTP/1.1 parser keeps for each connection, used to reuse header fields
+   * repeated across requests on a persistent connection. 0, the default, disables the cache. Jetty's shared static
+   * cache of common header fields is used either way.
+   */
+  @JsonProperty
+  @Min(0)
+  private int headerCacheSize = DEFAULT_HEADER_CACHE_SIZE;
 
   public int getNumThreads()
   {
@@ -356,6 +374,22 @@ public class ServerConfig
    */
   public ServerConfig withUnannouncePropagationDelay(final Period newUnannouncePropagationDelay)
   {
+    return withShutdownTimings(gracefulShutdownTimeout, newUnannouncePropagationDelay);
+  }
+
+  /**
+   * Returns a copy of this config with {@link #getGracefulShutdownTimeout()} replaced by the given value.
+   */
+  public ServerConfig withGracefulShutdownTimeout(final Period newGracefulShutdownTimeout)
+  {
+    return withShutdownTimings(newGracefulShutdownTimeout, unannouncePropagationDelay);
+  }
+
+  private ServerConfig withShutdownTimings(
+      final Period newGracefulShutdownTimeout,
+      final Period newUnannouncePropagationDelay
+  )
+  {
     return new ServerConfig(
         numThreads,
         queueSize,
@@ -368,7 +402,7 @@ public class ServerConfig
         useNestedForUnknownTypeInSubquery,
         maxQueryTimeout,
         maxRequestHeaderSize,
-        gracefulShutdownTimeout,
+        newGracefulShutdownTimeout,
         newUnannouncePropagationDelay,
         inflateBufferSize,
         compressionLevel,
@@ -381,7 +415,8 @@ public class ServerConfig
         enableResponseIdentityHeaders,
         uriCompliance,
         enforceStrictSNIHostChecking,
-        enableQueryRequestsQueuing
+        enableQueryRequestsQueuing,
+        headerCacheSize
     );
   }
 
@@ -446,6 +481,11 @@ public class ServerConfig
     return enforceStrictSNIHostChecking;
   }
 
+  public int getHeaderCacheSize()
+  {
+    return headerCacheSize;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -480,7 +520,8 @@ public class ServerConfig
            enableResponseIdentityHeaders == that.enableResponseIdentityHeaders &&
            enableQueryRequestsQueuing == that.enableQueryRequestsQueuing &&
            Objects.equals(uriCompliance, that.uriCompliance) &&
-           enforceStrictSNIHostChecking == that.enforceStrictSNIHostChecking;
+           enforceStrictSNIHostChecking == that.enforceStrictSNIHostChecking &&
+           headerCacheSize == that.headerCacheSize;
   }
 
   @Override
@@ -511,7 +552,8 @@ public class ServerConfig
         enableResponseIdentityHeaders,
         enableQueryRequestsQueuing,
         uriCompliance,
-        enforceStrictSNIHostChecking
+        enforceStrictSNIHostChecking,
+        headerCacheSize
     );
   }
 
@@ -544,6 +586,7 @@ public class ServerConfig
            ", enableQueryRequestsQueuing=" + enableQueryRequestsQueuing +
            ", uriCompliance=" + uriCompliance +
            ", enforceStrictSNIHostChecking=" + enforceStrictSNIHostChecking +
+           ", headerCacheSize=" + headerCacheSize +
            '}';
   }
 

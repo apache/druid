@@ -46,8 +46,8 @@ import './resource-pane.scss';
 
 function makeNiceTitle(name: string): string {
   return name
-    .replace(/^[ _-]+|[ _-]+$/g, '')
-    .replace(/(^|[_-]+)\w/g, s => {
+    .replace(/^[ _-]+|(?<![ _-])[ _-]+$/g, '')
+    .replace(/(^|(?<![_-])[_-]+)\w/g, s => {
       // 'hello_world-love' -> 'Hello World Love'
       return s.replace(/[_-]+/, ' ').toUpperCase();
     })

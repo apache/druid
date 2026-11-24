@@ -12,6 +12,7 @@
     "groupBy/spilledQueries": [],
     "ingest/count": [],
     "ingest/events/duplicate": [],
+    "ingest/events/filtered": [],
     "ingest/events/messageGap": [],
     "ingest/events/processed": [],
     "ingest/events/processedWithError": [],
@@ -252,6 +253,8 @@
     "tier/storage/required": [],
     "tier/storage/capacity":  [],
     "tier/segmentCache/used":  [],
+    "tier/segmentCache/utilization":  [],
+    "tierAlias/segmentCache/utilization":  [],
     "tier/segmentCache/capacity":  [],
     "zk/connected": [],
     "zk/reconnect/time": []

@@ -27,6 +27,7 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
   private long processed;
   private long processedWithError;
   private long unparseable;
+  private long filtered;
   private long processedBytes;
   private final long[] thrownAwayByReason = new long[InputRowFilterResult.numValues()];
 
@@ -108,6 +109,18 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
   }
 
   @Override
+  public long getFiltered()
+  {
+    return filtered;
+  }
+
+  @Override
+  public void incrementFiltered()
+  {
+    filtered++;
+  }
+
+  @Override
   public RowIngestionMetersTotals getTotals()
   {
     return new RowIngestionMetersTotals(
@@ -115,7 +128,8 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
         processedBytes,
         processedWithError,
         getThrownAwayByReason(),
-        unparseable
+        unparseable,
+        filtered
     );
   }
 
@@ -130,6 +144,7 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
     this.processed += rowIngestionMetersTotals.getProcessed();
     this.processedWithError += rowIngestionMetersTotals.getProcessedWithError();
     this.unparseable += rowIngestionMetersTotals.getUnparseable();
+    this.filtered += rowIngestionMetersTotals.getFiltered();
     this.processedBytes += rowIngestionMetersTotals.getProcessedBytes();
 
     final Map<String, Long> thrownAwayByReason = rowIngestionMetersTotals.getThrownAwayByReason();

@@ -20,9 +20,9 @@
 package org.apache.druid.query.topn;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +50,7 @@ public class TopNQueryBuilderTest
     final TopNQuery query = builder
         .queryId("queryId")
         .build();
-    Assertions.assertEquals(ImmutableMap.of(BaseQuery.QUERY_ID, "queryId"), query.getContext());
+    Assertions.assertEquals(ImmutableMap.of(QueryContextParameters.QUERY_ID.getName(), "queryId"), query.getContext());
   }
 
   @Test
@@ -60,17 +60,17 @@ public class TopNQueryBuilderTest
         .context(ImmutableMap.of("my", "context"))
         .queryId("queryId")
         .build();
-    Assertions.assertEquals(ImmutableMap.of(BaseQuery.QUERY_ID, "queryId", "my", "context"), query.getContext());
+    Assertions.assertEquals(ImmutableMap.of(QueryContextParameters.QUERY_ID.getName(), "queryId", "my", "context"), query.getContext());
   }
 
   @Test
   public void testQueryIdWhenBuilderHasNonnullContextWithQueryIdReturnMergedContext()
   {
     final TopNQuery query = builder
-        .context(ImmutableMap.of("my", "context", BaseQuery.QUERY_ID, "queryId"))
+        .context(ImmutableMap.of("my", "context", QueryContextParameters.QUERY_ID.getName(), "queryId"))
         .queryId("realQueryId")
         .build();
-    Assertions.assertEquals(ImmutableMap.of(BaseQuery.QUERY_ID, "realQueryId", "my", "context"), query.getContext());
+    Assertions.assertEquals(ImmutableMap.of(QueryContextParameters.QUERY_ID.getName(), "realQueryId", "my", "context"), query.getContext());
   }
 
   @Test
@@ -88,8 +88,8 @@ public class TopNQueryBuilderTest
   {
     final TopNQuery query = builder
         .queryId("queryId")
-        .context(ImmutableMap.of("my", "context", BaseQuery.QUERY_ID, "realQueryId"))
+        .context(ImmutableMap.of("my", "context", QueryContextParameters.QUERY_ID.getName(), "realQueryId"))
         .build();
-    Assertions.assertEquals(ImmutableMap.of(BaseQuery.QUERY_ID, "realQueryId", "my", "context"), query.getContext());
+    Assertions.assertEquals(ImmutableMap.of(QueryContextParameters.QUERY_ID.getName(), "realQueryId", "my", "context"), query.getContext());
   }
 }

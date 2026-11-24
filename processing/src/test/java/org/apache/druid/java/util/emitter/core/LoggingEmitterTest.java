@@ -125,6 +125,21 @@ public class LoggingEmitterTest
   }
 
   /**
+   * The pre-ingestion "ingest/events/filtered" metric must be present in the bundled default allowlist so it is
+   * not silently dropped by the LoggingEmitter's default-filtered configuration.
+   */
+  @Test
+  public void testDefaultResourceAllowsIngestEventsFiltered()
+  {
+    createEmitter(true, null);
+
+    emitter.emit(ServiceMetricEvent.builder().setMetric("ingest/events/filtered", 4).build("test", "localhost"));
+    emitter.emit(ServiceMetricEvent.builder().setMetric("some/unlisted/metric", 1).build("test", "localhost"));
+
+    Assertions.assertEquals(1, serializedObjects.size(), "ingest/events/filtered should be allowed by the default list");
+  }
+
+  /**
    * With filtering enabled and a custom file path, only metrics from that file are emitted.
    */
   @Test

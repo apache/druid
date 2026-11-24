@@ -28,10 +28,12 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.query.operator.window.ranking.WindowRowNumberProcessor;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
@@ -128,7 +130,7 @@ public class WindowOperatorQueryQueryToolChestTest extends InitializedNullHandli
                   .build()
         ),
         new LegacySegmentSpec(Intervals.ETERNITY),
-        Collections.singletonMap(ResultSerializationMode.CTX_SERIALIZATION_PARAMETER, ResultSerializationMode.FRAMES.toString()),
+        QueryContext.ofMap(QueryContextParameters.SERIALIZATION, ResultSerializationMode.FRAMES),
         outputSignature,
         ImmutableList.of(
             new WindowOperatorFactory(new WindowRowNumberProcessor("w0"))

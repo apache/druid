@@ -38,6 +38,7 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -177,6 +178,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
       Map<String, String> tierToAliasName
   )
   {
+    final Map<String, CacheTotals> aliasCacheTotals = new HashMap<>();
     cluster.getHistoricals().forEach((tier, historicals) -> {
       final String alias = tierToAliasName.get(tier);
       final RowKey rowKey = alias == null
@@ -205,7 +207,36 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
       stats.add(Stats.Tier.TOTAL_CAPACITY, rowKey, storageCapacity);
       stats.add(Stats.Tier.CACHE_CAPACITY, rowKey, cacheCapacity);
       stats.add(Stats.Tier.CACHE_USED, rowKey, cacheUsed);
+      if (cacheCapacity > 0) {
+        stats.add(Stats.Tier.CACHE_UTILIZATION, rowKey, toPercent(cacheUsed, cacheCapacity));
+      }
+      if (alias != null) {
+        aliasCacheTotals.merge(alias, new CacheTotals(cacheUsed, cacheCapacity), CacheTotals::plus);
+      }
     });
+
+    aliasCacheTotals.forEach((alias, totals) -> {
+      if (totals.capacity() > 0) {
+        stats.add(
+            Stats.Tier.ALIAS_CACHE_UTILIZATION,
+            RowKey.of(Dimension.TIER_ALIAS, alias),
+            toPercent(totals.used(), totals.capacity())
+        );
+      }
+    });
+  }
+
+  private record CacheTotals(long used, long capacity)
+  {
+    CacheTotals plus(CacheTotals other)
+    {
+      return new CacheTotals(used + other.used, capacity + other.capacity);
+    }
+  }
+
+  private static long toPercent(long used, long capacity)
+  {
+    return Math.round(100.0 * used / capacity);
   }
 
   private void collectUsedSegmentStats(DruidCoordinatorRuntimeParams params, CoordinatorRunStats stats)

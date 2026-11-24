@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.js.JavaScriptConfig;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -72,11 +73,14 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IncrementalIndexTimeBoundaryInspector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -241,6 +245,29 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     Assertions.assertTrue(
         results.stream().anyMatch(row -> Arrays.deepEquals(new Object[]{"hi", null, 1L}, row.getArray()))
     );
+  }
+
+  @Test
+  public void testOrderingEndsAtVirtualColumn() throws Exception
+  {
+    // Test is only valid when sortByDim = true, since otherwise the ordering is by time alone.
+    Assumptions.assumeTrue(sortByDim);
+
+    final IncrementalIndex index = indexCreator.createIndex();
+    index.add(
+        new MapBasedInputRow(
+            System.currentTimeMillis() - 1,
+            Collections.singletonList("billy"),
+            ImmutableMap.of("billy", "hi")
+        )
+    );
+
+    // A virtual column takes the place of the stored "billy", which leads the ordering, so none of it is left.
+    final VirtualColumn billy = new ExpressionVirtualColumn("billy", "'q'", null, ExprMacroTable.nil());
+    final CursorBuildSpec spec = CursorBuildSpec.builder().setVirtualColumns(VirtualColumns.create(billy)).build();
+    try (final CursorHolder holder = new IncrementalIndexCursorFactory(index).makeCursorHolder(spec)) {
+      Assertions.assertEquals(List.of(), holder.getOrdering());
+    }
   }
 
   @Test

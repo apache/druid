@@ -28,6 +28,7 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.broker.BrokerClientImpl;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.CoordinatorClientConfig;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.NodeRole;
@@ -105,7 +106,8 @@ public class EmbeddedServiceClient
     );
     this.coordinatorServiceClient = module.makeServiceClientForCoordinator(
         factory,
-        anyServer.bindings().getInstance(ServiceLocator.class, Coordinator.class)
+        anyServer.bindings().getInstance(ServiceLocator.class, Coordinator.class),
+        new CoordinatorClientConfig()
     );
   }
 

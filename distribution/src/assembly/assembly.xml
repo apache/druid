@@ -122,6 +122,7 @@
             <outputDirectory>lib</outputDirectory>
             <excludes>
                 <exclude>org.apache.druid:extensions-distribution</exclude>
+                <exclude>*:*:pom</exclude>
             </excludes>
         </dependencySet>
         <dependencySet>

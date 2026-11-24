@@ -142,17 +142,9 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   )
   {
     if (allowList) {
-      return ListFilteredDimensionSpec.filterAllowList(
-          values,
-          factory.makeDimensionSelector(delegate),
-          delegate.getExtractionFn() != null
-      );
+      return ListFilteredDimensionSpec.filterAllowList(values, factory.makeDimensionSelector(delegate));
     } else {
-      return ListFilteredDimensionSpec.filterDenyList(
-          values,
-          factory.makeDimensionSelector(delegate),
-          delegate.getExtractionFn() != null
-      );
+      return ListFilteredDimensionSpec.filterDenyList(values, factory.makeDimensionSelector(delegate));
     }
   }
 
@@ -170,14 +162,20 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   {
     return new ColumnCapabilitiesImpl().setType(delegate.getOutputType())
                                        .setDictionaryEncoded(true)
-                                       .setHasBitmapIndexes(true);
+                                       .setHasBitmapIndexes(true)
+                                       .setHasMultipleValues(true);
   }
 
   @Nullable
   @Override
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
-    return inspector.getColumnCapabilities(delegate.getDimension());
+    final ColumnCapabilities delegateCapabilities = inspector.getColumnCapabilities(delegate.getDimension());
+    if (delegateCapabilities == null) {
+      return null;
+    }
+    // filtering can leave a row with no values, so even if the delegate is single-valued this column is not
+    return ColumnCapabilitiesImpl.copyOf(delegateCapabilities).setHasMultipleValues(true).setHasNulls(true);
   }
 
   @Override
@@ -301,15 +299,27 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       IdMapping idMapping
   )
   {
-    final int start = delegateIndex.getValue(idMapping.getReverseId(0)) == null ? 1 : 0;
     return getBitmapsInRange(
         delegateIndex,
         idMapping,
         DruidObjectPredicate.alwaysTrue(),
-        start,
+        getFirstNonNullIndex(delegateIndex, idMapping),
         idMapping.getValueCardinality(),
         false
     );
+  }
+
+  /**
+   * Returns the first filtered dictionary index which is not null. Values are sorted with null first, so this is 1 if
+   * the filtered dictionary starts with null, otherwise 0, including when the filtered dictionary is empty because
+   * none of the values matched.
+   */
+  private static int getFirstNonNullIndex(DictionaryEncodedStringValueIndex delegateIndex, IdMapping idMapping)
+  {
+    if (idMapping.getValueCardinality() == 0) {
+      return 0;
+    }
+    return delegateIndex.getValue(idMapping.getReverseId(0)) == null ? 1 : 0;
   }
 
   private static Iterable<ImmutableBitmap> getBitmapsInRange(
@@ -662,7 +672,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     )
     {
       int startIndex, endIndex;
-      final int firstValue = delegate.getValue(idMapping.getReverseId(0)) == null ? 1 : 0;
+      final int firstValue = getFirstNonNullIndex(delegate, idMapping);
       if (startValue == null) {
         startIndex = firstValue;
       } else {

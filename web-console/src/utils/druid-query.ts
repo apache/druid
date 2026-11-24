@@ -22,7 +22,7 @@ import { C } from 'druid-query-toolkit';
 
 import { Api } from '../singletons';
 
-import type { RowColumn } from './general';
+import type { LineColumn } from './general';
 import { assemble, lookupBy } from './general';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
@@ -109,27 +109,27 @@ export function getDruidErrorMessage(e: any): string {
 }
 
 export class DruidError extends Error {
-  static extractStartRowColumn(
+  static extractStartLineColumn(
     context: Record<string, any> | undefined,
     offsetLines = 0,
-  ): RowColumn | undefined {
+  ): LineColumn | undefined {
     if (context?.sourceType !== 'sql' || !context.line || !context.column) return;
 
     return {
-      row: Number(context.line) - 1 + offsetLines,
-      column: Number(context.column) - 1,
+      line: Number(context.line) + offsetLines,
+      column: Number(context.column),
     };
   }
 
-  static extractEndRowColumn(
+  static extractEndLineColumn(
     context: Record<string, any> | undefined,
     offsetLines = 0,
-  ): RowColumn | undefined {
+  ): LineColumn | undefined {
     if (context?.sourceType !== 'sql' || !context.endLine || !context.endColumn) return;
 
     return {
-      row: Number(context.endLine) - 1 + offsetLines,
-      column: Number(context.endColumn) - 1,
+      line: Number(context.endLine) + offsetLines,
+      column: Number(context.endColumn),
     };
   }
 
@@ -267,8 +267,8 @@ export class DruidError extends Error {
   public errorMessage?: string;
   public errorMessageWithoutExpectation?: string;
   public expectation?: string;
-  public startRowColumn?: RowColumn;
-  public endRowColumn?: RowColumn;
+  public startLineColumn?: LineColumn;
+  public endLineColumn?: LineColumn;
   public suggestion?: QuerySuggestion;
   public queryDuration?: number;
 
@@ -306,8 +306,8 @@ export class DruidError extends Error {
           );
         }
 
-        this.startRowColumn = DruidError.extractStartRowColumn(this.context, offsetLines);
-        this.endRowColumn = DruidError.extractEndRowColumn(this.context, offsetLines);
+        this.startLineColumn = DruidError.extractStartLineColumn(this.context, offsetLines);
+        this.endLineColumn = DruidError.extractEndLineColumn(this.context, offsetLines);
         this.suggestion = DruidError.getSuggestion(this.errorMessage);
 
         const expectationIndex = this.errorMessage.indexOf('Was expecting one of');

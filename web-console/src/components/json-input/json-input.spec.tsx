@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { EditorView } from '@codemirror/view';
+import { act, fireEvent, render } from '@testing-library/react';
 import Hjson from 'hjson';
 
-import { extractRowColumnFromHjsonError, JsonInput } from './json-input';
+import { extractLineColumnFromHjsonError, JsonInput } from './json-input';
 
 describe('JsonInput', () => {
   it('matches snapshot (null)', () => {
@@ -37,11 +38,11 @@ describe('JsonInput', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('extractRowColumnFromHjsonError is ok with non matching error', () => {
-    expect(extractRowColumnFromHjsonError(new Error('blah blah'))).toBeUndefined();
+  it('extractLineColumnFromHjsonError is ok with non matching error', () => {
+    expect(extractLineColumnFromHjsonError(new Error('blah blah'))).toBeUndefined();
   });
 
-  it('extractRowColumnFromHjsonError works with real error', () => {
+  it('extractLineColumnFromHjsonError works with real error', () => {
     let error: Error | undefined;
     try {
       Hjson.parse(`{\n"Hello" "World"\n}`);
@@ -51,10 +52,25 @@ describe('JsonInput', () => {
 
     expect(error).toBeDefined();
 
-    const rc = extractRowColumnFromHjsonError(error!);
-    expect(rc).toEqual({
-      column: 8,
-      row: 1,
+    expect(extractLineColumnFromHjsonError(error!)).toEqual({
+      line: 2,
+      column: 9,
     });
+  });
+
+  it('underlines the error once the editor loses focus', () => {
+    const { container } = render(<JsonInput onChange={() => {}} value={{ a: 1 }} />);
+    const view = EditorView.findFromDOM(container.querySelector<HTMLElement>('.cm-editor')!)!;
+    act(() => {
+      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: '{\n"a" 1\n}' } });
+    });
+    expect(container.querySelector('.cm-errorMark')).toBeNull();
+
+    act(() => {
+      fireEvent.blur(view.contentDOM);
+    });
+    const mark = container.querySelector('.cm-errorMark');
+    expect(mark?.textContent).toEqual('1');
+    expect(mark?.getAttribute('data-tooltip')).toEqual(`Expected ':' instead of '1'`);
   });
 });

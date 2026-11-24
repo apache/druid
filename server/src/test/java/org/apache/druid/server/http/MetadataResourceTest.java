@@ -61,6 +61,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -155,11 +156,11 @@ public class MetadataResourceTest
 
     final List<SegmentStatusInCluster> resultList = extractResponseList(response);
     Assertions.assertEquals(resultList.size(), 4);
-    Assertions.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, null, false), resultList.get(0));
-    Assertions.assertEquals(new SegmentStatusInCluster(segments[1], false, null, null, false), resultList.get(1));
-    Assertions.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultList.get(2));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, null, false, true), resultList.get(0));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[1], false, null, null, false, true), resultList.get(1));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false, true), resultList.get(2));
     // Replication factor should be 0 as the segment is overshadowed
-    Assertions.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultList.get(3));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false, true), resultList.get(3));
   }
 
   @Test
@@ -230,6 +231,19 @@ public class MetadataResourceTest
         ).build()
     );
 
+    // Not among the used segments, but still served by a Historical.
+    final DataSegment unusedSegment = realTimeSegments[2];
+    availableSegments.put(
+        unusedSegment.getId(),
+        AvailableSegmentMetadata.builder(
+            unusedSegment,
+            0L,
+            Collections.emptySet(),
+            null,
+            50L
+        ).build()
+    );
+
     Mockito.doReturn(availableSegments).when(coordinatorSegmentMetadataCache).getSegmentMetadataSnapshot();
 
     Mockito.doReturn(availableSegments.get(segments[0].getId()))
@@ -251,15 +265,93 @@ public class MetadataResourceTest
     Response response = metadataResource.getAllUsedSegments(request, null, "includeOvershadowedStatus", "includeRealtimeSegments");
 
     final List<SegmentStatusInCluster> resultList = extractResponseList(response);
-    Assertions.assertEquals(resultList.size(), 6);
+    Assertions.assertEquals(7, resultList.size());
     Map<SegmentId, SegmentStatusInCluster> resultMap = resultList.stream().collect(Collectors.toMap(segmentStatus -> segmentStatus.getDataSegment().getId(), Function.identity()));
-    Assertions.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false), resultMap.get(segments[0].getId()));
-    Assertions.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false), resultMap.get(segments[1].getId()));
-    Assertions.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultMap.get(segments[2].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false, true), resultMap.get(segments[0].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false, true), resultMap.get(segments[1].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false, true), resultMap.get(segments[2].getId()));
     // Replication factor should be 0 as the segment is overshadowed
-    Assertions.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultMap.get(segments[3].getId()));
-    Assertions.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true), resultMap.get(realTimeSegments[0].getId()));
-    Assertions.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true), resultMap.get(realTimeSegments[1].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false, true), resultMap.get(segments[3].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true, false), resultMap.get(realTimeSegments[0].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true, false), resultMap.get(realTimeSegments[1].getId()));
+    // Neither realtime nor published
+    Assertions.assertEquals(
+        new SegmentStatusInCluster(unusedSegment, false, null, 50L, false, false),
+        resultMap.get(unusedSegment.getId())
+    );
+    for (SegmentStatusInCluster segmentStatus : resultList) {
+      final boolean isUsed = DATASOURCE1.equals(segmentStatus.getDataSegment().getDataSource());
+      Assertions.assertEquals(isUsed, segmentStatus.isPublished());
+    }
+  }
+
+  @Test
+  public void testGetAllSegmentsIncludingRealtimeWithDataSourceFilter()
+  {
+    final String dataSource2 = "datasource2";
+    final DataSegment realtimeSegment =
+        CreateDataSegments.ofDatasource(dataSource2)
+                          .forIntervals(1, Granularities.DAY)
+                          .eachOfSizeInMb(500)
+                          .get(0);
+
+    final Map<SegmentId, AvailableSegmentMetadata> availableSegments = new LinkedHashMap<>();
+    // Used, and served by a Historical.
+    availableSegments.put(
+        segments[0].getId(),
+        AvailableSegmentMetadata.builder(segments[0], 0L, Collections.emptySet(), null, 20L).build()
+    );
+    // Not used, and served by a realtime task.
+    availableSegments.put(
+        realtimeSegment.getId(),
+        AvailableSegmentMetadata.builder(realtimeSegment, 1L, Collections.emptySet(), null, 10L).build()
+    );
+
+    final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache =
+        Mockito.mock(CoordinatorSegmentMetadataCache.class);
+    Mockito.doReturn(availableSegments).when(coordinatorSegmentMetadataCache).getSegmentMetadataSnapshot();
+    Mockito.doReturn(availableSegments.get(segments[0].getId()))
+           .when(coordinatorSegmentMetadataCache)
+           .getAvailableSegmentMetadata(DATASOURCE1, segments[0].getId());
+
+    metadataResource = new MetadataResource(
+        segmentsMetadataManager,
+        storageCoordinator,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        coordinator,
+        coordinatorSegmentMetadataCache
+    );
+
+    // The used segment of datasource1 is in the cache, but is not part of this request.
+    Assertions.assertEquals(
+        List.of(new SegmentStatusInCluster(realtimeSegment, false, null, 10L, true, false)),
+        extractResponseList(
+            metadataResource.getAllUsedSegments(
+                request,
+                Set.of(dataSource2),
+                "includeOvershadowedStatus",
+                "includeRealtimeSegments"
+            )
+        )
+    );
+
+    // The realtime segment of datasource2 is in the cache, but is not part of this request.
+    Assertions.assertEquals(
+        List.of(
+            new SegmentStatusInCluster(segments[0], false, 2, 20L, false, true),
+            new SegmentStatusInCluster(segments[1], false, null, null, false, true),
+            new SegmentStatusInCluster(segments[2], false, 1, null, false, true),
+            new SegmentStatusInCluster(segments[3], true, 0, null, false, true)
+        ),
+        extractResponseList(
+            metadataResource.getAllUsedSegments(
+                request,
+                Set.of(DATASOURCE1),
+                "includeOvershadowedStatus",
+                "includeRealtimeSegments"
+            )
+        )
+    );
   }
 
 

@@ -115,6 +115,24 @@ public class AsyncResourcesTest
   }
 
   @Test
+  public void testCollectOfFromFutureFailsWithoutWaitingAndCancelsOthersOnClose()
+  {
+    final SettableFuture<String> a = SettableFuture.create();
+    final SettableFuture<String> b = SettableFuture.create();
+    final AsyncResource<List<String>> collected =
+        AsyncResources.collect(List.of(AsyncResources.fromFutureUnmanaged(a), AsyncResources.fromFutureUnmanaged(b)));
+
+    final RuntimeException failure = new RuntimeException("boom");
+    b.setException(failure);
+    Assertions.assertTrue(collected.isReady(), "one failure must not wait for the other sources");
+    Assertions.assertSame(failure, Assertions.assertThrows(RuntimeException.class, collected::get));
+    Assertions.assertFalse(a.isCancelled(), "the other sources are left to close()");
+
+    collected.close();
+    Assertions.assertTrue(a.isCancelled());
+  }
+
+  @Test
   public void testFromFutureGetBeforeReadyThrows()
   {
     final AsyncResource<String> resource = AsyncResources.fromFutureUnmanaged(SettableFuture.create());

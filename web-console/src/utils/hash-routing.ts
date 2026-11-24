@@ -39,7 +39,8 @@ export function replaceHashPath(hashPath: string): void {
 }
 
 export function parseHashRoute(hashPath: string): HashRoute {
-  let pathname = hashPath.replace(/[?#].*$/, '');
+  const searchIndex = hashPath.search(/[?#]/);
+  let pathname = searchIndex === -1 ? hashPath : hashPath.slice(0, searchIndex);
   try {
     pathname = decodeURI(pathname);
   } catch {}

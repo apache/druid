@@ -34,8 +34,9 @@ import java.util.Objects;
  *   <li>replication factor of the segment</li>
  *   <li>number of rows in the segment</li>
  *   <li>if the segment is realtime</li>
+ *   <li>if the segment is published</li>
  * </ul>
- * <br></br>
+ * <br>
  * Objects of this class are used to sync the state of segments from the Coordinator to different services, typically the Broker.
  * The {@link #compareTo} method considers only the {@link SegmentId}.
  */
@@ -59,28 +60,41 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
    */
   private final Long numRows;
   /**
-   * If the segment is realtime.
+   * If the segment is unpublished and served only by realtime tasks. Always false for a published segment. This
+   * differs from {@code is_realtime} in {@code sys.segments}, which does not depend on whether the segment is
+   * published.
    */
   private final boolean realtime;
+  /**
+   * If the segment is published, that is, present in the metadata store and marked as used.
+   */
+  private final boolean published;
 
   @JsonCreator
   public SegmentStatusInCluster(
       @JsonProperty("overshadowed") boolean overshadowed,
       @JsonProperty("replicationFactor") @Nullable Integer replicationFactor,
       @JsonProperty("numRows") @Nullable Long numRows,
-      @JsonProperty("realtime") boolean realtime
+      @JsonProperty("realtime") boolean realtime,
+      @JsonProperty("published") @Nullable Boolean published
   )
   {
     // Jackson will overwrite dataSegment if needed (even though the field is final)
-    this(null, overshadowed, replicationFactor, numRows, realtime);
+    // Coordinators on older versions do not send "published"; in that case it is the opposite of "realtime".
+    // That default is wrong for an unused segment that a Historical still serves, which is neither.
+    this(null, overshadowed, replicationFactor, numRows, realtime, published == null ? !realtime : published);
   }
 
+  /**
+   * Creates a status for the given segment.
+   */
   public SegmentStatusInCluster(
       DataSegment dataSegment,
       boolean overshadowed,
       Integer replicationFactor,
       Long numRows,
-      boolean realtime
+      boolean realtime,
+      boolean published
   )
   {
     this.dataSegment = dataSegment;
@@ -88,6 +102,7 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
     this.replicationFactor = replicationFactor;
     this.numRows = numRows;
     this.realtime = realtime;
+    this.published = published;
   }
 
   @JsonProperty
@@ -122,6 +137,12 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
     return realtime;
   }
 
+  @JsonProperty
+  public boolean isPublished()
+  {
+    return published;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -134,6 +155,7 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
     SegmentStatusInCluster that = (SegmentStatusInCluster) o;
     return overshadowed == that.overshadowed
            && realtime == that.realtime
+           && published == that.published
            && Objects.equals(replicationFactor, that.replicationFactor)
            && Objects.equals(dataSegment, that.dataSegment)
            && Objects.equals(numRows, that.numRows);
@@ -142,7 +164,7 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
   @Override
   public int hashCode()
   {
-    return Objects.hash(overshadowed, replicationFactor, dataSegment, numRows, realtime);
+    return Objects.hash(overshadowed, replicationFactor, dataSegment, numRows, realtime, published);
   }
 
   @Override
@@ -160,6 +182,7 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
            ", dataSegment=" + dataSegment +
            ", numRows=" + numRows +
            ", realtime=" + realtime +
+           ", published=" + published +
            '}';
   }
 }

@@ -103,8 +103,14 @@ public class LeaderElectorAsyncWrapper implements Closeable
     try {
       futureRef.get().cancel(true);
       executor.shutdownNow();
-      if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
-        LOGGER.warn("Failed to terminate [%s] executor.", this.getClass().getSimpleName());
+      if (executor.awaitTermination(10, TimeUnit.SECONDS)) {
+        // Release the lock after the run loop has exited.
+        k8sLeaderElector.close();
+      } else {
+        LOGGER.warn(
+            "Failed to terminate [%s] executor. Not releasing the lock; it will expire after the lease duration.",
+            this.getClass().getSimpleName()
+        );
       }
     }
     catch (InterruptedException ex) {

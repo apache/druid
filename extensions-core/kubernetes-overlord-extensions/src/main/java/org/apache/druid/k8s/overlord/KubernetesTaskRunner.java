@@ -261,6 +261,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     try {
       KubernetesPeonLifecycle peonLifecycle;
+      final boolean isShutdown;
 
       synchronized (tasks) {
         KubernetesWorkItem workItem = tasks.get(task.getId());
@@ -270,10 +271,18 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         }
 
         peonLifecycle = workItem.getPeonLifeycle();
+        isShutdown = workItem.isShutdown();
       }
 
       TaskStatus taskStatus;
-      if (run) {
+      if (isShutdown) {
+        // Shut down while waiting for a free thread.
+        if (!run) {
+          // A restored job already has a pod, so persist its logs and close the log watch opened by the shutdown.
+          peonLifecycle.saveLogs();
+        }
+        taskStatus = TaskStatus.failure(task.getId(), "Task was shut down before it started");
+      } else if (run) {
         taskStatus = peonLifecycle.run(
             adapter.fromTask(task),
             config.getTaskLaunchTimeout().toStandardDuration().getMillis(),

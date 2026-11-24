@@ -215,6 +215,39 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testQueryOnPartOfSegmentDoesNotUseWholeSegmentCacheEntry() throws IOException
+  {
+    final Query query = new TopNQueryBuilder()
+        .dataSource("ds")
+        .dimension("top_dim")
+        .metric("imps")
+        .threshold(3)
+        .intervals("2011-01-05/2011-01-10")
+        .aggregators(AGGS)
+        .granularity(Granularities.ALL)
+        .build();
+    final QueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
+    final CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query, null);
+    final byte[] cacheKeyPrefix = RandomUtils.nextBytes(10);
+
+    // Cache results under the key for the whole segment, as a query covering all of it would.
+    final Cache cache = MapCache.create(1024 * 1024);
+    cache.put(
+        CacheUtil.computeSegmentCacheKey(
+            CACHE_ID,
+            SEGMENT_DESCRIPTOR,
+            Bytes.concat(cacheKeyPrefix, cacheStrategy.computeCacheKey(query))
+        ),
+        toByteArray(
+            Iterables.transform(makeTopNResults(true, OBJECTS), cacheStrategy.prepareForSegmentLevelCache())
+        )
+    );
+
+    final CachingQueryRunner runner = makeCachingQueryRunner(cacheKeyPrefix, cache, toolchest, Sequences.empty());
+    Assertions.assertEquals(List.of(), runner.run(QueryPlus.wrap(query)).toList());
+  }
+
+  @Test
   public void testNullCacheKeyPrefix()
   {
     Query query = new TopNQueryBuilder()
@@ -351,7 +384,7 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query, null);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
         CACHE_ID,
-        SEGMENT_DESCRIPTOR,
+        narrowSegmentDescriptor(query),
         Bytes.concat(keyPrefix, cacheStrategy.computeCacheKey(query))
     );
     Assertions.assertTrue(runner.canPopulateCache(query, cacheStrategy));
@@ -395,7 +428,7 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query, null);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
         CACHE_ID,
-        SEGMENT_DESCRIPTOR,
+        narrowSegmentDescriptor(query),
         Bytes.concat(cacheKeyPrefix, cacheStrategy.computeCacheKey(query))
     );
 
@@ -411,6 +444,19 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     Assertions.assertTrue(runner.canUseCache(query, toolchest.getCacheStrategy(query, null)));
     List<Result> results = runner.run(QueryPlus.wrap(query)).toList();
     Assertions.assertEquals(expectedResults.toString(), results.toString());
+  }
+
+  /**
+   * Returns {@link #SEGMENT_DESCRIPTOR} narrowed to the interval of {@code query}, which is where the runner keys its
+   * cache entries.
+   */
+  private static SegmentDescriptor narrowSegmentDescriptor(final Query<?> query)
+  {
+    return new SegmentDescriptor(
+        Iterables.getOnlyElement(query.getIntervals()).overlap(SEGMENT_DESCRIPTOR.getInterval()),
+        SEGMENT_DESCRIPTOR.getVersion(),
+        SEGMENT_DESCRIPTOR.getPartitionNumber()
+    );
   }
 
   private CachingQueryRunner makeCachingQueryRunner(

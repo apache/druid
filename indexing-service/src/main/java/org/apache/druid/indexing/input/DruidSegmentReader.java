@@ -168,7 +168,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
 
   /**
    * Given a {@link Cursor} create a {@link Sequence} that returns the rows of the cursor as
-   * Map<String, Object> intermediate rows, selecting the dimensions and metrics of this segment reader.
+   * {@code Map<String, Object>} intermediate rows, selecting the dimensions and metrics of this segment reader.
    *
    * @param cursor A cursor
    *
@@ -292,7 +292,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
 
   /**
    * Given a {@link Cursor}, a list of dimension names, and a list of metric names, this iterator
-   * returns the rows of the cursor as Map<String, Object> intermediate rows.
+   * returns the rows of the cursor as {@code Map<String, Object>} intermediate rows.
    */
   private static class IntermediateRowFromCursorIterator implements Iterator<Map<String, Object>>
   {
