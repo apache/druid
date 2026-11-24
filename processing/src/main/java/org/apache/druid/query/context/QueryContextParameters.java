@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 /**
  * Central catalog of query context parameter descriptors.
@@ -85,6 +86,8 @@ import java.util.function.Supplier;
  */
 public final class QueryContextParameters
 {
+  private static final Pattern SUFFIXED_DURATION_PATTERN =
+      Pattern.compile("[0-9]+(?:ns|us|ms|s|m|h|d)");
 
 
   // region General query parameters
@@ -2668,6 +2671,10 @@ public final class QueryContextParameters
               return HumanReadableDuration.parse(text).getMillis();
             }
             catch (IAE e) {
+              // Do not reinterpret an overflowing duration as a legacy numeric multiplier.
+              if (SUFFIXED_DURATION_PATTERN.matcher(text.trim()).matches()) {
+                throw invalidValueException(name, "a valid duration within the supported range", value);
+              }
               // Preserve legacy numeric Long values that cannot fit in a nanosecond-backed duration.
               return QueryContexts.getAsLong(name, value);
             }

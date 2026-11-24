@@ -36,7 +36,7 @@ For example:
 
 ```properties
 druid.global.http.readTimeout=30s
-druid.global.http.unusedConnectionTimeout=5m
+druid.global.http.unusedConnectionTimeout=25s
 druid.global.http.connectTimeout=PT10S
 druid.server.http.defaultQueryTimeout=30000
 ```

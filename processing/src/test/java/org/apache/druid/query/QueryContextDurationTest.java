@@ -98,4 +98,22 @@ public class QueryContextDurationTest
     Assertions.assertEquals("not-a-duration", context.asMap().get("timeout"));
     Assertions.assertThrows(BadQueryContextException.class, () -> context.getTimeout(0L));
   }
+
+  @Test
+  public void testMinuteDurationOverflowBoundary()
+  {
+    Assertions.assertEquals(
+        9_223_372_020_000L,
+        QueryContext.of(
+            Map.of("timeout", "153722867m")
+        ).getTimeout(0L)
+    );
+
+    Assertions.assertThrows(
+        BadQueryContextException.class,
+        () -> QueryContext.of(
+            Map.of("timeout", "153722868m")
+        ).getTimeout(0L)
+    );
+  }
 }
