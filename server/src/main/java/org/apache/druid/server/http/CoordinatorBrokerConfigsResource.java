@@ -26,6 +26,9 @@ import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.BadQueryContextException;
+import org.apache.druid.query.context.QueryContextConfig;
+import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -53,12 +56,14 @@ public class CoordinatorBrokerConfigsResource
   private final AuditManager auditManager;
   private final AtomicReference<BrokerDynamicConfig> currentConfig;
   private final BrokerDynamicConfigSyncer brokerDynamicConfigSyncer;
+  private final QueryContextConfig queryContextConfig;
 
   @Inject
   public CoordinatorBrokerConfigsResource(
       JacksonConfigManager configManager,
       AuditManager auditManager,
-      BrokerDynamicConfigSyncer brokerDynamicConfigSyncer
+      BrokerDynamicConfigSyncer brokerDynamicConfigSyncer,
+      QueryContextConfig queryContextConfig
   )
   {
     this.configManager = configManager;
@@ -69,6 +74,7 @@ public class CoordinatorBrokerConfigsResource
         BrokerDynamicConfig.builder().build()
     );
     this.brokerDynamicConfigSyncer = brokerDynamicConfigSyncer;
+    this.queryContextConfig = queryContextConfig;
   }
 
   @GET
@@ -89,6 +95,14 @@ public class CoordinatorBrokerConfigsResource
       BrokerDynamicConfig current = currentConfig.get();
       BrokerDynamicConfig newConfig = configBuilder.build(current);
 
+      // Validate the context only when the update changes it.
+      if (!newConfig.getQueryContext().equals(current.getQueryContext())) {
+        QueryContextParameterValidator.validate(
+            newConfig.getQueryContext().asMap(),
+            queryContextConfig.isRejectUnknownParameters()
+        );
+      }
+
       final SetResult setResult = configManager.set(
           BrokerDynamicConfig.CONFIG_KEY,
           newConfig,
@@ -104,7 +118,7 @@ public class CoordinatorBrokerConfigsResource
                        .build();
       }
     }
-    catch (IllegalArgumentException e) {
+    catch (IllegalArgumentException | BadQueryContextException e) {
       return Response.status(Response.Status.BAD_REQUEST)
                      .entity(ServletResourceUtils.sanitizeException(e))
                      .build();

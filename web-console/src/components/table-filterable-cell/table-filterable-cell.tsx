@@ -59,7 +59,7 @@ export const TableFilterableCell = React.memo(function TableFilterableCell(
                   icon={TableFilter.modeToIcon(mode)}
                   text={displayValue ?? value}
                   onClick={() =>
-                    onFiltersChange(filters.addOrUpdate(new TableFilter(field, mode, value)))
+                    onFiltersChange(filters.addOrUpdate(new TableFilter(field, mode, [value])))
                   }
                 />
               ))}

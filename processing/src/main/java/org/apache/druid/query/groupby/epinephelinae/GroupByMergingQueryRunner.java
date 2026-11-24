@@ -262,9 +262,15 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                                       @SuppressWarnings("unused")
                                       Closeable grouperReleaser = grouperHolder.increment()
                                   ) {
-                                    // Return true if OK, false if resources were exhausted.
-                                    return input.run(queryPlusForRunners, responseContext)
-                                                .accumulate(AggregateResult.ok(), accumulator);
+                                    try {
+                                      // Return false if resources were exhausted.
+                                      return input.run(queryPlusForRunners, responseContext)
+                                                  .accumulate(AggregateResult.ok(), accumulator);
+                                    }
+                                    finally {
+                                      // Clear worker references before releasing the grouper and its merge buffer.
+                                      grouper.clearThreadLocalState();
+                                    }
                                   }
                                   catch (QueryInterruptedException | QueryTimeoutException e) {
                                     throw e;

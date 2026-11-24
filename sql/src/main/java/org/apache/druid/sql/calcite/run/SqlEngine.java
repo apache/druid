@@ -24,6 +24,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -36,7 +37,6 @@ import org.apache.druid.sql.http.QueryInfo;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Engine for running SQL queries.
@@ -59,7 +59,7 @@ public interface SqlEngine
    * Validates a provided query context. Returns quietly if the context is OK; throws {@link ValidationException}
    * if the context has a problem.
    */
-  void validateContext(Map<String, Object> queryContext);
+  void validateContext(QueryContext queryContext);
 
   /**
    * SQL row type that would be emitted by the {@link QueryMaker} from {@link #buildQueryMakerForSelect}.
@@ -72,7 +72,7 @@ public interface SqlEngine
   RelDataType resultTypeForSelect(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   );
 
   /**
@@ -86,7 +86,7 @@ public interface SqlEngine
   RelDataType resultTypeForInsert(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   );
 
   /**
@@ -121,10 +121,13 @@ public interface SqlEngine
   ) throws ValidationException;
 
   /**
-   * Enables the engine to make changes to the Context.
+   * Enables the engine to make changes to the context of a statement before it is planned.
+   *
+   * @return the context to plan the statement with
    */
-  default void initContextMap(Map<String, Object> contextMap)
+  default QueryContext initContext(QueryContext context)
   {
+    return context;
   }
 
   /**

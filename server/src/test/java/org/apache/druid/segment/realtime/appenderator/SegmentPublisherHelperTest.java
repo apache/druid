@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.BuildingDimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
@@ -240,16 +241,12 @@ public class SegmentPublisherHelperTest
 
   private static DataSegment newSegment(ShardSpec shardSpec)
   {
-    return new DataSegment(
-        "datasource",
-        Intervals.of("2020-01-01/P1d"),
-        "version",
-        null,
-        ImmutableList.of("dim"),
-        ImmutableList.of("met"),
-        shardSpec,
-        9,
-        10L
-    );
+    return DataSegment.builder(SegmentId.of("datasource", Intervals.of("2020-01-01/P1d"), "version", shardSpec))
+                      .dimensions(ImmutableList.of("dim"))
+                      .metrics(ImmutableList.of("met"))
+                      .shardSpec(shardSpec)
+                      .binaryVersion(9)
+                      .size(10L)
+                      .build();
   }
 }

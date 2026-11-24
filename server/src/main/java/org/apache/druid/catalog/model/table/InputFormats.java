@@ -153,7 +153,7 @@ public class InputFormats
           CatalogUtils.concatLists(
               Arrays.asList(
                   new Parameter(LIST_DELIMITER_PARAMETER, ParameterType.VARCHAR, true),
-                  new Parameter(SKIP_ROWS_PARAMETER, ParameterType.BOOLEAN, true)
+                  new Parameter(SKIP_ROWS_PARAMETER, ParameterType.BIGINT, true)
               ),
               parameters
           )

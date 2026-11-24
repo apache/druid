@@ -620,6 +620,16 @@ class ProjectionsTest
   }
 
   @Test
+  void testGetClusterGroupBundleNameIsInterned()
+  {
+    // loaded segments retain bundle names (cache entries, rule selections, column tables), so every caller must get
+    // the same instance for the same group rather than a fresh copy
+    final String name = Projections.getClusterGroupBundleName(List.of(0, 1));
+    Assertions.assertEquals("__base$0_1", name);
+    Assertions.assertSame(name, Projections.getClusterGroupBundleName(List.of(0, 1)));
+  }
+
+  @Test
   void testIsAllowedClusteringType()
   {
     Assertions.assertTrue(Projections.isAllowedClusteringType(ColumnType.STRING));

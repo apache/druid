@@ -20,9 +20,9 @@
 package org.apache.druid.data.input.protobuf;
 
 import com.google.common.io.Files;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -78,8 +78,8 @@ public class InlineDescriptorProtobufBytesDecoderTest
   public void testBadProto()
   {
     final var ex = assertThrows(
-        ParseException.class,
-        () -> new InlineDescriptorProtobufBytesDecoder(descString, "BadName")
+        DruidException.class,
+        new InlineDescriptorProtobufBytesDecoder(descString, "BadName")::getDescriptor
     );
 
     assertEquals(
@@ -93,7 +93,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
   {
     final var ex = assertThrows(
         IAE.class,
-        () -> new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName")
+        new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName")::getDescriptor
     );
 
     assertEquals(
@@ -106,11 +106,8 @@ public class InlineDescriptorProtobufBytesDecoderTest
   public void testMalformedDescriptorValidBase64InvalidDescriptor()
   {
     final var ex = assertThrows(
-        ParseException.class,
-        () -> new InlineDescriptorProtobufBytesDecoder(
-            "aGVsbG8gd29ybGQ=",
-            "BadName"
-        )
+        DruidException.class,
+        new InlineDescriptorProtobufBytesDecoder("aGVsbG8gd29ybGQ=", "BadName")::getDescriptor
     );
 
     assertEquals(

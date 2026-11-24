@@ -28,6 +28,7 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -147,8 +148,8 @@ public class DruidStatementTest extends CalciteTestBase
     return new DruidJdbcStatement(
         "",
         0,
-        Collections.emptyMap(),
-        Collections.emptyMap(),
+        QueryContext.empty(),
+        QueryContext.empty(),
         sqlStatementFactory,
         new ResultFetcherFactory(AvaticaServerConfig.DEFAULT_FETCH_TIMEOUT_MS)
     );

@@ -43,6 +43,7 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Implementation of {@link LoadableSegment} for regular Druid segments loaded via {@link SegmentManager}.
@@ -61,6 +62,12 @@ public class RegularLoadableSegment implements LoadableSegment
 
   @GuardedBy("this")
   private boolean acquired;
+
+  /**
+   * Row and byte counts recorded when the segment is acquired. They are only added to {@link #inputCounters} by
+   * {@link #countHandedOut()}.
+   */
+  private final AtomicReference<LoadableSegmentUtils.FileCounts> uncountedFile = new AtomicReference<>();
 
   /**
    * Cached DataSegment from local timeline, if available. Null if not in local timeline or if isReindex is true.
@@ -87,7 +94,8 @@ public class RegularLoadableSegment implements LoadableSegment
    * @param segmentManager    segment manager for loading and caching segments
    * @param segmentId         the segment ID to load
    * @param descriptor        segment descriptor for querying
-   * @param inputCounters     optional counters for tracking input, updated at delivery via {@link #countDelivered}
+   * @param inputCounters     optional counters for tracking input. Loads are counted at delivery via
+   *                          {@link #countDelivered}, and files by {@link #countHandedOut()}.
    * @param coordinatorClient optional client for fetching DataSegment from Coordinator when not available locally
    * @param isReindex         true if this is a DML command writing to the same table it's reading from
    */
@@ -147,11 +155,10 @@ public class RegularLoadableSegment implements LoadableSegment
     if (cachedSegment.isPresent()) {
       acquired = true;
 
-      // Update counters inline; the countDelivered hook is only for the acquire() path.
       if (inputCounters != null) {
         final int rowCount = LoadableSegmentUtils.getSegmentRowCount(cachedSegment.get());
         final long byteCount = cachedDataSegment != null ? cachedDataSegment.getSize() : 0;
-        inputCounters.addFile(rowCount, byteCount);
+        uncountedFile.set(new LoadableSegmentUtils.FileCounts(rowCount, byteCount));
       }
     }
     return cachedSegment;
@@ -246,10 +253,19 @@ public class RegularLoadableSegment implements LoadableSegment
     }
   }
 
+  @Override
+  public void countHandedOut()
+  {
+    final LoadableSegmentUtils.FileCounts counts = uncountedFile.getAndSet(null);
+    if (counts != null && inputCounters != null) {
+      inputCounters.addFile(counts.rows(), counts.bytes());
+    }
+  }
+
   /**
    * Counter accounting for a delivered acquire, installed on the returned action via
    * {@link AcquireSegmentAction#setOnRelease} so it runs exactly once, inside a successful
-   * {@link AcquireSegmentAction#release()}.
+   * {@link AcquireSegmentAction#release()}. Counts the load, and records the file for {@link #countHandedOut()}.
    */
   private void countDelivered(AcquireSegmentResult result)
   {
@@ -259,8 +275,8 @@ public class RegularLoadableSegment implements LoadableSegment
     inputCounters.addLoad(result);
     final int rowCount = result.getSegment().map(LoadableSegmentUtils::getSegmentRowCount).orElse(0);
     final DataSegment sizeSource = cachedDataSegment != null ? cachedDataSegment : fetchedDataSegment;
-    // Parity with the old countedLoad: addFile fires even for an empty delivery, with rowCount 0.
-    inputCounters.addFile(rowCount, sizeSource == null ? 0 : sizeSource.getSize());
+    // Parity with the old countedLoad: an empty delivery still counts as a file, with rowCount 0.
+    uncountedFile.set(new LoadableSegmentUtils.FileCounts(rowCount, sizeSource == null ? 0 : sizeSource.getSize()));
   }
 
   /**

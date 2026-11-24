@@ -86,12 +86,15 @@ public class OutboxImpl<MessageType> implements Outbox<MessageType>
       return Futures.immediateCancelledFuture();
     }
 
-    final OutboxQueue<MessageType> queue = queues.computeIfAbsent(clientHost, id -> new OutboxQueue<>());
-    if (epoch != queue.epoch && epoch != MessageRelay.INIT) {
+    final OutboxQueue<MessageType> queue = queues.computeIfAbsent(clientHost, _ -> new OutboxQueue<>());
+    if (epoch == MessageRelay.INIT) {
+      // Respond right away, even if there are no messages, so the client can see the current epoch.
+      return queue.getMessages(startWatermark, false);
+    } else if (epoch != queue.epoch) {
       return Futures.immediateFuture(new MessageBatch<>(Collections.emptyList(), queue.epoch, 0));
+    } else {
+      return queue.getMessages(startWatermark, true);
     }
-
-    return queue.getMessages(startWatermark);
   }
 
   @Override
@@ -156,7 +159,14 @@ public class OutboxImpl<MessageType> implements Outbox<MessageType>
       return pendingFutures.register(future);
     }
 
-    ListenableFuture<MessageBatch<T>> getMessages(final long newStartWatermark)
+    /**
+     * Acknowledges messages below {@code newStartWatermark}, then returns the next batch.
+     *
+     * @param newStartWatermark acknowledgement watermark; messages below this (but not including it) are acked
+     * @param wait if true, return a future that resolves when at least one message is available. If false, returns
+     *             a future that is immediately resolved even if no messages are available.
+     */
+    ListenableFuture<MessageBatch<T>> getMessages(final long newStartWatermark, final boolean wait)
     {
       synchronized (this) {
         // Ack and drain all messages up to startWatermark.
@@ -166,7 +176,7 @@ public class OutboxImpl<MessageType> implements Outbox<MessageType>
           message.lhs.set(null);
         }
 
-        if (queue.isEmpty()) {
+        if (queue.isEmpty() && wait) {
           // Send next batch when a message is available.
           if (messageAvailableFuture.isDone()) {
             messageAvailableFuture = SettableFuture.create();

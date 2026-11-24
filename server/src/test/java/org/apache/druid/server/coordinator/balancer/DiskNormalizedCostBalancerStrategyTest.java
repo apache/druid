@@ -31,6 +31,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -127,17 +128,13 @@ public class DiskNormalizedCostBalancerStrategyTest
   public static DataSegment getSegment(int index, String dataSource, Interval interval, long size)
   {
     // Not using EasyMock as it hampers the performance of multithreads.
-    DataSegment segment = new DataSegment(
-        dataSource,
-        interval,
-        String.valueOf(index),
-        new ConcurrentHashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        null,
-        0,
-        size
-    );
+    DataSegment segment = DataSegment.builder(SegmentId.of(dataSource, interval, String.valueOf(index), 0))
+                                     .loadSpec(new ConcurrentHashMap<>())
+                                     .dimensions(new ArrayList<>())
+                                     .metrics(new ArrayList<>())
+                                     .binaryVersion(0)
+                                     .size(size)
+                                     .build();
     return segment;
   }
 

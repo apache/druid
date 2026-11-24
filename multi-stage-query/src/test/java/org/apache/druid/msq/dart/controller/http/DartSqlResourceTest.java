@@ -61,6 +61,7 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.DruidNode;
@@ -237,7 +238,7 @@ public class DartSqlResourceTest extends MSQTestBase
           @Override
           public String queryId()
           {
-            return getQueryContext().getString(QueryContextParameters.DART_QUERY_ID.getName());
+            return getQueryContext().get(QueryContextParameters.DART_QUERY_ID);
           }
 
           @Override
@@ -274,7 +275,8 @@ public class DartSqlResourceTest extends MSQTestBase
         new ServerConfig(),
         new DefaultQueryConfig(ImmutableMap.of("foo", "bar")),
         toolbox,
-        dartSqlClients
+        dartSqlClients,
+        QueryContextConfig.DEFAULT
     );
 
     sqlResource = new SqlResource(
@@ -288,7 +290,8 @@ public class DartSqlResourceTest extends MSQTestBase
             SELF_NODE
         ),
         DefaultQueryConfig.NIL,
-        new ServerConfig()
+        new ServerConfig(),
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
     );
 
     // Setup mocks

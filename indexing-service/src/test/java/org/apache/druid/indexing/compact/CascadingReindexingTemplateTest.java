@@ -52,6 +52,7 @@ import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfi
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -1746,10 +1747,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
   private SegmentTimeline createTestTimeline(DateTime start, DateTime end)
   {
-    DataSegment segment = DataSegment.builder()
-        .dataSource("testDS")
-        .interval(new Interval(start, end))
-        .version("v1")
+    DataSegment segment = DataSegment.builder(SegmentId.of("testDS", new Interval(start, end), "v1", 0))
         .size(1000)
         .build();
     return SegmentTimeline.forSegments(Collections.singletonList(segment));

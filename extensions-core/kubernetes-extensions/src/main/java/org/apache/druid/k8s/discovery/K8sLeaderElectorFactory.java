@@ -38,4 +38,9 @@ interface K8sLeaderElector
 {
   String getCurrentLeader();
   void run(Runnable startLeadingHook, Runnable stopLeadingHook);
+
+  /**
+   * Stops this elector permanently and, if it holds the lock, releases it.
+   */
+  void close();
 }

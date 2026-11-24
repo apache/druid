@@ -25,7 +25,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import javax.annotation.Nullable;
@@ -46,7 +46,7 @@ import java.util.TreeSet;
  */
 public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufBytesDecoder
 {
-  private Descriptors.Descriptor descriptor;
+  private volatile Descriptors.Descriptor descriptor;
 
   /**
    * An optional message Protobuf message type in the descriptor. Both short name and fully qualified name are accepted.
@@ -71,15 +71,30 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
 
   public Descriptors.Descriptor getDescriptor()
   {
+    if (descriptor == null) {
+      initializeDescriptor();
+    }
     return descriptor;
   }
 
+  /**
+   * Loads the descriptor on first use. Subclasses may do I/O here, so it should not be called from a
+   * {@link com.fasterxml.jackson.annotation.JsonCreator} constructor.
+   */
   @VisibleForTesting
-  void initializeDescriptor()
+  synchronized void initializeDescriptor()
   {
     if (this.descriptor == null) {
-      final var descriptorSet = loadFileDescriptorSet();
-      this.descriptor = buildMessageDescriptor(descriptorSet);
+      try {
+        final var descriptorSet = loadFileDescriptorSet();
+        this.descriptor = buildMessageDescriptor(descriptorSet);
+      }
+      catch (ParseException e) {
+        // Not a ParseException: a bad descriptor must fail the task, not be counted as unparseable rows.
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build(e, "%s", e.getMessage());
+      }
     }
   }
 
@@ -89,10 +104,7 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
   @Override
   public DynamicMessage parse(ByteBuffer bytes)
   {
-    if (descriptor == null) {
-      throw new IAE("Descriptor needs to be initialized before parsing");
-    }
-
+    final Descriptors.Descriptor descriptor = getDescriptor();
     try {
       return DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(bytes));
     }

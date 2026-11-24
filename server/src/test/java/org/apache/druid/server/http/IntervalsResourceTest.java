@@ -28,6 +28,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterEach;
@@ -58,43 +59,22 @@ public class IntervalsResourceTest
 
     dataSegmentList = new ArrayList<>();
     dataSegmentList.add(
-        new DataSegment(
-            "datasource1",
-            Intervals.of("2010-01-01T00:00:00.000Z/P1D"),
-            "",
-            null,
-            null,
-            null,
-            null,
-            0x9,
-            20
-        )
+        DataSegment.builder(SegmentId.of("datasource1", Intervals.of("2010-01-01T00:00:00.000Z/P1D"), "", 0))
+                   .binaryVersion(0x9)
+                   .size(20)
+                   .build()
     );
     dataSegmentList.add(
-        new DataSegment(
-            "datasource1",
-            Intervals.of("2010-01-22T00:00:00.000Z/P1D"),
-            "",
-            null,
-            null,
-            null,
-            null,
-            0x9,
-            10
-        )
+        DataSegment.builder(SegmentId.of("datasource1", Intervals.of("2010-01-22T00:00:00.000Z/P1D"), "", 0))
+                   .binaryVersion(0x9)
+                   .size(10)
+                   .build()
     );
     dataSegmentList.add(
-        new DataSegment(
-            "datasource2",
-            Intervals.of("2010-01-01T00:00:00.000Z/P1D"),
-            "",
-            null,
-            null,
-            null,
-            null,
-            0x9,
-            5
-        )
+        DataSegment.builder(SegmentId.of("datasource2", Intervals.of("2010-01-01T00:00:00.000Z/P1D"), "", 0))
+                   .binaryVersion(0x9)
+                   .size(5)
+                   .build()
     );
     server = new DruidServer("who", "host", null, 1234, null, ServerType.HISTORICAL, "tier1", 0);
     server.addDataSegment(dataSegmentList.get(0));

@@ -73,3 +73,20 @@ Consider the following example input JSON:
   `$['y']` -> `[1, 2, 3]`
 - For a key that contains an array, to return an item in the array:<br />
   `$.y[1]` -> `2`
+
+### Colon path syntax
+
+You can write `expr:path` as shorthand for `JSON_VALUE(expr, '$.path')`. The path after the colon uses the same elements as JSONPath, without the leading `$`:
+
+|Shorthand|Equivalent|
+| --- | --- |
+|`expr:x`| `JSON_VALUE(expr, '$.x')` |
+|`expr:x.y`| `JSON_VALUE(expr, '$.x.y')` |
+|`expr:['x']`| `JSON_VALUE(expr, '$[''x'']')` |
+|`expr:x[1]`| `JSON_VALUE(expr, '$.x[1]')` |
+
+Use bracket notation or a double-quoted identifier, such as `expr:"array"`, for field names that are reserved keywords or contain special characters.
+
+To specify a return type, cast the result, such as `expr:x::BIGINT` or `CAST(expr:x AS BIGINT)`.
+
+When a select item is a colon path ending in a field name, such as `expr:x.y`, the output column is named after the last field (`y`), unless the select list contains `*` or if the name would duplicate another output column's name.

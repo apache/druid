@@ -33,11 +33,14 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.jackson.GranularityModule;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CompressionUtils;
@@ -52,9 +55,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -137,17 +142,14 @@ public class HdfsDataSegmentPusherTest
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
-    DataSegment segmentToPush = new DataSegment(
-        "foo",
-        Intervals.of("2015/2016"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        size
-    );
+    DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                           .loadSpec(new HashMap<>())
+                                           .dimensions(new ArrayList<>())
+                                           .metrics(new ArrayList<>())
+                                           .shardSpec(NoneShardSpec.instance())
+                                           .binaryVersion(0)
+                                           .size(size)
+                                           .build();
 
     DataSegment segment = pusher.push(segmentDir, segmentToPush, true);
 
@@ -178,17 +180,14 @@ public class HdfsDataSegmentPusherTest
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
-    DataSegment segmentToPush = new DataSegment(
-        "foo",
-        Intervals.of("2015/2016"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        size
-    );
+    DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                           .loadSpec(new HashMap<>())
+                                           .dimensions(new ArrayList<>())
+                                           .metrics(new ArrayList<>())
+                                           .shardSpec(NoneShardSpec.instance())
+                                           .binaryVersion(0)
+                                           .size(size)
+                                           .build();
 
     final String storageDirSuffix = "shuffle-data/index_parallel_session_analysis_test_bkdhhedd_2023-09-08T03:18:21.121Z/2023-08-29T16:00:00.000Z/2023-08-29T17:00:00.000Z";
     DataSegment segment = pusher.pushToPath(segmentDir, segmentToPush, storageDirSuffix);
@@ -215,27 +214,28 @@ public class HdfsDataSegmentPusherTest
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
     final File storageDirectory = tempFolder.newFolder();
 
-    config.setCompressionFormat(format);
     config.setStorageDirectory(
         scheme != null
         ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
         : storageDirectory.getAbsolutePath()
     );
 
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
+        config,
+        conf,
+        null,
+        new DeepStorageSegmentConfig(null, format)
+    );
 
     for (int i = 0; i < numberOfSegments; i++) {
-      segments[i] = new DataSegment(
-          "foo",
-          Intervals.of("2015/2016"),
-          "0",
-          new HashMap<>(),
-          new ArrayList<>(),
-          new ArrayList<>(),
-          new NumberedShardSpec(i, i),
-          0,
-          size
-      );
+      segments[i] = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", i))
+                               .loadSpec(new HashMap<>())
+                               .dimensions(new ArrayList<>())
+                               .metrics(new ArrayList<>())
+                               .shardSpec(new NumberedShardSpec(i, i))
+                               .binaryVersion(0)
+                               .size(size)
+                               .build();
     }
 
     for (int i = 0; i < numberOfSegments; i++) {
@@ -322,17 +322,14 @@ public class HdfsDataSegmentPusherTest
     );
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
-    DataSegment segmentToPush = new DataSegment(
-        "foo",
-        Intervals.of("2015/2016"),
-        "0",
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        size
-    );
+    DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                           .loadSpec(new HashMap<>())
+                                           .dimensions(new ArrayList<>())
+                                           .metrics(new ArrayList<>())
+                                           .shardSpec(NoneShardSpec.instance())
+                                           .binaryVersion(0)
+                                           .size(size)
+                                           .build();
 
     DataSegment segment = pusher.push(segmentDir, segmentToPush, false);
 
@@ -425,21 +422,219 @@ public class HdfsDataSegmentPusherTest
     Interval interval = Intervals.of("2011-10-01/2011-10-02");
     ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
 
-    DataSegment segment = new DataSegment(
-        "something",
-        interval,
-        "brand:new:version",
-        loadSpec,
-        Arrays.asList("dim1", "dim2"),
-        Arrays.asList("met1", "met2"),
-        NoneShardSpec.instance(),
-        null,
-        1
-    );
+    DataSegment segment = DataSegment.builder(SegmentId.of("something", interval, "brand:new:version", 0))
+                                     .loadSpec(loadSpec)
+                                     .dimensions(Arrays.asList("dim1", "dim2"))
+                                     .metrics(Arrays.asList("met1", "met2"))
+                                     .shardSpec(NoneShardSpec.instance())
+                                     .binaryVersion(null)
+                                     .size(1)
+                                     .build();
 
     String storageDir = hdfsDataSegmentPusher.getStorageDir(segment, false);
     Assertions.assertEquals("something/20111001T000000.000Z_20111002T000000.000Z/brand_new_version", storageDir);
 
   }
 
+  @Test
+  public void testPushNoneDirectorySegment() throws Exception
+  {
+    final Configuration conf = new Configuration(true);
+
+    final File segmentDir = tempFolder.newFolder();
+    final File tmp1 = new File(segmentDir, "version.bin");
+    final File tmp2 = new File(segmentDir, "index.smoosh");
+    final byte[] data1 = new byte[]{0x0, 0x0, 0x0, 0x1};
+    final byte[] data2 = new byte[]{0x1, 0x2, 0x3, 0x4, 0x5};
+    Files.write(data1, tmp1);
+    Files.write(data2, tmp2);
+    final long expectedSize = data1.length + data2.length;
+
+    final HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
+    final File storageDirectory = tempFolder.newFolder();
+    config.setStorageDirectory(storageDirectory.getAbsolutePath());
+
+    final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
+        config,
+        conf,
+        null,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+
+    final DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                                 .loadSpec(new HashMap<>())
+                                                 .dimensions(new ArrayList<>())
+                                                 .metrics(new ArrayList<>())
+                                                 .shardSpec(NoneShardSpec.instance())
+                                                 .binaryVersion(0)
+                                                 .size(expectedSize)
+                                                 .build();
+
+    final DataSegment pushedSegment = pusher.push(segmentDir, segmentToPush, false);
+
+    Assertions.assertEquals(expectedSize, pushedSegment.getSize());
+    Assertions.assertEquals(segmentToPush, pushedSegment);
+
+    final String pathUri = pushedSegment.getLoadSpec().get("path").toString();
+    Assertions.assertTrue(pathUri.endsWith("/0_index"), pathUri);
+
+    final File segmentOutDir = new File(
+        StringUtils.format(
+            "%s/%s/%d_index",
+            storageDirectory,
+            pusher.getStorageDir(pushedSegment, false),
+            pushedSegment.getShardSpec().getPartitionNum()
+        )
+    );
+    Assertions.assertTrue(segmentOutDir.exists());
+    Assertions.assertTrue(segmentOutDir.isDirectory());
+    Assertions.assertTrue(new File(segmentOutDir, "version.bin").exists());
+    Assertions.assertTrue(new File(segmentOutDir, "index.smoosh").exists());
+
+    // Pull directory segment and verify contents
+    final HdfsDataSegmentPuller puller = new HdfsDataSegmentPuller(conf);
+    final File pullTargetDir = tempFolder.newFolder();
+    puller.getSegmentFiles(new Path(pathUri), pullTargetDir);
+    Assertions.assertTrue(new File(pullTargetDir, "version.bin").exists());
+    Assertions.assertTrue(new File(pullTargetDir, "index.smoosh").exists());
+    Assertions.assertArrayEquals(data1, Files.toByteArray(new File(pullTargetDir, "version.bin")));
+    Assertions.assertArrayEquals(data2, Files.toByteArray(new File(pullTargetDir, "index.smoosh")));
+  }
+
+  @Test
+  public void testPushNoneWithUniquePath() throws Exception
+  {
+    final Configuration conf = new Configuration(true);
+
+    final File segmentDir = tempFolder.newFolder();
+    final File tmp = new File(segmentDir, "version.bin");
+    final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
+    Files.write(data, tmp);
+
+    final HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
+    final File storageDirectory = tempFolder.newFolder();
+    config.setStorageDirectory(storageDirectory.getAbsolutePath());
+
+    final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
+        config,
+        conf,
+        null,
+        new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+
+    final DataSegment segmentToPush = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+                                                 .loadSpec(new HashMap<>())
+                                                 .dimensions(new ArrayList<>())
+                                                 .metrics(new ArrayList<>())
+                                                 .shardSpec(NoneShardSpec.instance())
+                                                 .binaryVersion(0)
+                                                 .size(data.length)
+                                                 .build();
+
+    final DataSegment pushedSegment = pusher.push(segmentDir, segmentToPush, true);
+
+    final Pattern pattern =
+        Pattern.compile(".*/foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0_[A-Za-z0-9-]{36}_index");
+    Assertions.assertTrue(
+        pattern.matcher(pushedSegment.getLoadSpec().get("path").toString()).matches(),
+        pushedSegment.getLoadSpec().get("path").toString()
+    );
+  }
+
+  @Test
+  public void testPushUnsupportedFormatThrows()
+  {
+    final HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
+    config.setStorageDirectory("/tmp");
+    final Configuration conf = new Configuration(true);
+
+    Assertions.assertThrows(
+        IAE.class,
+        () -> new HdfsDataSegmentPusher(
+            config,
+            conf,
+            null,
+            new DeepStorageSegmentConfig(null, CompressionUtils.Format.SNAPPY)
+        )
+    );
+  }
+
+  @Test
+  public void testPushToPathWithNoneAndDirectorySuffixEndingInIndex() throws Exception
+  {
+    final Configuration conf = new Configuration(true);
+    final File segmentDir = tempFolder.newFolder();
+    Files.write(new byte[]{0x0, 0x0, 0x0, 0x9}, new File(segmentDir, "version.bin"));
+
+    final HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
+    final File storageDirectory = tempFolder.newFolder();
+    config.setStorageDirectory(storageDirectory.getAbsolutePath());
+
+    final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
+      config,
+      conf,
+      null,
+      new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+
+    final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+      .loadSpec(new HashMap<>())
+      .dimensions(new ArrayList<>())
+      .metrics(new ArrayList<>())
+      .shardSpec(new NumberedShardSpec(0, 0))
+      .binaryVersion(0)
+      .size(3)
+      .build();
+
+    final String suffix = "some-directory/index";
+    final DataSegment pushed = pusher.pushToPath(segmentDir, segment, suffix);
+
+    final String path = Objects.requireNonNull(pushed.getLoadSpec()).get("path").toString();
+    Assertions.assertTrue(path.endsWith("some-directory/index/0_index"), path);
+    Assertions.assertTrue(new File(URI.create(path).getPath()).isDirectory());
+  }
+
+  @Test
+  public void testPushNoneCleansUpTempDirectoryWhenInputListingFails() throws Exception
+  {
+    final Configuration conf = new Configuration(true);
+    final File invalidSegmentDir = tempFolder.newFile();
+
+    final HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
+    final File storageDirectory = tempFolder.newFolder();
+    config.setStorageDirectory(storageDirectory.getAbsolutePath());
+
+    final HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(
+      config,
+      conf,
+      null,
+      new DeepStorageSegmentConfig(null, CompressionUtils.Format.NONE)
+    );
+
+    final DataSegment segment = DataSegment.builder(SegmentId.of("foo", Intervals.of("2015/2016"), "0", 0))
+      .loadSpec(new HashMap<>())
+      .dimensions(new ArrayList<>())
+      .metrics(new ArrayList<>())
+      .shardSpec(new NumberedShardSpec(0, 0))
+      .binaryVersion(0)
+      .size(0)
+      .build();
+
+    final FileSystem fs = FileSystem.getLocal(conf);
+    final Path storagePath = fs.makeQualified(new Path(storageDirectory.getAbsolutePath()));
+
+    assertThrows(
+      IOException.class,
+      () -> pusher.push(invalidSegmentDir, segment, false)
+    );
+
+    final Path dataSourcePath = new Path(storagePath, segment.getDataSource());
+    if (fs.exists(dataSourcePath)) {
+      Assertions.assertEquals(
+        0,
+        fs.listStatus(dataSourcePath).length,
+        "Temporary HDFS directory (UUID folder) should be cleaned up"
+      );
+    }
+  }
 }

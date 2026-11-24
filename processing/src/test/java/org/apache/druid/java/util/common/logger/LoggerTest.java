@@ -146,15 +146,10 @@ public class LoggerTest
     final DateTime end = DateTimes.of("2012-01-02");
     final String version = DateTimes.of("2020-02-02").toString();
     return IntStream.range(0, numSegments)
-                    .mapToObj(segmentNum -> DataSegment.builder()
-                                                       .dataSource("someDataSource")
-                                                       .interval(
-                                                           new Interval(
+                    .mapToObj(segmentNum -> DataSegment.builder(SegmentId.of("someDataSource", new Interval(
                                                                start.plusDays(segmentNum),
                                                                end.plusDays(segmentNum + 1)
-                                                           )
-                                                       )
-                                                       .version(version)
+                                                           ), version, 0))
                                                        .size(1)
                                                        .build());
 

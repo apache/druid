@@ -41,7 +41,9 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.utils.CloseableUtils;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -60,6 +62,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWorkerClient
 {
   private static final Logger log = new Logger(DartWorkerClientImpl.class);
+
+  /**
+   * Timeout for controller-to-worker requests other than {@link #stopWorker}.
+   */
+  static final Duration CONTROLLER_REQUEST_TIMEOUT = Duration.standardSeconds(60);
+
+  /**
+   * Timeout for {@link #stopWorker}. Shorter than {@link #CONTROLLER_REQUEST_TIMEOUT}, since workers that
+   * miss their stop request are canceled by syncs anyway.
+   */
+  static final Duration STOP_WORKER_TIMEOUT = Duration.standardSeconds(10);
 
   private final String queryId;
   private final ServiceClientFactory clientFactory;
@@ -100,13 +113,12 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
     this.controllerHost = controllerHost;
 
     if (controllerHost == null) {
-      // worker -> worker client. Retry HTTP 503 in case worker A starts up before worker B, and needs to
-      // contact it immediately.
-      this.retryPolicy = new DartWorkerRetryPolicy(true);
+      // worker -> worker client, which retries as long as the query is running.
+      this.retryPolicy = new DartWorkerRetryPolicy();
     } else {
-      // controller -> worker client. Do not retry any HTTP error codes. If we retry HTTP 503 for controller -> worker,
-      // we can get stuck trying to contact workers that have exited.
-      this.retryPolicy = new DartWorkerRetryPolicy(false);
+      // controller -> worker client, which does not retry. Lost workers fail the query either way, and retries would
+      // only delay the failure.
+      this.retryPolicy = StandardRetryPolicy.noRetries();
     }
   }
 
@@ -181,9 +193,21 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
     }
 
     return getClient(workerId).asyncRequest(
-        new RequestBuilder(HttpMethod.POST, "/stop"),
+        newRequest(HttpMethod.POST, "/stop").timeout(STOP_WORKER_TIMEOUT),
         IgnoreHttpResponseHandler.INSTANCE
     );
+  }
+
+  @Override
+  protected RequestBuilder newRequest(final HttpMethod method, final String encodedPathAndQueryString)
+  {
+    final RequestBuilder requestBuilder = super.newRequest(method, encodedPathAndQueryString);
+
+    if (controllerHost != null) {
+      requestBuilder.timeout(CONTROLLER_REQUEST_TIMEOUT);
+    }
+
+    return requestBuilder;
   }
 
   /**

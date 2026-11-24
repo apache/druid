@@ -1570,32 +1570,19 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
   private static DataSegment newSegment(Interval interval, String version)
   {
-    return new DataSegment(
-        DATA_SOURCE,
-        interval,
-        version,
-        null,
-        null,
-        null,
-        null,
-        9,
-        10L
-    );
+    return DataSegment.builder(SegmentId.of(DATA_SOURCE, interval, version, 0))
+                      .binaryVersion(9)
+                      .size(10L)
+                      .build();
   }
 
   private static DataSegment newSegment(Interval interval, String version, Map<String, Object> loadSpec)
   {
-    return new DataSegment(
-        DATA_SOURCE,
-        interval,
-        version,
-        loadSpec,
-        null,
-        null,
-        null,
-        9,
-        10L
-    );
+    return DataSegment.builder(SegmentId.of(DATA_SOURCE, interval, version, 0))
+                      .loadSpec(loadSpec)
+                      .binaryVersion(9)
+                      .size(10L)
+                      .build();
   }
 
   private void insertUsedSegments(Set<DataSegment> segments, Map<String, String> upgradedFromSegmentIdMap)

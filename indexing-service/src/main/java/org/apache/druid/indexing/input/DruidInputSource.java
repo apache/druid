@@ -448,6 +448,13 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   }
 
   @Override
+  public boolean isSplittable()
+  {
+    // An explicit segment list is returned as a single split by createSplits().
+    return segmentIds == null;
+  }
+
+  @Override
   public SplittableInputSource<List<WindowedSegmentId>> withSplit(InputSplit<List<WindowedSegmentId>> split)
   {
     return new DruidInputSource(

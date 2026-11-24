@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.autoscaling;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -733,6 +734,130 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
+  public void testProvisioningWithoutWorkerVersion()
+  {
+    config.setWorkerVersion(null);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(2).anyTimes();
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).anyTimes();
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject())).andReturn(new ArrayList<>()).anyTimes();
+    EasyMock.expect(autoScaler.provision()).andReturn(new AutoScalingData(Collections.singletonList("fake")));
+    final HttpRemoteTaskRunner runner = EasyMock.createMock(HttpRemoteTaskRunner.class);
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(Collections.singletonList(NoopTask.create()));
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        Collections.singletonList(workerWithTask(testTask, "http", "h1", "n1", INVALID_VERSION))
+    );
+    EasyMock.expect(runner.getConfig()).andReturn(new HttpRemoteTaskRunnerConfig()).anyTimes();
+    EasyMock.replay(runner, autoScaler);
+
+    final Provisioner provisioner = strategy.makeProvisioner(runner);
+
+    Assertions.assertTrue(provisioner.doProvision());
+    Assertions.assertEquals(ScalingStats.EVENT.PROVISION, provisioner.getStats().toList().get(0).getEvent());
+    EasyMock.verify(autoScaler, runner);
+  }
+
+  @Test
+  public void testTerminatingWithoutWorkerVersion()
+  {
+    config.setWorkerVersion(null);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).anyTimes();
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject())).andReturn(new ArrayList<>()).anyTimes();
+    EasyMock.expect(autoScaler.terminate(EasyMock.anyObject())).andReturn(new AutoScalingData(new ArrayList<>()));
+    final HttpRemoteTaskRunner runner = EasyMock.createMock(HttpRemoteTaskRunner.class);
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        ImmutableList.of(
+            workerWithTask(testTask, "http", "h1", "n1", INVALID_VERSION),
+            workerWithTask(testTask, "http", "h2", "n2", INVALID_VERSION)
+        )
+    ).anyTimes();
+    EasyMock.expect(runner.getConfig()).andReturn(new HttpRemoteTaskRunnerConfig()).anyTimes();
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.eq(1)))
+            .andReturn(Collections.singletonList(workerWithTask(testTask).getWorker()));
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(new ArrayList<>());
+    EasyMock.replay(runner, autoScaler);
+
+    final Provisioner provisioner = strategy.makeProvisioner(runner);
+
+    Assertions.assertTrue(provisioner.doTerminate());
+    Assertions.assertEquals(ScalingStats.EVENT.TERMINATE, provisioner.getStats().toList().get(0).getEvent());
+    EasyMock.verify(autoScaler, runner);
+  }
+
+  @Test
+  public void testProvisioningWithoutWorkerVersionUsesRunnerMinWorkerVersion()
+  {
+    // A rolling update: the runner no longer assigns tasks to the old worker, so it must not fill the only slot.
+    config.setWorkerVersion(null);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).anyTimes();
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(1).anyTimes();
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject())).andReturn(new ArrayList<>()).anyTimes();
+    EasyMock.expect(autoScaler.provision()).andReturn(new AutoScalingData(Collections.singletonList("fake")));
+    final HttpRemoteTaskRunner runner = EasyMock.createMock(HttpRemoteTaskRunner.class);
+    EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(Collections.singletonList(NoopTask.create()));
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        Collections.singletonList(workerWithTask(testTask, "http", "h1", "n1", INVALID_VERSION))
+    );
+    EasyMock.expect(runner.getConfig()).andReturn(runnerConfigWithMinWorkerVersion(MIN_VERSION)).anyTimes();
+    EasyMock.replay(runner, autoScaler);
+
+    final Provisioner provisioner = strategy.makeProvisioner(runner);
+
+    Assertions.assertTrue(provisioner.doProvision());
+    Assertions.assertEquals(ScalingStats.EVENT.PROVISION, provisioner.getStats().toList().get(0).getEvent());
+    EasyMock.verify(autoScaler, runner);
+  }
+
+  @Test
+  public void testTerminatingWithoutWorkerVersionUsesRunnerMinWorkerVersion()
+  {
+    config.setWorkerVersion(null);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).anyTimes();
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject())).andReturn(new ArrayList<>()).anyTimes();
+    EasyMock.expect(autoScaler.terminate(EasyMock.anyObject())).andReturn(new AutoScalingData(new ArrayList<>()));
+    final HttpRemoteTaskRunner runner = EasyMock.createMock(HttpRemoteTaskRunner.class);
+    EasyMock.expect(runner.getWorkers()).andReturn(
+        Collections.singletonList(workerWithTask(testTask, "http", "h1", "n1", INVALID_VERSION))
+    ).anyTimes();
+    EasyMock.expect(runner.getConfig()).andReturn(runnerConfigWithMinWorkerVersion(MIN_VERSION)).anyTimes();
+    // the old worker is invalid, so it can be terminated even though it is the only worker
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.eq(1)))
+            .andReturn(Collections.singletonList(workerWithTask(testTask).getWorker()));
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(new ArrayList<>());
+    EasyMock.replay(runner, autoScaler);
+
+    final Provisioner provisioner = strategy.makeProvisioner(runner);
+
+    Assertions.assertTrue(provisioner.doTerminate());
+    Assertions.assertEquals(ScalingStats.EVENT.TERMINATE, provisioner.getStats().toList().get(0).getEvent());
+    EasyMock.verify(autoScaler, runner);
+  }
+
+  @Test
+  public void testValidWorkerPredicateWithoutWorkerVersion()
+  {
+    config.setWorkerVersion(null);
+    final HttpRemoteTaskRunner runner = EasyMock.createMock(HttpRemoteTaskRunner.class);
+    EasyMock.expect(runner.getConfig()).andReturn(new HttpRemoteTaskRunnerConfig()).times(2);
+    EasyMock.expect(runner.getConfig()).andReturn(runnerConfigWithMinWorkerVersion(MIN_VERSION)).times(2);
+    EasyMock.replay(runner);
+    final Predicate<ImmutableWorkerInfo> isValid = ProvisioningUtil.createValidWorkerPredicate(config, runner);
+    final ImmutableWorkerInfo disabledWorker = ImmutableWorkerInfo.fromWorkerAnnouncements(
+        new Worker("http", "h1", "n1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY, true),
+        ImmutableMap.of(),
+        DateTimes.EPOCH,
+        null
+    );
+
+    // the runner's default minWorkerVersion is "0"
+    Assertions.assertTrue(isValid.apply(workerWithTask(testTask, "http", "h1", "n1", INVALID_VERSION)));
+    Assertions.assertFalse(isValid.apply(disabledWorker));
+
+    Assertions.assertFalse(isValid.apply(workerWithTask(testTask, "http", "h1", "n1", INVALID_VERSION)));
+    Assertions.assertTrue(isValid.apply(workerWithTask(testTask, "http", "h1", "n1", MIN_VERSION, 1)));
+    EasyMock.verify(runner);
+  }
+
+  @Test
   public void testSomethingTerminating()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(1).times(3);
@@ -915,6 +1040,18 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     EasyMock.verify(autoScaler);
     EasyMock.verify(runner);
+  }
+
+  private static HttpRemoteTaskRunnerConfig runnerConfigWithMinWorkerVersion(String minWorkerVersion)
+  {
+    return new HttpRemoteTaskRunnerConfig()
+    {
+      @Override
+      public String getMinWorkerVersion()
+      {
+        return minWorkerVersion;
+      }
+    };
   }
 
   private static ImmutableWorkerInfo workerWithTask(Task task)

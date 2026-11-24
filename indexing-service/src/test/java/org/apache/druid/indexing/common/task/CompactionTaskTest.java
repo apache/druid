@@ -285,17 +285,14 @@ public class CompactionTaskTest
 
     for (int i = 0; i < SEGMENT_INTERVALS.size(); i++) {
       SEGMENT_MAP.put(
-          new DataSegment(
-              DATA_SOURCE,
-              SEGMENT_INTERVALS.get(i),
-              "version_" + i,
-              Map.of(),
-              findDimensions(i, SEGMENT_INTERVALS.get(i)),
-              AGGREGATORS.stream().map(AggregatorFactory::getName).collect(Collectors.toList()),
-              new NumberedShardSpec(0, 1),
-              0,
-              SEGMENT_SIZE_BYTES
-          ),
+          DataSegment.builder(SegmentId.of(DATA_SOURCE, SEGMENT_INTERVALS.get(i), "version_" + i, 0))
+                     .loadSpec(Map.of())
+                     .dimensions(findDimensions(i, SEGMENT_INTERVALS.get(i)))
+                     .metrics(AGGREGATORS.stream().map(AggregatorFactory::getName).collect(Collectors.toList()))
+                     .shardSpec(new NumberedShardSpec(0, 1))
+                     .binaryVersion(0)
+                     .size(SEGMENT_SIZE_BYTES)
+                     .build(),
           new File("file_" + i)
       );
     }
@@ -2893,10 +2890,7 @@ public class CompactionTaskTest
     Mockito.lenient().when(index.getAvailableDimensions()).thenReturn(new ListIndexed<>());
     Mockito.lenient().when(index.getProjectionQueryableIndex(ArgumentMatchers.anyString())).thenReturn(projectionIndex);
 
-    final DataSegment segment = DataSegment.builder()
-                                           .dataSource(DATA_SOURCE)
-                                           .interval(interval)
-                                           .version("version")
+    final DataSegment segment = DataSegment.builder(SegmentId.of(DATA_SOURCE, interval, "version", 0))
                                            .size(SEGMENT_SIZE_BYTES)
                                            .build();
     return Pair.of(segment, () -> new ReferenceCountingResourceHolder<>(index, () -> {}));
@@ -2914,10 +2908,7 @@ public class CompactionTaskTest
     Mockito.lenient().when(index.getMetadata())
            .thenReturn(new Metadata(null, aggregators, null, null, null, null, null, null));
 
-    final DataSegment segment = DataSegment.builder()
-                                           .dataSource(DATA_SOURCE)
-                                           .interval(interval)
-                                           .version("version")
+    final DataSegment segment = DataSegment.builder(SegmentId.of(DATA_SOURCE, interval, "version", 0))
                                            .size(SEGMENT_SIZE_BYTES)
                                            .build();
     return Pair.of(segment, () -> new ReferenceCountingResourceHolder<>(index, () -> {}));
@@ -2967,10 +2958,7 @@ public class CompactionTaskTest
            .when(index.getClusterGroupQueryableIndex(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean()))
            .thenReturn(groupIndex);
 
-    final DataSegment segment = DataSegment.builder()
-                                           .dataSource(DATA_SOURCE)
-                                           .interval(interval)
-                                           .version("version")
+    final DataSegment segment = DataSegment.builder(SegmentId.of(DATA_SOURCE, interval, "version", 0))
                                            .size(SEGMENT_SIZE_BYTES)
                                            .build();
     return Pair.of(segment, () -> new ReferenceCountingResourceHolder<>(index, () -> {}));

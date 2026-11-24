@@ -24,18 +24,23 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.EnvVarSourceBuilder;
 import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodTemplate;
+import io.fabric8.kubernetes.api.model.PodTemplateBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
@@ -43,9 +48,12 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesOverlordUtils;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -53,6 +61,7 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * A PodTemplate {@link TaskAdapter} to transform tasks to kubernetes jobs and kubernetes pods to tasks
@@ -72,6 +81,11 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 {
   public static final String TYPE = "customTemplateAdapter";
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
+
+  /**
+   * Valid image tag, as defined by the OCI distribution spec.
+   */
+  private static final Pattern IMAGE_TAG_PATTERN = Pattern.compile("[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}");
 
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
   private final TaskConfig taskConfig;
@@ -111,7 +125,8 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   /**
    * Create a {@link Job} from a {@link Task}
    *
-   * 1. Select pod template based on task type
+   * 1. Select pod template based on task type, then apply the image tag from the task context
+   *    (see {@link #applyImageTagOverride})
    * 2. Add labels and annotations to the pod template including the task as a compressed and base64 encoded string
    * 3. Add labels and annotations to the job
    * 4. Add user specified active deadline seconds and job ttl
@@ -132,7 +147,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
           task.getId()
       );
     }
-    PodTemplateWithName podTemplateWithName = selectedPodTemplate.get();
+    final PodTemplateWithName podTemplateWithName = applyImageTagOverride(task, selectedPodTemplate.get());
 
     return new JobBuilder()
         .withNewMetadata()
@@ -162,6 +177,112 @@ public class PodTemplateTaskAdapter implements TaskAdapter
                                                            .getStandardSeconds())
         .endSpec()
         .build();
+  }
+
+  /**
+   * Replaces the image tag of the first container with the value of the
+   * {@link DruidK8sConstants#TASK_CONTEXT_MIN_POD_IMAGE_TAG} task context key, if the value is newer than the tag in
+   * the pod template. {@link StringComparators#VERSION} compares the tags.
+   * <p>
+   * Returns {@code selected} if the key is absent or not applicable, new {@code PodTemplateWithName} otherwise.
+   *
+   * @throws DruidException if the value is not a valid image tag
+   * @throws org.apache.druid.query.BadQueryContextException if the value is not a string
+   */
+  protected PodTemplateWithName applyImageTagOverride(final Task task, final PodTemplateWithName selected)
+  {
+    final Object contextValue = task.getContextValue(DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG);
+    if (contextValue == null) {
+      return selected;
+    }
+    if (!taskRunnerConfig.isAllowTaskImageTagOverride()) {
+      log.warn(
+          "Task[%s] sets context key[%s], but the image tag override is disabled. Ignoring the key.",
+          task.getId(),
+          DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG
+      );
+      return selected;
+    }
+    final String requestedTag = QueryContexts.getAsString(DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG, contextValue, null);
+    if (!IMAGE_TAG_PATTERN.matcher(requestedTag).matches()) {
+      throw InvalidInput.exception(
+          "Task[%s] sets context key[%s] to value[%s], which is not a valid image tag. A valid tag matches[%s].",
+          task.getId(),
+          DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG,
+          requestedTag,
+          IMAGE_TAG_PATTERN.pattern()
+      );
+    }
+
+    final List<Container> containers = selected.getPodTemplate().getTemplate().getSpec().getContainers();
+    final String oldImage = containers.isEmpty() ? null : containers.get(0).getImage();
+    final Pair<String, String> repositoryAndTag = getRepositoryAndTag(oldImage);
+    if (repositoryAndTag == null) {
+      log.warn(
+          "Task[%s] sets context key[%s], but image[%s] from pod template[%s] has a digest or no tag. Ignoring the key.",
+          task.getId(),
+          DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG,
+          oldImage,
+          selected.getName()
+      );
+      return selected;
+    }
+
+    final String oldTag = repositoryAndTag.rhs;
+    if (StringComparators.VERSION.compare(requestedTag, oldTag) <= 0) {
+      log.info(
+          "Task[%s] sets context key[%s] to tag[%s], which is not newer than tag[%s] of image[%s] from pod template[%s]."
+          + " Using the image from the pod template.",
+          task.getId(),
+          DruidK8sConstants.TASK_CONTEXT_MIN_POD_IMAGE_TAG,
+          requestedTag,
+          oldTag,
+          oldImage,
+          selected.getName()
+      );
+      return selected;
+    }
+
+    final String newImage = repositoryAndTag.lhs + ":" + requestedTag;
+    final PodTemplate podTemplate = new PodTemplateBuilder(selected.getPodTemplate())
+        .editTemplate()
+        .editSpec()
+        .editFirstContainer()
+        .withImage(newImage)
+        .endContainer()
+        .endSpec()
+        .endTemplate()
+        .build();
+
+    log.info(
+        "Task[%s] uses image[%s] instead of image[%s] from pod template[%s].",
+        task.getId(),
+        newImage,
+        oldImage,
+        selected.getName()
+    );
+    return new PodTemplateWithName(selected.getName(), podTemplate);
+  }
+
+  /**
+   * Returns a pair with the repository of the image as {@code lhs} and the tag of the image as {@code rhs}, or null if
+   * the image is null, has a digest or has no tag.
+   * <p>
+   * An image with a digest ({@code repository@sha256:...} or {@code repository:tag@sha256:...}) returns null, because
+   * the container runtime pulls the image by the digest and ignores the tag. Thus, a new tag has no effect. To use a
+   * new tag, Druid must remove the digest, but the operator can set the digest to pin the image intentionally.
+   */
+  @Nullable
+  private static Pair<String, String> getRepositoryAndTag(@Nullable String image)
+  {
+    if (image == null || image.indexOf('@') >= 0) {
+      return null;
+    }
+    final int tagSeparator = image.lastIndexOf(':');
+    if (tagSeparator <= image.lastIndexOf('/')) {
+      return null;
+    }
+    return Pair.of(image.substring(0, tagSeparator), image.substring(tagSeparator + 1));
   }
 
   /**

@@ -169,10 +169,7 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
     location = manager.getLocations().get(0);
     // Drive eviction off hold-release so tests don't need to provoke SIEVE via capacity pressure.
     location.setAreWeakEntriesEphemeral(true);
-    dataSegment = DataSegment.builder()
-                             .dataSource(SEGMENT_ID.getDataSource())
-                             .interval(SEGMENT_ID.getInterval())
-                             .version(SEGMENT_ID.getVersion())
+    dataSegment = DataSegment.builder(SegmentId.of(SEGMENT_ID.getDataSource(), SEGMENT_ID.getInterval(), SEGMENT_ID.getVersion(), 0))
                              .shardSpec(NoneShardSpec.instance())
                              .size(0)
                              .build();

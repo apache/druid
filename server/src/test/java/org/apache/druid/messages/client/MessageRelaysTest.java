@@ -93,6 +93,15 @@ public class MessageRelaysTest
   }
 
   @Test
+  public void test_serverAdded_thenStop()
+  {
+    discovery.fire(listener -> listener.nodesAdded(Collections.singletonList(OUTBOX_DISCO_NODE)));
+    messageRelays.stop();
+    Assertions.assertEquals(1, messageListener.getAdds());
+    Assertions.assertEquals(0, messageListener.getRemoves());
+  }
+
+  @Test
   public void test_messageListener()
   {
     discovery.fire(listener -> listener.nodesAdded(Collections.singletonList(OUTBOX_DISCO_NODE)));

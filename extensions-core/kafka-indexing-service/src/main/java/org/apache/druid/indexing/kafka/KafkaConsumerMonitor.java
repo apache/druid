@@ -214,6 +214,8 @@ public class KafkaConsumerMonitor extends AbstractMonitor
    * sampling window (30s by default).
    * A value of 0 represents that the consumer is never idle, i.e. always consuming.
    * A value of 1 represents that the consumer is always idle, i.e. not receiving data.
+   * A negative value indicates that the metric is not yet known, e.g. because the consumer
+   * has not reported it yet.
    */
   public double getPollIdleRatioAvg()
   {
@@ -223,6 +225,8 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   /**
    * Cumulative average poll-to-idle ratio over the lifetime of the task
    * as opposed to {@link #getPollIdleRatioAvg()} which only reflects Kafka's own short sampling window.
+   * A negative value indicates that the metric is not yet known, e.g. because the consumer
+   * has not reported any sample yet.
    */
   public double getRunningAvgPollIdleRatio()
   {
@@ -231,7 +235,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
 
   private static class RunningAverage
   {
-    private static final double UNKNOWN = 1.0d;
+    private static final double UNKNOWN = -1.0d;
 
     private double latest = UNKNOWN;
     private double sum = 0.0d;

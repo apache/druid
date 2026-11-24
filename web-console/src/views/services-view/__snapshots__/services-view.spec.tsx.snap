@@ -170,6 +170,13 @@ exports[`ServicesView renders data 1`] = `
       Tier
     </stub-column>
     <stub-column
+      hidden=""
+      id="tier_alias"
+      width="180"
+    >
+      Tier alias
+    </stub-column>
+    <stub-column
       id="host"
       width="200"
     >

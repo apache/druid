@@ -139,7 +139,11 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -148,6 +152,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -5120,6 +5125,125 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{null}
         ),
         RowSignature.builder().add("dim1", ColumnType.LONG).build()
+    );
+  }
+
+  @Test
+  public void testInfixCastToInterval()
+  {
+    // Numbers cast to intervals are in units of the interval's field.
+    testQuery(
+        "SELECT __time + CAST(cnt AS INTERVAL DAY), __time + cnt::INTERVAL HOUR, __time + (cnt * 2)::INTERVAL MONTH,"
+        + " __time - m1::BIGINT::INTERVAL SECOND, __time + (cnt - 3)::INTERVAL YEAR FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "(\"__time\" + (\"cnt\" * 86400000))", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "(\"__time\" + (\"cnt\" * 3600000))", ColumnType.LONG),
+                    expressionVirtualColumn(
+                        "v2",
+                        "timestamp_shift(\"__time\",concat('P', (\"cnt\" * 2), 'M'),1,'UTC')",
+                        ColumnType.LONG
+                    ),
+                    expressionVirtualColumn("v3", "(\"__time\" - (CAST(\"m1\", 'LONG') * 1000))", ColumnType.LONG),
+                    expressionVirtualColumn(
+                        "v4",
+                        "timestamp_shift(\"__time\",concat('P', ((\"cnt\" - 3) * 12), 'M'),1,'UTC')",
+                        ColumnType.LONG
+                    )
+                )
+                .columns("v0", "v1", "v2", "v3", "v4")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                timestamp("2000-01-02"),
+                timestamp("2000-01-01T01"),
+                timestamp("2000-03-01"),
+                timestamp("1999-12-31T23:59:59"),
+                timestamp("1998-01-01")
+            },
+            new Object[]{
+                timestamp("2000-01-03"),
+                timestamp("2000-01-02T01"),
+                timestamp("2000-03-02"),
+                timestamp("2000-01-01T23:59:58"),
+                timestamp("1998-01-02")
+            },
+            new Object[]{
+                timestamp("2000-01-04"),
+                timestamp("2000-01-03T01"),
+                timestamp("2000-03-03"),
+                timestamp("2000-01-02T23:59:57"),
+                timestamp("1998-01-03")
+            },
+            new Object[]{
+                timestamp("2001-01-02"),
+                timestamp("2001-01-01T01"),
+                timestamp("2001-03-01"),
+                timestamp("2000-12-31T23:59:56"),
+                timestamp("1999-01-01")
+            },
+            new Object[]{
+                timestamp("2001-01-03"),
+                timestamp("2001-01-02T01"),
+                timestamp("2001-03-02"),
+                timestamp("2001-01-01T23:59:55"),
+                timestamp("1999-01-02")
+            },
+            new Object[]{
+                timestamp("2001-01-04"),
+                timestamp("2001-01-03T01"),
+                timestamp("2001-03-03"),
+                timestamp("2001-01-02T23:59:54"),
+                timestamp("1999-01-03")
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testInfixCastDecimalToInterval()
+  {
+    // Fractions are kept down to the millisecond for day-time intervals, rather than truncated to the field.
+    testQuery(
+        "SELECT __time + (m1 / 2)::DECIMAL(5, 1)::INTERVAL DAY, __time + (m1 - 3.5)::DECIMAL(5, 1)::INTERVAL SECOND"
+        + " FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn(
+                        "v0",
+                        "(\"__time\" + CAST(((\"m1\" / 2) * 86400000), 'LONG'))",
+                        ColumnType.LONG
+                    ),
+                    expressionVirtualColumn(
+                        "v1",
+                        "(\"__time\" + CAST(((\"m1\" - 3.5) * 1000), 'LONG'))",
+                        ColumnType.LONG
+                    )
+                )
+                .columns("v0", "v1")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{timestamp("2000-01-01T12"), timestamp("1999-12-31T23:59:57.500")},
+            new Object[]{timestamp("2000-01-03"), timestamp("2000-01-01T23:59:58.500")},
+            new Object[]{timestamp("2000-01-04T12"), timestamp("2000-01-02T23:59:59.500")},
+            new Object[]{timestamp("2001-01-03"), timestamp("2001-01-01T00:00:00.500")},
+            new Object[]{timestamp("2001-01-04T12"), timestamp("2001-01-02T00:00:01.500")},
+            new Object[]{timestamp("2001-01-06"), timestamp("2001-01-03T00:00:02.500")}
+        )
     );
   }
 
@@ -13515,12 +13639,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testRequireTimeConditionPositive()
+  /**
+   * Pairs of planner configs for the {@code testRequireTimeCondition*} parameterised tests.
+   * Each test runs twice: once with {@code requireTimeCondition=true} (the guard enabled)
+   * and once with the default planner config (guard disabled). Positive tests must produce
+   * identical native plans and rows under both configs; negative tests must throw under the
+   * guard and plan successfully without it.
+   */
+  public static Stream<Arguments> requireTimeConditionConfigs()
+  {
+    return Stream.of(
+        Arguments.of(Named.of("require-on", PLANNER_CONFIG_REQUIRE_TIME_CONDITION)),
+        Arguments.of(Named.of("require-off", PLANNER_CONFIG_DEFAULT))
+    );
+  }
+
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionPositive(PlannerConfig plannerConfig)
   {
     // simple timeseries
     testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        plannerConfig,
         "SELECT SUM(cnt), gran FROM (\n"
         + "  SELECT __time as t, floor(__time TO month) AS gran,\n"
         + "  cnt FROM druid.foo\n"
@@ -13545,12 +13685,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testRequireTimeConditionPositive2()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionPositive2(PlannerConfig plannerConfig)
   {
     // nested GROUP BY only requires time condition for inner most query
     testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        plannerConfig,
         "SELECT\n"
         + "  SUM(cnt),\n"
         + "  COUNT(*)\n"
@@ -13589,6 +13730,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // __time >= x remains in the join condition
+  // Not parametrised under require-on/require-off: DecoupledPlanningCalciteQueryTest
+  // pins a frozen native plan via a quidem .iq recording keyed on the test's display
+  // name. @ParameterizedTest would make the harness look for per-config .iq files
+  // (e.g. testRequireTimeConditionPositive3@require-on.iq) that don't exist, and the
+  // plan is config-independent anyway (the guard runs post-plan construction).
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
   @Test
   public void testRequireTimeConditionPositive3()
@@ -13661,11 +13807,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testRequireTimeConditionLogicalValuePositive()
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionLogicalValuePositive(PlannerConfig plannerConfig)
   {
     testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        plannerConfig,
         "SELECT 2 + 2 AS a",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -13737,6 +13884,252 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
               + "  WHERE dim1 <> '' AND __time >= '2000-01-01'\n"
               + ")",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
+  }
+
+  // Coverage for issue #17407: explicit INNER JOIN of two bounded subqueries. Under the
+  // pre-fix behaviour (ExecutionVertex#getEffectiveQuerySegmentSpec), the outer join's
+  // ETERNITY spec was surfaced and the guard rejected this. The analyzer descends both
+  // legs and confirms every physical leaf is bounded.
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionExplicitJoinBothSidesFilteredPositive(PlannerConfig plannerConfig)
+  {
+    try {
+      testQuery(
+          plannerConfig,
+          "SELECT COUNT(*) FROM\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') a\n"
+              + "  INNER JOIN\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') b\n"
+              + "  ON a.dim1 = b.dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a join where both legs are bounded: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+      // testQuery may fail comparing actual output to the empty expected lists; that is not
+      // what this test asserts. The only failure mode we care about is CannotBuildQueryException.
+    }
+  }
+
+  @Test
+  public void testRequireTimeConditionExplicitJoinRightSideMissingFilterNegative()
+  {
+    msqIncompatible();
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT COUNT(*) FROM\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') a\n"
+              + "  INNER JOIN\n"
+              + "  (SELECT dim1 FROM druid.foo) b\n"
+              + "  ON a.dim1 = b.dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
+  }
+
+  @Test
+  public void testRequireTimeConditionExplicitJoinLeftSideMissingFilterNegative()
+  {
+    msqIncompatible();
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT COUNT(*) FROM\n"
+              + "  (SELECT dim1 FROM druid.foo) a\n"
+              + "  INNER JOIN\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') b\n"
+              + "  ON a.dim1 = b.dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
+  }
+
+  // A lookup on the right side is global: the walker short-circuits at isGlobal(), so we
+  // only need the left (bounded) leg to satisfy the guard. Regression guard against a fix
+  // that would over-eagerly demand a __time filter on globals.
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionLookupRightSidePositive(PlannerConfig plannerConfig)
+  {
+    try {
+      testQuery(
+          plannerConfig,
+          "SELECT COUNT(*) FROM druid.foo\n"
+              + "  INNER JOIN lookup.lookyloo l ON foo.dim1 = l.k\n"
+              + "  WHERE foo.__time >= '2000-01-01'",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a bounded join against a global lookup: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+    }
+  }
+
+  @Test
+  public void testRequireTimeConditionThreeWayJoinDeepLegMissingFilterNegative()
+  {
+    msqIncompatible();
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT COUNT(*) FROM\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') a\n"
+              + "  INNER JOIN\n"
+              + "  (SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01') b\n"
+              + "  ON a.dim1 = b.dim1\n"
+              + "  INNER JOIN\n"
+              + "  (SELECT dim1 FROM druid.foo) c\n"
+              + "  ON b.dim1 = c.dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
+  }
+
+  // Regression guard for v33+ where ExecutionVertex#getEffectiveQuerySegmentSpec prunes
+  // at Query#mayCollapseQueryDataSource() (default false). LIMIT prevents the outer scan
+  // from collapsing the inner query, so the pre-fix walker sees only the outer ETERNITY
+  // spec and rejects. The analyzer descends the QueryDataSource unconditionally.
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionNonCollapsibleSubqueryPositive(PlannerConfig plannerConfig)
+  {
+    try {
+      testQuery(
+          plannerConfig,
+          "SELECT COUNT(*) FROM (\n"
+              + "  SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01' LIMIT 10\n"
+              + ")",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a non-collapsible subquery with a bounded inner scan: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+    }
+  }
+
+  // Nested rollup: an outer GROUP BY over a subquery whose inner GROUP BY owns the
+  // __time bound. The inner query is the innermost owner of the physical scan, so its
+  // bound reaches the leaf and the guard is satisfied. Guards against regressions that
+  // mistake the outer query's segment spec for the physical scan's bound.
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionNestedRollupPositive(PlannerConfig plannerConfig)
+  {
+    try {
+      testQuery(
+          plannerConfig,
+          "SELECT __time, SUM(cnt) AS cnt, dim1\n"
+              + "FROM (\n"
+              + "  SELECT TIME_FLOOR(__time, 'PT1H') AS __time, SUM(cnt) AS cnt, dim1\n"
+              + "  FROM druid.foo\n"
+              + "  WHERE __time >= '2000-01-01' AND __time < '2001-01-01'\n"
+              + "  GROUP BY TIME_FLOOR(__time, 'PT1H'), dim1\n"
+              + ")\n"
+              + "GROUP BY __time, dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a nested-rollup with a bounded inner GROUP BY: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+    }
+  }
+
+  // A CTE is inlined by Calcite into an equivalent nested subquery. When the CTE
+  // definition owns the __time bound, the resulting plan is a bounded inner query
+  // under an outer aggregate, which the guard must accept.
+  @MethodSource("requireTimeConditionConfigs")
+  @ParameterizedTest(name = "{0}")
+  public void testRequireTimeConditionCtePositive(PlannerConfig plannerConfig)
+  {
+    try {
+      testQuery(
+          plannerConfig,
+          "WITH recent AS (\n"
+              + "  SELECT TIME_FLOOR(__time, 'PT1H') AS __time, SUM(cnt) AS cnt, dim1\n"
+              + "  FROM druid.foo\n"
+              + "  WHERE __time >= '2000-01-01' AND __time < '2001-01-01'\n"
+              + "  GROUP BY TIME_FLOOR(__time, 'PT1H'), dim1\n"
+              + ")\n"
+              + "SELECT __time, SUM(cnt) AS cnt, dim1 FROM recent GROUP BY __time, dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (CannotBuildQueryException e) {
+      Assertions.fail("requireTimeCondition rejected a CTE with a bounded inner __time filter: " + e.getMessage());
+    }
+    catch (AssertionError ignored) {
+    }
+  }
+
+  // A CTE with no __time filter anywhere inlines to an unbounded scan under the outer;
+  // the guard must reject with the specific "__time column" message.
+  @Test
+  public void testRequireTimeConditionCteNegative()
+  {
+    msqIncompatible();
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "WITH recent AS (\n"
+              + "  SELECT dim1, cnt FROM druid.foo\n"
+              + ")\n"
+              + "SELECT dim1, SUM(cnt) FROM recent GROUP BY dim1",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
+  }
+
+  // The guard keys on query intervals, not filters. A __time predicate on a subquery
+  // result stays a residual filter and never becomes a QuerySegmentSpec, so it must not
+  // satisfy the guard. Preserved deliberately per RCA.
+  @Test
+  public void testRequireTimeConditionOuterFilterOverUnboundedSubqueryNegative()
+  {
+    msqIncompatible();
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT COUNT(*) FROM (\n"
+              + "  SELECT __time, dim1 FROM druid.foo LIMIT 10\n"
+              + ") WHERE __time >= '2000-01-01'",
           CalciteTests.REGULAR_USER_AUTH_RESULT,
           ImmutableList.of(),
           ImmutableList.of()
@@ -15401,6 +15794,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
       Assertions.assertTrue(e.getMessage().contains("parameter `maxBytes` must be a numeric literal"));
     }
+  }
+
+  @Test
+  public void testCountDistinctNonNumericStringLiteral()
+  {
+    // COUNT shares the argument translation of numeric aggregators, but must still accept any string literal
+    testBuilder()
+        .sql("SELECT COUNT(DISTINCT 'abc') FROM foo")
+        .expectedResults(ImmutableList.of(new Object[]{1L}))
+        .run();
+  }
+
+  @Test
+  public void testScalarSubqueryNonNumericStringLiteral()
+  {
+    // SINGLE_VALUE shares the argument translation of numeric aggregators, but must still accept any string literal
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT COUNT(*) FROM foo WHERE dim1 = (SELECT 'abc' FROM foo WHERE dim1 = 'def')")
+        .expectedResults(ImmutableList.of(new Object[]{1L}))
+        .run();
   }
 
   /**

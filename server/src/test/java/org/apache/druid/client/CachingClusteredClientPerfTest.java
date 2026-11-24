@@ -57,6 +57,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
@@ -172,10 +173,7 @@ public class CachingClusteredClientPerfTest
 
   private DataSegment makeDataSegment(String dataSource, Interval interval, String version, int partition)
   {
-    return DataSegment.builder()
-                      .dataSource(dataSource)
-                      .interval(interval)
-                      .version(version)
+    return DataSegment.builder(SegmentId.of(dataSource, interval, version, partition))
                       .shardSpec(new LinearShardSpec(partition))
                       .size(1)
                       .build();

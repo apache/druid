@@ -247,19 +247,26 @@ public class MetadataResource
               isOvershadowed,
               replicationFactor,
               numRows,
-              // published segment can't be realtime
-              false
+              // the realtime flag is set only on segments that are not published
+              false,
+              true
           );
         });
 
     Stream<SegmentStatusInCluster> finalSegments = segmentStatus;
 
-    // conditionally add realtime segments information
+    // conditionally add the segments that are served but not published, such as realtime segments
     if (includeRealtimeSegments != null && coordinatorSegmentMetadataCache != null) {
       final Stream<SegmentStatusInCluster> realtimeSegmentStatus = coordinatorSegmentMetadataCache
           .getSegmentMetadataSnapshot()
           .values()
           .stream()
+          // The snapshot covers every datasource, so apply the datasource filter here too. Without it, the used
+          // segments of the other datasources are not in segmentAlreadySeen and would be returned as not published.
+          .filter(availableSegmentMetadata ->
+                      dataSources == null
+                      || dataSources.isEmpty()
+                      || dataSources.contains(availableSegmentMetadata.getSegment().getDataSource()))
           .filter(availableSegmentMetadata ->
                       !segmentAlreadySeen.contains(availableSegmentMetadata.getSegment().getId()))
           .map(availableSegmentMetadata ->
@@ -269,7 +276,10 @@ public class MetadataResource
                        // replication factor is null for unpublished segments
                        null,
                        availableSegmentMetadata.getNumRows(),
-                       availableSegmentMetadata.isRealtime() != 0
+                       availableSegmentMetadata.isRealtime() != 0,
+                       // Not among the used segments, so not published. This covers realtime segments and also
+                       // segments that are no longer used but that a Historical has not dropped yet.
+                       false
                    ));
 
       finalSegments = Stream.concat(segmentStatus, realtimeSegmentStatus);

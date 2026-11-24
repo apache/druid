@@ -120,7 +120,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(Map<String, Object> queryContext)
+  public void validateContext(QueryContext queryContext)
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, SYSTEM_CONTEXT_PARAMETERS);
   }
@@ -129,7 +129,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   public RelDataType resultTypeForSelect(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   )
   {
     return getMSQStructType(typeFactory);
@@ -139,7 +139,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   public RelDataType resultTypeForInsert(
       RelDataTypeFactory typeFactory,
       RelDataType validatedRowType,
-      Map<String, Object> queryContext
+      QueryContext queryContext
   )
   {
     return getMSQStructType(typeFactory);
@@ -549,7 +549,7 @@ public class MSQTaskSqlEngine implements SqlEngine
     try {
       return QueryKitUtils.getSegmentGranularityFromContext(
           plannerContext.getJsonMapper(),
-          plannerContext.queryContextMap()
+          plannerContext.queryContext().asMap()
       );
     }
     catch (Exception e) {
