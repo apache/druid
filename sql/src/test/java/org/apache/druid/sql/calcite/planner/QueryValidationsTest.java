@@ -53,7 +53,7 @@ public class QueryValidationsTest
   }
 
   @Test
-  public void test_rightJoin_broadcastHint_broadcastDefault_reportsHint()
+  public void test_rightJoin_broadcastHint_broadcastDefault_isRejected()
   {
     final ValidationException e = Assertions.assertThrows(
         ValidationException.class,
@@ -63,8 +63,8 @@ public class QueryValidationsTest
         )
     );
     Assertions.assertEquals(
-        "RIGHT JOIN is not supported by engine[test] with join hint[broadcast]. "
-        + "Remove the hint or use join hint[sort_merge].",
+        "RIGHT JOIN is not supported by engine[test] with join hint[broadcast] and sqlJoinAlgorithm[broadcast]. "
+        + "Remove the hint and set sqlJoinAlgorithm[sortMerge].",
         e.getMessage()
     );
   }

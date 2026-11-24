@@ -79,7 +79,9 @@ public class QueryValidations
       relNode.accept(shuttle);
       if (shuttle.found != null) {
         final DruidHint.DruidJoinHint joinHint = QueryUtils.getJoinHint(shuttle.found);
-        if (joinHint != null && joinHint.asJoinAlgorithm() == JoinAlgorithm.BROADCAST) {
+        final boolean broadcastHint = joinHint != null && joinHint.asJoinAlgorithm() == JoinAlgorithm.BROADCAST;
+        if (plannerContext.getJoinAlgorithm() != JoinAlgorithm.BROADCAST) {
+          // Only a broadcast hint can match under a non-broadcast context.
           throw new ValidationException(
               StringUtils.format(
                   "%s JOIN is not supported by engine[%s] with join hint[%s]. Remove the hint or use join hint[%s].",
@@ -87,6 +89,20 @@ public class QueryValidations
                   plannerContext.getEngine().name(),
                   DruidHint.DruidJoinHint.BroadcastJoinHint.BROADCAST_JOIN,
                   DruidHint.DruidJoinHint.SortMergeJoinHint.SORT_MERGE_JOIN
+              )
+          );
+        } else if (broadcastHint) {
+          throw new ValidationException(
+              StringUtils.format(
+                  "%s JOIN is not supported by engine[%s] with join hint[%s] and %s[%s]. "
+                  + "Remove the hint and set %s[%s].",
+                  shuttle.found.getJoinType(),
+                  plannerContext.getEngine().name(),
+                  DruidHint.DruidJoinHint.BroadcastJoinHint.BROADCAST_JOIN,
+                  QueryContextParameters.SQL_JOIN_ALGORITHM,
+                  plannerContext.getJoinAlgorithm(),
+                  QueryContextParameters.SQL_JOIN_ALGORITHM,
+                  JoinAlgorithm.SORT_MERGE.toString()
               )
           );
         } else if (joinHint != null) {
