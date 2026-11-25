@@ -77,10 +77,15 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.DefaultPasswordProvider;
@@ -95,10 +100,13 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -110,16 +118,35 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TaskQueueTest extends IngestionTestBase
 {
   private static final Granularity SEGMENT_GRANULARITY = Granularities.DAY;
+  private static final String PERSIST_FAILED_METRIC = "task/status/persistFailed/count";
+  private static final TaskLocation PERSISTENCE_TASK_LOCATION = TaskLocation.create("worker", 8100, 8300);
 
   private TaskActionClientFactory actionClientFactory;
   private TaskQueue taskQueue;
   private StubServiceEmitter serviceEmitter;
   private Map<String, Object> defaultTaskContext;
+  private TaskStorage statusPersistenceStorage;
+  private TaskRunner statusPersistenceRunner;
 
   @BeforeEach
   @Override
@@ -807,6 +834,289 @@ public class TaskQueueTest extends IngestionTestBase
     Assertions.assertEquals(medPriority.getId(), submitted.get(2));
     Assertions.assertEquals(lowPriority2.getId(), submitted.get(3));
     Assertions.assertEquals(lowPriority1.getId(), submitted.get(4));
+  }
+
+  @Timeout(20)
+  @Test
+  public void testSuccessfulWriteIsNotRetried()
+  {
+    setUpStatusPersistenceTest();
+    final Task task = addTaskForStatusPersistenceTest();
+    taskQueue.shutdownWithSuccess(task.getId(), "test completion");
+
+    taskQueue.syncFromStorage();
+    taskQueue.syncFromStorage();
+
+    verify(statusPersistenceStorage, times(1)).setStatus(any());
+    Assertions.assertFalse(taskQueue.getActiveTaskInfo(task.getId()).isPresent());
+    serviceEmitter.verifyNotEmitted(PERSIST_FAILED_METRIC);
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+  }
+
+  @Timeout(20)
+  @Test
+  public void testFailedWriteIsRetriedWithoutRerunningTask()
+  {
+    setUpStatusPersistenceTest();
+    final Task task = addTaskForStatusPersistenceTest();
+    final TaskStatus expected = TaskStatus.success(task.getId()).withLocation(PERSISTENCE_TASK_LOCATION);
+    doThrow(new ISE("Metadata unavailable")).doCallRealMethod().when(statusPersistenceStorage).setStatus(any());
+
+    taskQueue.shutdownWithSuccess(task.getId(), "test completion");
+    Assertions.assertTrue(statusPersistenceStorage.getStatus(task.getId()).get().isRunnable());
+    serviceEmitter.verifyEmitted(PERSIST_FAILED_METRIC, 1);
+
+    // Even with a runnable storage record, a completed entry must never be submitted to the runner again.
+    taskQueue.manageQueuedTasks();
+    taskQueue.syncFromStorage();
+    Assertions.assertEquals(expected, statusPersistenceStorage.getStatus(task.getId()).get());
+    Assertions.assertEquals(PERSISTENCE_TASK_LOCATION, statusPersistenceStorage.getStatus(task.getId()).get().getLocation());
+    Assertions.assertTrue(taskQueue.getActiveTaskInfo(task.getId()).isPresent());
+    taskQueue.manageQueuedTasks();
+
+    taskQueue.syncFromStorage();
+    taskQueue.manageQueuedTasks();
+    Assertions.assertFalse(taskQueue.getActiveTaskInfo(task.getId()).isPresent());
+    verify(statusPersistenceRunner, never()).run(any());
+    verify(statusPersistenceStorage, times(2)).setStatus(expected);
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+    Assertions.assertEquals(1L, taskQueue.getSuccessfulTaskCount().values().stream().mapToLong(Long::longValue).sum());
+  }
+
+  @Timeout(20)
+  @ParameterizedTest
+  @ValueSource(classes = {AlertEvent.class, ServiceMetricEvent.class, Event.class})
+  public void testFailedWriteCleanupWhenEmitterThrows(final Class<? extends Event> failedEventType) throws Exception
+  {
+    serviceEmitter = spy(serviceEmitter);
+    setUpStatusPersistenceTest();
+    final TestTask task = new TestTask("persist-failure", Intervals.of("2021-01/P1M"));
+    taskQueue.add(task);
+    getLockbox().lock(task, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task, task.interval, null));
+    Assertions.assertEquals(1, getLockbox().findLocksForTask(task).size());
+    doThrow(new ISE("Metadata unavailable")).doCallRealMethod().when(statusPersistenceStorage).setStatus(any());
+    doThrow(new ISE("Emitter unavailable")).when(serviceEmitter).emit(any(failedEventType));
+
+    Assertions.assertDoesNotThrow(() -> taskQueue.shutdownWithSuccess(task.getId(), "test completion"));
+    Assertions.assertTrue(getLockbox().findLocksForTask(task).isEmpty());
+    verify(statusPersistenceRunner, timeout(5000)).shutdown(task.getId(), "test completion", new Object[0]);
+    doCallRealMethod().when(serviceEmitter).emit(any(Event.class));
+
+    taskQueue.syncFromStorage();
+    taskQueue.syncFromStorage();
+    taskQueue.manageQueuedTasks();
+
+    Assertions.assertTrue(statusPersistenceStorage.getStatus(task.getId()).get().isSuccess());
+    Assertions.assertFalse(taskQueue.getActiveTaskInfo(task.getId()).isPresent());
+    verify(statusPersistenceStorage, times(2)).setStatus(any());
+    verify(statusPersistenceRunner, never()).run(any());
+    verify(serviceEmitter, times(1)).emit(argThat((Event event) ->
+        event instanceof ServiceMetricEvent && "task/run/time".equals(((ServiceMetricEvent) event).getMetric())
+    ));
+    Assertions.assertEquals(1L, taskQueue.getSuccessfulTaskCount().values().stream().mapToLong(Long::longValue).sum());
+  }
+
+  @Timeout(20)
+  @Test
+  public void testFailedCompletionRetainsErrorMessage()
+  {
+    setUpStatusPersistenceTest();
+    final Task task = addTaskForStatusPersistenceTest();
+    doThrow(new ISE("Metadata unavailable")).doCallRealMethod().when(statusPersistenceStorage).setStatus(any());
+
+    taskQueue.shutdown(task.getId(), "original failure");
+    taskQueue.syncFromStorage();
+
+    Assertions.assertEquals(
+        TaskStatus.failure(task.getId(), "original failure").withLocation(PERSISTENCE_TASK_LOCATION),
+        statusPersistenceStorage.getStatus(task.getId()).get()
+    );
+  }
+
+  @Timeout(20)
+  @Test
+  public void testCallbackRetryPreservesDurationAndLocation() throws InterruptedException
+  {
+    setUpStatusPersistenceTest();
+    final Task task = addTaskForStatusPersistenceTest();
+    final TaskStatus status = TaskStatus.success(task.getId()).withDuration(1234);
+    final CountDownLatch writeAttempted = new CountDownLatch(1);
+    when(statusPersistenceRunner.run(task)).thenReturn(Futures.immediateFuture(status));
+    doAnswer(invocation -> {
+      writeAttempted.countDown();
+      throw new ISE("Metadata unavailable");
+    }).doCallRealMethod().when(statusPersistenceStorage).setStatus(any());
+
+    taskQueue.manageQueuedTasks();
+    Assertions.assertTrue(writeAttempted.await(5, TimeUnit.SECONDS));
+    taskQueue.syncFromStorage();
+    taskQueue.syncFromStorage();
+    taskQueue.manageQueuedTasks();
+
+    Assertions.assertEquals(status.withLocation(PERSISTENCE_TASK_LOCATION), statusPersistenceStorage.getStatus(task.getId()).get());
+    Assertions.assertEquals(PERSISTENCE_TASK_LOCATION, statusPersistenceStorage.getStatus(task.getId()).get().getLocation());
+    verify(statusPersistenceRunner, times(1)).run(task);
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+  }
+
+  @Timeout(20)
+  @Test
+  public void testFailedStatusReadIsRetried()
+  {
+    setUpStatusPersistenceTest();
+    final Task task = addTaskForStatusPersistenceTest();
+    doThrow(new ISE("Metadata unavailable")).doCallRealMethod().when(statusPersistenceStorage).getStatus(task.getId());
+
+    taskQueue.shutdownWithSuccess(task.getId(), "test completion");
+    taskQueue.syncFromStorage();
+
+    Assertions.assertTrue(statusPersistenceStorage.getStatus(task.getId()).get().isSuccess());
+    verify(statusPersistenceStorage, times(1)).setStatus(any());
+    serviceEmitter.verifyEmitted(PERSIST_FAILED_METRIC, 1);
+  }
+
+  @Timeout(20)
+  @Test
+  public void testCommittedWriteWithLostAcknowledgementIsNotRetried()
+  {
+    setUpStatusPersistenceTest();
+    final Task task = addTaskForStatusPersistenceTest();
+    doAnswer(invocation -> {
+      invocation.callRealMethod();
+      throw new ISE("Connection lost after commit");
+    }).when(statusPersistenceStorage).setStatus(any());
+
+    taskQueue.shutdownWithSuccess(task.getId(), "test completion");
+    taskQueue.syncFromStorage();
+    taskQueue.syncFromStorage();
+
+    Assertions.assertTrue(statusPersistenceStorage.getStatus(task.getId()).get().isSuccess());
+    Assertions.assertFalse(taskQueue.getActiveTaskInfo(task.getId()).isPresent());
+    verify(statusPersistenceStorage, times(1)).setStatus(any());
+  }
+
+  @Timeout(20)
+  @Test
+  public void testStaleSnapshotDoesNotOverwriteTerminalStatus()
+  {
+    setUpStatusPersistenceTest();
+    final Task task = addTaskForStatusPersistenceTest();
+    doThrow(new ISE("Metadata unavailable")).when(statusPersistenceStorage).setStatus(any());
+    taskQueue.shutdownWithSuccess(task.getId(), "test completion");
+    doCallRealMethod().when(statusPersistenceStorage).setStatus(any());
+    final TaskStatus storedStatus = TaskStatus.failure(task.getId(), "completed elsewhere");
+    final List<TaskInfo> snapshot = statusPersistenceStorage.getActiveTaskInfos();
+
+    doAnswer(invocation -> {
+      statusPersistenceStorage.setStatus(storedStatus);
+      return snapshot;
+    }).doReturn(snapshot).doCallRealMethod().when(statusPersistenceStorage).getActiveTaskInfos();
+
+    taskQueue.syncFromStorage();
+    taskQueue.syncFromStorage();
+    taskQueue.syncFromStorage();
+
+    // A second stale snapshot must not retry again once storage has been found terminal.
+    verify(statusPersistenceStorage, times(2)).getStatus(task.getId());
+    // Storage was already terminal when the retry checked it, so only the initial failure emits an alert.
+    Assertions.assertEquals(1, serviceEmitter.getAlerts().size());
+    Assertions.assertEquals(storedStatus, statusPersistenceStorage.getStatus(task.getId()).get());
+    Assertions.assertFalse(taskQueue.getActiveTaskInfo(task.getId()).isPresent());
+    verify(statusPersistenceStorage, times(2)).setStatus(any());
+  }
+
+  @Timeout(20)
+  @Test
+  public void testOneFailedRetryDoesNotPreventOtherTasksFromRecovering()
+  {
+    setUpStatusPersistenceTest();
+    final Task failingTask = addTaskForStatusPersistenceTest();
+    final Task recoveringTask = addTaskForStatusPersistenceTest();
+    final TaskStatus failedWrite = TaskStatus.success(failingTask.getId()).withLocation(PERSISTENCE_TASK_LOCATION);
+    final TaskStatus recoveringWrite = TaskStatus.success(recoveringTask.getId()).withLocation(PERSISTENCE_TASK_LOCATION);
+    doThrow(new ISE("Metadata unavailable")).when(statusPersistenceStorage).setStatus(any());
+    taskQueue.shutdownWithSuccess(failingTask.getId(), "test completion");
+    taskQueue.shutdownWithSuccess(recoveringTask.getId(), "test completion");
+    doCallRealMethod().when(statusPersistenceStorage).setStatus(recoveringWrite);
+
+    taskQueue.syncFromStorage();
+    taskQueue.syncFromStorage();
+    Assertions.assertTrue(statusPersistenceStorage.getStatus(failingTask.getId()).get().isRunnable());
+    Assertions.assertEquals(recoveringWrite, statusPersistenceStorage.getStatus(recoveringTask.getId()).get());
+    Assertions.assertFalse(taskQueue.getActiveTaskInfo(recoveringTask.getId()).isPresent());
+    serviceEmitter.verifyEmitted(PERSIST_FAILED_METRIC, Map.of(DruidMetrics.TASK_ID, failingTask.getId()), 3);
+
+    doCallRealMethod().when(statusPersistenceStorage).setStatus(failedWrite);
+    taskQueue.syncFromStorage();
+    taskQueue.syncFromStorage();
+    Assertions.assertEquals(failedWrite, statusPersistenceStorage.getStatus(failingTask.getId()).get());
+    Assertions.assertFalse(taskQueue.getActiveTaskInfo(failingTask.getId()).isPresent());
+    verify(statusPersistenceRunner, never()).run(any());
+    serviceEmitter.verifyEmitted("task/run/time", 2);
+  }
+
+  @Timeout(20)
+  @Test
+  public void testCompletionDuringStorageSnapshotDoesNotReaddTask()
+  {
+    setUpStatusPersistenceTest();
+    final Task task = addTaskForStatusPersistenceTest();
+    doAnswer(invocation -> {
+      final List<TaskInfo> snapshot = (List<TaskInfo>) invocation.callRealMethod();
+      taskQueue.shutdownWithSuccess(task.getId(), "completion during sync");
+      return snapshot;
+    }).doCallRealMethod().when(statusPersistenceStorage).getActiveTaskInfos();
+
+    taskQueue.syncFromStorage();
+    taskQueue.manageQueuedTasks();
+    taskQueue.syncFromStorage();
+    taskQueue.manageQueuedTasks();
+
+    // The snapshot predates completion, but the successful write must not be retried or alert.
+    verify(statusPersistenceStorage, times(1)).getStatus(task.getId());
+    Assertions.assertTrue(serviceEmitter.getAlerts().isEmpty());
+    Assertions.assertFalse(taskQueue.getActiveTaskInfo(task.getId()).isPresent());
+    Assertions.assertTrue(statusPersistenceStorage.getStatus(task.getId()).get().isSuccess());
+    verify(statusPersistenceStorage, times(1)).setStatus(any());
+    verify(statusPersistenceRunner, never()).run(any());
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+  }
+
+  @AfterEach
+  public void stopStatusPersistenceTestQueue()
+  {
+    if (statusPersistenceStorage != null) {
+      taskQueue.stop();
+    }
+  }
+
+  private void setUpStatusPersistenceTest()
+  {
+    statusPersistenceStorage = spy(getTaskStorage());
+    statusPersistenceRunner = mock(TaskRunner.class);
+    when(statusPersistenceRunner.getKnownTasks()).thenReturn(List.of());
+    when(statusPersistenceRunner.getTaskLocation(any())).thenReturn(PERSISTENCE_TASK_LOCATION);
+    EmittingLogger.registerEmitter(serviceEmitter);
+    taskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null, null, null),
+        new DefaultTaskConfig(),
+        statusPersistenceStorage,
+        statusPersistenceRunner,
+        actionClientFactory,
+        getLockbox(),
+        serviceEmitter,
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
+    );
+    taskQueue.setActive(true);
+  }
+
+  private Task addTaskForStatusPersistenceTest()
+  {
+    final Task task = NoopTask.create();
+    taskQueue.add(task);
+    return task;
   }
 
   @Test
