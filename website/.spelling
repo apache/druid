@@ -598,6 +598,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+Struct
 structs
 sub-conditions
 subarray
