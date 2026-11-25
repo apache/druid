@@ -89,7 +89,8 @@ public class SegmentReplicationStatus
 
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicated(
       Iterable<DataSegment> usedSegments,
-      boolean ignoreMissingServers
+      boolean ignoreMissingServers,
+      boolean ignorePendingFirstLoad
   )
   {
     final Map<String, Object2LongMap<String>> tierToUnderReplicated = new HashMap<>();
@@ -97,6 +98,9 @@ public class SegmentReplicationStatus
     for (DataSegment segment : usedSegments) {
       final Map<String, SegmentReplicaCount> tierToReplicaCount = replicaCountsInTier.get(segment.getId());
       if (tierToReplicaCount == null) {
+        continue;
+      }
+      if (ignorePendingFirstLoad && totalReplicaCounts.get(segment.getId()).loaded() <= 0) {
         continue;
       }
 

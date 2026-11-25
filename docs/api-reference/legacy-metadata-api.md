@@ -47,6 +47,11 @@ A segment is considered fully loaded when:
 - Druid has replicated it the number of times configured in the corresponding load rule.
 - Or the number of replicas for the segment in each tier where it is configured to be replicated equals the available nodes of a service type that are currently allowed to load the segment in the tier.
 
+`GET /druid/coordinator/v1/loadstatus?full&ignoreUnloadedSegments`
+
+Returns the same result as `loadstatus?full`, but skips each segment that no Historical in any tier has loaded.
+Replicas on Brokers and realtime tasks do not count as loaded. A segment that is loaded in one tier still counts in the other tiers.
+
 `GET /druid/coordinator/v1/loadqueue`
 
 Returns the ids of segments to load and drop for each Historical process.

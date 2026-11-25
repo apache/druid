@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.loading;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
@@ -81,7 +82,7 @@ public class SegmentReplicationStatusTest
       final Object2IntMap<String> expectedUnavailable = computeExpectedUnavailable(status, segments);
       final Object2IntMap<String> expectedDeepStorageOnly = computeExpectedDeepStorageOnly(status, segments);
       final Map<String, Object2LongMap<String>> expectedUnderReplicated =
-          status.getTierToDatasourceToUnderReplicated(segments, ignoreMissingServers);
+          status.getTierToDatasourceToUnderReplicated(segments, ignoreMissingServers, false);
 
       Assertions.assertEquals(expectedUnavailable, snapshot.getDatasourceToUnavailableCount());
       Assertions.assertEquals(expectedDeepStorageOnly, snapshot.getDatasourceToDeepStorageOnlyCount());
@@ -139,6 +140,42 @@ public class SegmentReplicationStatusTest
 
     Assertions.assertEquals(1, status.getReplicaCountsInCluster(segments.get(0).getId()).totalLoaded());
     Assertions.assertNull(status.getReplicaCountsInCluster(segments.get(1).getId()));
+  }
+
+  @Test
+  public void testIgnoreUnloadedSegments()
+  {
+    final SegmentReplicaCount realtimeOnly = countOf(2, 2, 0);
+    realtimeOnly.incrementLoadedOnNonHistoricalServer();
+
+    // No historical replica: skipped.
+    assertUnderReplicated(Map.of(TIER_1, countOf(2, 2, 0)), TIER_1, 2, 0);
+    // One historical replica: not skipped.
+    assertUnderReplicated(Map.of(TIER_1, countOf(2, 2, 1)), TIER_1, 1, 1);
+    // Only a realtime server serves the segment: skipped.
+    assertUnderReplicated(Map.of(TIER_1, realtimeOnly), TIER_1, 1, 0);
+    // A historical in another tier loaded the segment: not skipped.
+    assertUnderReplicated(Map.of(TIER_1, countOf(1, 1, 1), TIER_2, countOf(1, 1, 0)), TIER_2, 1, 1);
+  }
+
+  private void assertUnderReplicated(
+      Map<String, SegmentReplicaCount> tierToCount,
+      String tier,
+      long expectedWithoutFlag,
+      long expectedWithFlag
+  )
+  {
+    final DataSegment segment = segments.get(0);
+    final SegmentReplicationStatus status = new SegmentReplicationStatus(Map.of(segment.getId(), tierToCount));
+    for (boolean ignoreUnloadedSegments : new boolean[]{false, true}) {
+      final Object2LongMap<String> datasourceToCount = status
+          .getTierToDatasourceToUnderReplicated(List.of(segment), false, ignoreUnloadedSegments)
+          .getOrDefault(tier, new Object2LongOpenHashMap<>());
+      Assertions.assertEquals(
+          ignoreUnloadedSegments ? expectedWithFlag : expectedWithoutFlag,
+          datasourceToCount.getLong(segment.getDataSource())
+      );
+    }
   }
 
   private static SegmentReplicaCount countOf(int required, int requiredAndLoadable, int loaded)

@@ -154,6 +154,14 @@ public class SegmentReplicaCount
   }
 
   /**
+   * Number of replicas loaded on historical servers. This includes replicas that are currently being dropped.
+   */
+  int loaded()
+  {
+    return loaded;
+  }
+
+  /**
    * Number of replicas loaded on all servers. This includes replicas that are
    * currently being dropped.
    */

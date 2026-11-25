@@ -83,7 +83,8 @@ public class CoordinatorResource
   public Response getLoadStatus(
       @QueryParam("simple") String simple,
       @QueryParam("full") String full,
-      @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView
+      @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView,
+      @QueryParam("ignoreUnloadedSegments") @Nullable String ignoreUnloadedSegments
   )
   {
     if (simple != null) {
@@ -92,7 +93,10 @@ public class CoordinatorResource
 
     if (full != null) {
       return Response.ok(
-          coordinator.getTierToDatasourceToUnderReplicatedCount(computeUsingClusterView != null)
+          coordinator.getTierToDatasourceToUnderReplicatedCount(
+              computeUsingClusterView != null,
+              ignoreUnloadedSegments != null
+          )
       ).build();
     }
     return Response.ok(coordinator.getDatasourceToLoadStatus()).build();

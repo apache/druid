@@ -288,7 +288,7 @@ public class DruidCoordinatorTest
     Assertions.assertEquals(0, coordinator.getBroadcastSegments().size());
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(false);
+        coordinator.getTierToDatasourceToUnderReplicatedCount(false, false);
     Assertions.assertNotNull(underReplicationCountsPerDataSourcePerTier);
     Assertions.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
 
@@ -302,7 +302,7 @@ public class DruidCoordinatorTest
     Assertions.assertEquals(1L, underRepliicationCountsPerDataSource.getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(true);
+        coordinator.getTierToDatasourceToUnderReplicatedCount(true, false);
     Assertions.assertNotNull(underReplicationCountsPerDataSourcePerTier);
     Assertions.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
 
@@ -382,13 +382,13 @@ public class DruidCoordinatorTest
     Assertions.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(false);
+        coordinator.getTierToDatasourceToUnderReplicatedCount(false, false);
     Assertions.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
     Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
     Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(true);
+        coordinator.getTierToDatasourceToUnderReplicatedCount(true, false);
     Assertions.assertEquals(2, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
     Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
     Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
@@ -476,7 +476,7 @@ public class DruidCoordinatorTest
 
     // Under-replicated counts are updated only after the next coordinator run
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(false);
+        coordinator.getTierToDatasourceToUnderReplicatedCount(false, false);
     Assertions.assertEquals(4, underReplicationCountsPerDataSourcePerTier.size());
     Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
     Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
@@ -484,7 +484,7 @@ public class DruidCoordinatorTest
     Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(tierName2).getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(true);
+        coordinator.getTierToDatasourceToUnderReplicatedCount(true, false);
     Assertions.assertEquals(4, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
     Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
     Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
@@ -818,7 +818,7 @@ public class DruidCoordinatorTest
     Assertions.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
-        coordinator.getTierToDatasourceToUnderReplicatedCount(false);
+        coordinator.getTierToDatasourceToUnderReplicatedCount(false, false);
     Assertions.assertNotNull(underReplicationCountsPerDataSourcePerTier);
     Assertions.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
 

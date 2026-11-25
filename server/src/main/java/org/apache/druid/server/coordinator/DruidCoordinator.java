@@ -227,10 +227,13 @@ public class DruidCoordinator
     return taskMaster.getAllPeons();
   }
 
-  public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(boolean useClusterView)
+  public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(
+      boolean useClusterView,
+      boolean ignorePendingFirstLoad
+  )
   {
     final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
-    return computeUnderReplicated(dataSegments, useClusterView);
+    return computeUnderReplicated(dataSegments, useClusterView, ignorePendingFirstLoad);
   }
 
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(
@@ -238,7 +241,7 @@ public class DruidCoordinator
       boolean useClusterView
   )
   {
-    return computeUnderReplicated(dataSegments, useClusterView);
+    return computeUnderReplicated(dataSegments, useClusterView, false);
   }
 
   public Object2IntMap<String> getDatasourceToUnavailableSegmentCount()
@@ -428,13 +431,18 @@ public class DruidCoordinator
 
   private Map<String, Object2LongMap<String>> computeUnderReplicated(
       Iterable<DataSegment> dataSegments,
-      boolean computeUsingClusterView
+      boolean computeUsingClusterView,
+      boolean ignorePendingFirstLoad
   )
   {
     if (segmentReplicationStatus == null) {
       return Collections.emptyMap();
     } else {
-      return segmentReplicationStatus.getTierToDatasourceToUnderReplicated(dataSegments, !computeUsingClusterView);
+      return segmentReplicationStatus.getTierToDatasourceToUnderReplicated(
+          dataSegments,
+          !computeUsingClusterView,
+          ignorePendingFirstLoad
+      );
     }
   }
 
