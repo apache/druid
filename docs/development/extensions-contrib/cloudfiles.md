@@ -27,7 +27,7 @@ To use this Apache Druid extension, [include](../../configuration/extensions.md#
 
 ## Deep Storage
 
-[Rackspace Cloud Files](http://www.rackspace.com/cloud/files/) is another option for deep storage. This requires some additional Druid configuration.
+[Rackspace Cloud Files](https://docs.rackspace.com/docs/cloud-files) is another option for deep storage. This requires some additional Druid configuration.
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|

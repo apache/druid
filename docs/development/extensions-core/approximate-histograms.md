@@ -44,7 +44,7 @@ to compute approximate histograms, with the following modifications:
 - the sketch maintains the exact original data as long as the number of
   distinct data points is fewer than the resolutions (number of centroids),
   increasing accuracy when there are few data points, or when dealing with
-  discrete data points. You can find some of the details in [this post](https://metamarkets.com/2013/histograms/).
+  discrete data points. You can find some of the details in [this post](https://web.archive.org/web/20160304062800/https://metamarkets.com/2013/histograms/).
 
 Here are a few things to note before using approximate histograms:
 
