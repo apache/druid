@@ -549,11 +549,11 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
    * {@code acquireSegment} path on partial-eligible segments to force the segment fully resident before returning.
    * Each container downloads via {@link #fetchFiles}, so a not-yet-downloaded container fetches in a single range
    * read (its files tile back-to-back), and a partially-downloaded container skips its already-resident spans.
-   * <p>
-   * {@code continueDownloading} is consulted before each container fetch (including each attached external
-   * mapper's), so a download whose consumer has given up can stop between fetches rather than finish. Returns
-   * {@code true} when every file is downloaded, {@code false} when the supplier stopped the download early; containers
-   * fetched before the stop stay resident and a later call picks up where this one left off.
+   *
+   * @param continueDownloading consulted before each container fetch (including each attached external mapper's), so a
+   *                            download whose consumer has given up can stop between fetches rather than finish
+   * @return {@code true} when every file is downloaded, {@code false} when the supplier stopped the download early;
+   * containers fetched before the stop stay resident and a later call picks up where this one left off.
    */
   public boolean ensureAllDownloaded(BooleanSupplier continueDownloading) throws IOException
   {
