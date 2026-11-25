@@ -845,25 +845,6 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.apache.iceberg</groupId>
-      <artifactId>iceberg-data</artifactId>
-      <version>${iceberg.core.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-databind</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-core</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-annotations</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-avro</artifactId>
       <version>${parquet.version}</version>
@@ -983,6 +964,12 @@
               <ignoredUnusedDeclaredDependency>io.grpc:grpc-context</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>com.fasterxml.woodstox:woodstox-core</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>org.codehaus.woodstox:stax2-api</ignoredUnusedDeclaredDependency>
+              <!-- Parquet jars declared only to align versions of what iceberg-parquet loads at runtime -->
+              <ignoredUnusedDeclaredDependency>org.apache.parquet:parquet-avro</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>org.apache.parquet:parquet-common</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>org.apache.parquet:parquet-encoding</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>org.apache.parquet:parquet-format-structures</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>org.apache.parquet:parquet-hadoop</ignoredUnusedDeclaredDependency>
             </ignoredUnusedDeclaredDependencies>
           </configuration>
         </plugin>
