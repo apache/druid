@@ -105,12 +105,15 @@ public class MSQTestTaskActionClient implements TaskActionClient
           0
       ));
     } else if (taskAction instanceof RetrieveUsedSegmentsAction) {
-      String dataSource = ((RetrieveUsedSegmentsAction) taskAction).getDataSource();
+      final RetrieveUsedSegmentsAction retrieveUsedSegmentsAction = (RetrieveUsedSegmentsAction) taskAction;
+      final String dataSource = retrieveUsedSegmentsAction.getDataSource();
+      // Like the Overlord, return only the segment details the action asks for.
       return (RetType) injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
                                .getSegments()
                                .stream()
                                .filter(dataSegment -> dataSegment.getDataSource()
                                                                  .equals(dataSource))
+                               .map(dataSegment -> dataSegment.retainOnlyDetails(retrieveUsedSegmentsAction.getDetails()))
                                .collect(Collectors.toSet());
     } else if (taskAction instanceof SegmentTransactionalInsertAction) {
       final Set<DataSegment> segments = ((SegmentTransactionalInsertAction) taskAction).getSegments();
