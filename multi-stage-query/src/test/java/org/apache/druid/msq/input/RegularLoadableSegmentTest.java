@@ -80,6 +80,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -376,11 +377,12 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     // Load segment into SegmentManager's timeline
     segmentManagerPreLoad.loadSegment(segment);
 
+    final ChannelCounters counters = new ChannelCounters();
     final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
         segmentManagerPreLoad,
         segment.getId(),
         segment.toDescriptor(),
-        null,
+        counters,
         null,
         false
     );
@@ -388,6 +390,14 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     // acquireIfCached should return a segment since it's loaded
     final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached(AcquireMode.PARTIAL);
     Assertions.assertTrue(cachedSegment.isPresent());
+
+    // The file is counted only once the segment is handed out, and only once.
+    Assertions.assertNull(counters.snapshot(), "nothing is counted until the segment is handed out");
+    loadableSegment.countHandedOut();
+    loadableSegment.countHandedOut();
+    Assertions.assertEquals(1, lastValue(counters.snapshot().getFiles()));
+    Assertions.assertEquals(1209, lastValue(counters.snapshot().getRows()));
+    Assertions.assertEquals(segment.getSize(), lastValue(counters.snapshot().getBytes()));
 
     try (final Segment acquiredSegment = cachedSegment.get()) {
       Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
@@ -652,9 +662,8 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
   }
 
   /**
-   * Counter accounting happens automatically inside a successful {@link AcquireSegmentAction#release()} (via the
-   * on-release hook the loadable segment installs): addLoad (when bytes were loaded) + one addFile with the segment's
-   * row count. The releasing consumer has no counting obligation.
+   * A successful {@link AcquireSegmentAction#release()} counts the load. The file, with the segment's row count, is
+   * counted only by {@link RegularLoadableSegment#countHandedOut()}, at most once.
    */
   @Test
   public void test_countDelivered_accounting() throws Exception
@@ -673,17 +682,26 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     final AcquireSegmentAction action = loadableSegment.acquire(AcquireMode.PARTIAL);
     action.await();
     final AcquireSegmentResult result = action.release();
+    Assertions.assertEquals(1, lastValue(counters.snapshot().getLoadFiles()), "the load is counted at release");
+    Assertions.assertEquals(0, lastValue(counters.snapshot().getFiles()), "the file is not counted until handed out");
 
-    final ChannelCounters.Snapshot snapshot = counters.snapshot();
-    Assertions.assertNotNull(snapshot.getFiles());
-    Assertions.assertEquals(1, snapshot.getFiles()[snapshot.getFiles().length - 1], "exactly one file per delivery");
-    Assertions.assertNotNull(snapshot.getRows());
-    Assertions.assertEquals(1209, snapshot.getRows()[snapshot.getRows().length - 1]);
+    loadableSegment.countHandedOut();
+    loadableSegment.countHandedOut();
+    Assertions.assertEquals(1, lastValue(counters.snapshot().getFiles()), "exactly one file per delivery");
+    Assertions.assertEquals(1209, lastValue(counters.snapshot().getRows()));
 
     try (Segment acquiredSegment = result.getSegment().orElseThrow()) {
       Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
     }
     action.close();
+  }
+
+  /**
+   * Returns the last element of a counter array, or 0 if nothing has been counted.
+   */
+  private static long lastValue(@Nullable final long[] values)
+  {
+    return values == null || values.length == 0 ? 0 : values[values.length - 1];
   }
 
   /**

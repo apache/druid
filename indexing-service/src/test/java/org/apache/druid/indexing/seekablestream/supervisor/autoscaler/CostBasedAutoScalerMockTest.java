@@ -72,6 +72,7 @@ public class CostBasedAutoScalerMockTest
                                       .enableTaskAutoScaler(true)
                                       .lagWeight(0.6)
                                       .idleWeight(0.4)
+                                      .scaleDownDuringTaskRolloverOnly(false)
                                       .build();
   }
 
@@ -209,6 +210,7 @@ public class CostBasedAutoScalerMockTest
                                                                        .taskCountMax(50)
                                                                        .taskCountMin(1)
                                                                        .enableTaskAutoScaler(true)
+                                                                       .scaleDownDuringTaskRolloverOnly(false)
                                                                        .build();
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(mockSupervisor, boundedConfig, mockSpec, mockEmitter));
 

@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.QueryContext;
@@ -98,8 +97,8 @@ public class GroupByQueryConfigTest
                         QueryContext.builder()
                                     .putRaw(QueryContextParameters.MAX_ON_DISK_STORAGE.getName(), "3M")
                                     .putRaw("maxResults", 2)
-                                    .put(QueryContextParameters.MAX_SELECTOR_DICTIONARY_SIZE, HumanReadableBytes.valueOf(3))
-                                    .put(QueryContextParameters.MAX_MERGING_DICTIONARY_SIZE, HumanReadableBytes.valueOf(4))
+                                    .put(QueryContextParameters.MAX_SELECTOR_DICTIONARY_SIZE, 3L)
+                                    .put(QueryContextParameters.MAX_MERGING_DICTIONARY_SIZE, 4L)
                                     .put(QueryContextParameters.MAX_SPILL_FILE_COUNT, 333)
                                     .put(QueryContextParameters.APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT, true)
                                     .putRaw(

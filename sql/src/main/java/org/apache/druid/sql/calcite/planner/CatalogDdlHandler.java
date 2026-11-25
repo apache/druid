@@ -276,7 +276,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
       );
     }
     return new DatasourceProjectionMetadata(
-        new ProjectionSpecTranslator(handlerContext.plannerFactory(), handlerContext.queryContextMap())
+        new ProjectionSpecTranslator(handlerContext.plannerFactory(), handlerContext.queryContext())
             .translate(tableName, columns, name, projection.getBody())
     );
   }
@@ -292,7 +292,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
       final SqlProjectionSpec projection
   )
   {
-    return new ProjectionSpecTranslator(handlerContext.plannerFactory(), handlerContext.queryContextMap())
+    return new ProjectionSpecTranslator(handlerContext.plannerFactory(), handlerContext.queryContext())
         .translateBaseTable(tableName, columns, projection.getBody(), projection.getClusteredBy());
   }
 

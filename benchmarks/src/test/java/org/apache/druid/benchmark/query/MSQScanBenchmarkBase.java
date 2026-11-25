@@ -28,6 +28,8 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.test.CalciteMSQTestsHelper;
+import org.apache.druid.msq.test.MSQTestWorkerContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.IndexSpec;
@@ -75,7 +77,7 @@ import java.util.concurrent.TimeUnit;
  * come from {@link SqlBenchmarkDatasets#clusteringDatasource}, and {@link #layout} chooses how segments store them.
  * <p>
  * Besides time per query, reports the work done by the scan stage (stage 0) as JMH auxiliary counters, read from the
- * query report: segments acquired, rows in those segments, and rows written, each averaged over queries. Run with
+ * query report: segments processed, rows in those segments, and rows written, each averaged over queries. Run with
  * {@code -prof gc} to also report bytes allocated per query.
  * <p>
  * Segments default to V9, sorted by {@code __time} first. Choose other layouts with the {@code layout} parameter, for
@@ -90,6 +92,9 @@ import java.util.concurrent.TimeUnit;
  *   -jvmArgsAppend "--add-opens=java.base/java.nio=ALL-UNNAMED ..."
  * </pre>
  * Set the {@code DRUID_BENCHMARK_CACHE_DIR} environment variable to reuse generated segments across runs.
+ * <p>
+ * {@link #threadsPerWorker} is applied through system properties read when the query framework is created, so each
+ * trial must run in its own fork; do not run with {@code -f 0}.
  */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
@@ -157,6 +162,13 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
   @Param({"2"})
   private int maxNumTasks;
 
+  /**
+   * Number of processors each worker runs with. This also determines the default segment load-ahead, which is twice
+   * this. The in-JVM workers share one processing pool, sized so that each worker can run this many processors.
+   */
+  @Param({"1", "8"})
+  private int threadsPerWorker;
+
   @Param({"V9_TIME_ORDERED"})
   private Layout layout;
 
@@ -180,8 +192,8 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
   @AuxCounters(AuxCounters.Type.EVENTS)
   public static class WorkCounters
   {
-    public double segmentsAcquired;
-    public double rowsInAcquiredSegments;
+    public double segmentsProcessed;
+    public double rowsInProcessedSegments;
     public double rowsWritten;
 
     private final long[] workSums = new long[3];
@@ -192,8 +204,8 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
     @Setup(Level.Iteration)
     public void startIteration(final IterationParams iterationParams)
     {
-      segmentsAcquired = 0;
-      rowsInAcquiredSegments = 0;
+      segmentsProcessed = 0;
+      rowsInProcessedSegments = 0;
       rowsWritten = 0;
       Arrays.fill(workSums, 0);
       numQueries = 0;
@@ -206,20 +218,20 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
       reported |= reporting;
     }
 
-    private void record(final long segmentsAcquired, final long rowsInAcquiredSegments, final long rowsWritten)
+    private void record(final long segmentsProcessed, final long rowsInProcessedSegments, final long rowsWritten)
     {
       if (!reporting) {
         return;
       }
 
-      workSums[0] += segmentsAcquired;
-      workSums[1] += rowsInAcquiredSegments;
+      workSums[0] += segmentsProcessed;
+      workSums[1] += rowsInProcessedSegments;
       workSums[2] += rowsWritten;
       numQueries++;
 
       // JMH reads the counters when the iteration ends, so keep them at the running mean.
-      this.segmentsAcquired = (double) workSums[0] / numQueries;
-      this.rowsInAcquiredSegments = (double) workSums[1] / numQueries;
+      this.segmentsProcessed = (double) workSums[0] / numQueries;
+      this.rowsInProcessedSegments = (double) workSums[1] / numQueries;
       this.rowsWritten = (double) workSums[2] / numQueries;
     }
   }
@@ -233,6 +245,12 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
       engineClass = engineClass.getSuperclass();
     }
     annotations = Arrays.asList(engineClass.getAnnotations());
+
+    System.setProperty(MSQTestWorkerContext.THREAD_COUNT_PROPERTY, String.valueOf(threadsPerWorker));
+    System.setProperty(
+        CalciteMSQTestsHelper.MSQTestModule.POOL_THREADS_PROPERTY,
+        String.valueOf(threadsPerWorker * maxNumTasks)
+    );
 
     final String clusteredDatasource = SqlBenchmarkDatasets.clusteringDatasource("CLUSTERED", clusteringCardinality, 2);
     final SqlBenchmarkDatasets.BenchmarkSchema clustered = SqlBenchmarkDatasets.getSchema(clusteredDatasource);
@@ -335,6 +353,21 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
     );
   }
 
+  /**
+   * Newest rows for one value of the primary clustering column and one value of a secondary column. Matches about 1 in
+   * 4,500 rows, so with a limit above the number of matching rows the scan cannot prune anything.
+   */
+  @Benchmark
+  public void whereClusterKeyAndDimOrderByTimeDescWithLimit(final WorkCounters counters, final Blackhole blackhole)
+  {
+    runQuery(
+        "SELECT * FROM " + DATASOURCE + " WHERE clusterKey1 = '1' AND dimSecondary = '7' ORDER BY __time DESC LIMIT "
+        + limit,
+        counters,
+        blackhole
+    );
+  }
+
   @Benchmark
   public void unorderedWithLimit(final WorkCounters counters, final Blackhole blackhole)
   {
@@ -381,19 +414,19 @@ public abstract class MSQScanBenchmarkBase extends BaseCalciteQueryTest
 
     // Stage 0 scans the datasource; sum its counters over workers.
     final Map<Integer, CounterSnapshots> scanStageWorkers = payload.getCounters().copyMap().get(0);
-    long segmentsAcquired = 0;
-    long rowsInAcquiredSegments = 0;
+    long segmentsProcessed = 0;
+    long rowsInProcessedSegments = 0;
     long rowsWritten = 0;
     for (final CounterSnapshots worker : scanStageWorkers.values()) {
       final ChannelCounters.Snapshot input =
           (ChannelCounters.Snapshot) worker.getMap().get(CounterNames.inputChannel(0));
       final ChannelCounters.Snapshot output =
           (ChannelCounters.Snapshot) worker.getMap().get(CounterNames.outputChannel());
-      segmentsAcquired += sum(input.getFiles());
-      rowsInAcquiredSegments += sum(input.getRows());
+      segmentsProcessed += sum(input.getFiles());
+      rowsInProcessedSegments += sum(input.getRows());
       rowsWritten += output == null ? 0 : sum(output.getRows());
     }
-    counters.record(segmentsAcquired, rowsInAcquiredSegments, rowsWritten);
+    counters.record(segmentsProcessed, rowsInProcessedSegments, rowsWritten);
   }
 
   private static long sum(final long[] values)

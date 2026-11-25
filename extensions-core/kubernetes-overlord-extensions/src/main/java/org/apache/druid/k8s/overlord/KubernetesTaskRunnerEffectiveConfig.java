@@ -197,6 +197,12 @@ public class KubernetesTaskRunnerEffectiveConfig implements KubernetesTaskRunner
   }
 
   @Override
+  public boolean isAllowTaskImageTagOverride()
+  {
+    return staticConfig.isAllowTaskImageTagOverride();
+  }
+
+  @Override
   @Nullable
   public Integer getAdvertisedPlaintextPort()
   {

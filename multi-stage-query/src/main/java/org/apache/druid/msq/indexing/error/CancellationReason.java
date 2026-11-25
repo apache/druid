@@ -32,6 +32,10 @@ public enum CancellationReason
    */
   TASK_SHUTDOWN("Query canceled due to task shutdown", DruidException.Category.CANCELED),
   /**
+   * Query was canceled due to the controller shutting down.
+   */
+  CONTROLLER_SHUTDOWN("Query canceled due to controller shutdown", DruidException.Category.CANCELED),
+  /**
    * Query was canceled due to a request from the user.
    */
   USER_REQUEST("Query canceled", DruidException.Category.CANCELED),

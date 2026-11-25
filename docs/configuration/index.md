@@ -234,7 +234,8 @@ values for the above mentioned configs among others provided by Java implementat
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 |`druid.auth.unsecuredPaths`| List of Strings|List of paths for which security checks will not be performed. All requests to these paths will be allowed.|[]|no|
 |`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, skip authentication checks for HTTP OPTIONS requests. This is needed for certain use cases, such as supporting CORS pre-flight requests. Note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404), so enabling this option may reveal information about server configuration, including information about what extensions are loaded (if those extensions add extensions).|false|no|
-|`druid.auth.emitAuthMetrics`|Boolean|If true, emit service metrics for authorization events. When enabled, Druid emits `auth/forbidden` when access is denied and `auth/exception` when an internal authorization error occurs. See [Security metrics](#security) for details.|false|no|
+|`druid.auth.emitAuthMetrics`|Boolean|If true, emit service metrics for authorization events. When enabled, Druid emits `auth/forbidden` when access is denied and `auth/exception` when an internal authorization error occurs. See [Security metrics](../operations/metrics.md#security) for details.|false|no|
+|`druid.auth.enableLookupAuthorization`|Boolean|If true, authorize lookup endpoints with `LOOKUP` resources. Requests where neither a tier nor a lookup can be resolved require `LOOKUP:LOOKUP`. See [LOOKUP resource permissions](../operations/security-user-auth.md#lookup).|false|no|
 
 For more information, please see [Authentication and Authorization](../operations/auth.md).
 
@@ -247,7 +248,7 @@ All services can log debugging information on startup.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.startup.logging.logProperties`|Log all properties on startup (from common.runtime.properties, runtime.properties, and the JVM command line).|false|
-|`druid.startup.logging.maskProperties`|Masks sensitive properties (passwords, for example) containing theses words.|["password"]|
+|`druid.startup.logging.maskProperties`|**Deprecated**, use `druid.server.hiddenProperties` instead. Words in this list are still added to `druid.server.hiddenProperties`.|null|
 
 Note that some sensitive information may be logged if these settings are enabled.
 
@@ -325,13 +326,16 @@ For native queries, the logger only logs requests when the `query/time` metric e
 For SQL queries, it only logs requests when the `sqlQuery/time` metric exceeds threshold provided in `sqlQueryTimeThresholdMs`.
 See [Metrics](../operations/metrics.md) for more details on query metrics.
 
-Requests that meet the threshold are logged using the request logger type set in `druid.request.logging.delegate.type`.
+Requests that pass every filter are logged using the request logger type set in `druid.request.logging.delegate.type`.
+Set `alwaysLogFailures` to log failed queries even when they would otherwise be filtered out.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.queryTimeThresholdMs`|Threshold value for the `query/time` metric in milliseconds.|0, i.e., no filtering|
 |`druid.request.logging.sqlQueryTimeThresholdMs`|Threshold value for the `sqlQuery/time` metric in milliseconds.|0, i.e., no filtering|
 |`druid.request.logging.mutedQueryTypes` | Query requests of these types are not logged. Query types are defined as string objects corresponding to the "queryType" value for the specified query in the Druid's [native JSON query API](../querying/querying.md). Misspelled query types will be ignored. Example to ignore scan and timeBoundary queries: `["scan", "timeBoundary"]`| []|
+|`druid.request.logging.muteSqlPlannedNativeQueries`|If `true`, native queries with a `sqlQueryId` in their context are not logged, regardless of `queryTimeThresholdMs`. This covers every native query planned from SQL; on the Broker, the SQL request log line still records each query's outcome and its `nativeQueryIds`. Data servers receive these native queries with the same `sqlQueryId`, so they are muted there too. Native queries submitted directly without a `sqlQueryId` are unaffected.|false|
+|`druid.request.logging.alwaysLogFailures`|If `true`, failed native and SQL queries (any query with `success: false`, including cancelled, timed-out and invalid queries) are always logged, bypassing the time thresholds, `mutedQueryTypes`, and `muteSqlPlannedNativeQueries`.|false|
 |`druid.request.logging.delegate.type`|Type of delegate request logger to log requests.|none|
 
 #### Composing request logging
@@ -432,7 +436,7 @@ This deep storage is used to interface with HDFS. You must load the `druid-hdfs-
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.storage.storageDirectory`|HDFS directory to use as deep storage.|none|
-|`druid.storage.compressionFormat`|The compression format applied to the segments uploaded to HDFS. Only `zip` and `lz4` are supported. |zip|
+|`druid.storage.compressionFormat`|The compression format applied to segments uploaded to HDFS. Supports `zip`, `lz4`, and `none` (uncompressed directory layout).|zip|
 
 #### Cassandra deep storage
 
@@ -502,7 +506,7 @@ These properties do not apply to metadata storage connections.
 |Property|Possible values| Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |Default|
 |--------|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
 |`druid.access.jdbc.enforceAllowedProperties`|Boolean| When true, Druid applies `druid.access.jdbc.allowedProperties` to JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, or `jdbc:mariadb:`. When false, Druid allows any kind of JDBC connections without JDBC property validation. This config is for backward compatibility especially during upgrades since enforcing allow list can break existing ingestion jobs or lookups based on JDBC. This config is deprecated and will be removed in a future release. |true|
-|`druid.access.jdbc.allowedProperties`|List of JDBC properties| Defines a list of allowed JDBC properties. Druid always enforces the list for all JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, and `jdbc:mariadb:` if `druid.access.jdbc.enforceAllowedProperties` is set to true.<br/><br/>This option is tested against MySQL connector 8.2.0, MariaDB connector 3.5.10, and PostgreSQL connector 42.2.14. Other connector versions might not work.                                                                           |`["useSSL", "requireSSL", "sslMode", "ssl", "sslmode"]`|
+|`druid.access.jdbc.allowedProperties`|List of JDBC properties| Defines a list of allowed JDBC properties. Druid always enforces the list for all JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, and `jdbc:mariadb:` if `druid.access.jdbc.enforceAllowedProperties` is set to true.<br/><br/>This option is tested against MySQL connector 8.2.0, MariaDB connector 4.0.0, and PostgreSQL connector 42.2.14. Other connector versions might not work. With MariaDB connector 4.x, Druid counts both `useSSL=false` and `sslMode=disable` as setting `sslMode`, so keep `sslMode` in the list to allow connections without TLS.                                                                           |`["useSSL", "requireSSL", "sslMode", "ssl", "sslmode"]`|
 |`druid.access.jdbc.allowUnknownJdbcUrlFormat`|Boolean| When false, Druid only accepts JDBC connections starting with `jdbc:postgresql:` or `jdbc:mysql:`. When true, Druid allows JDBC connections to any kind of database, but only enforces `druid.access.jdbc.allowedProperties` for PostgreSQL and MySQL/MariaDB.                                                                                                                                                                                                                 |true|
 
 ### Task logging
@@ -715,7 +719,7 @@ This section contains the configuration options for endpoints that are supported
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.hiddenProperties`| If property names or substring of property names (case insensitive) is in this list, responses of the `/status/properties` endpoint do not show these properties | `["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password", "password", "key", "token", "pwd"]` |
+|`druid.server.hiddenProperties`|Properties whose names contain any of these words (case insensitive) are treated as sensitive: their values are masked in the startup property log (`druid.startup.logging.logProperties`) and in logged task commands, and the properties are omitted from the `/status/properties` endpoint. Setting this property replaces the default list, so keep the default words when adding new ones.|`["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password", "password", "key", "token", "pwd", "secret", "passphrase", "basicAuthentication", "druid.emitter.kafka.producer.hiddenProperties"]`|
 
 ## Master server
 
@@ -1037,7 +1041,7 @@ If autoscaling is enabled, you can set these additional configs:
 |`druid.indexer.autoscale.maxScalingDuration`|How long the Overlord will wait around for a Middle Manager to show up before giving up.|`PT15M`|
 |`druid.indexer.autoscale.numEventsToTrack`|The number of autoscaling related events (node creation and termination) to track.|10|
 |`druid.indexer.autoscale.pendingTaskTimeout`|How long a task can be in "pending" state before the Overlord tries to scale up.|`PT30S`|
-|`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling. Overrides dynamic configuration. |null|
+|`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling, and running workers with an older version count as invalid, so they can be terminated. If not set, `druid.indexer.runner.minWorkerVersion` decides which workers are valid. |null|
 |`druid.indexer.autoscale.workerPort`|The port that Middle Managers will run on.|8080|
 |`druid.indexer.autoscale.workerCapacityHint`| An estimation of the number of task slots available for each worker launched by the auto scaler when there are no workers running. The auto scaler uses the worker capacity hint to launch workers with an adequate capacity to handle pending tasks. When unset or set to a value less than or equal to 0, the auto scaler scales workers equal to the value for `minNumWorkers` in autoScaler config instead. The auto scaler assumes that each worker, either a Middle Manager or indexer, has the same amount of task slots. Therefore, when all your workers have the same capacity (homogeneous capacity), set the value for `autoscale.workerCapacityHint` equal to `druid.worker.capacity`. If your workers have different capacities (heterogeneous capacity), set the value to the average of `druid.worker.capacity` across the workers. For example, if two workers have `druid.worker.capacity=10`, and one has `druid.worker.capacity=4`, set `autoscale.workerCapacityHint=8`. Only applies to `pendingTaskBased` provisioning strategy.|-1|
 
@@ -1505,10 +1509,11 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|`PT5M`|
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
-|`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
+|`druid.server.http.gracefulShutdownTimeout`|How long Jetty waits on shutdown for in-flight requests, such as queries, to finish before closing the remaining connections. Idle connections are closed after about one second. This wait starts after `druid.server.http.unannouncePropagationDelay` elapses. `PT0S` disables the wait.|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context-reference.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |`Long.MAX_VALUE`|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
+|`druid.server.http.headerCacheSize`|Size of the cache Jetty keeps on each client connection to avoid re-parsing request headers that repeat across requests on that connection. Disabled (0) by default because the parsing it saves is negligible compared to the work of serving a Druid request, and each connection that uses the cache holds extra heap for as long as it stays open. Most deployments should leave this at 0.|0|
 |`druid.server.http.enableForwardedRequestCustomizer`|If enabled, adds Jetty ForwardedRequestCustomizer which reads X-Forwarded-* request headers to manipulate servlet request object when Druid is used behind a proxy.|false|
 |`druid.server.http.allowedHttpMethods`|List of HTTP methods that should be allowed in addition to the ones required by Druid APIs. Druid APIs require GET, PUT, POST, and DELETE, which are always allowed. This option is not useful unless you have installed an extension that needs these additional HTTP methods or that adds functionality related to CORS. None of Druid's bundled extensions require these methods.|`[]`|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
@@ -1627,10 +1632,11 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|`PT5M`|
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
-|`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
+|`druid.server.http.gracefulShutdownTimeout`|How long Jetty waits on shutdown for in-flight requests, such as queries, to finish before closing the remaining connections. Idle connections are closed after about one second. This wait starts after `druid.server.http.unannouncePropagationDelay` elapses. `PT0S` disables the wait.|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context-reference.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |`Long.MAX_VALUE`|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
+|`druid.server.http.headerCacheSize`|Size of the cache Jetty keeps on each client connection to avoid re-parsing request headers that repeat across requests on that connection. Disabled (0) by default because the parsing it saves is negligible compared to the work of serving a Druid request, and each connection that uses the cache holds extra heap for as long as it stays open. Most deployments should leave this at 0.|0|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 
 ##### Processing
@@ -1836,10 +1842,11 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 |`druid.server.http.maxScatterGatherBytes`|Maximum number of bytes gathered from data processes such as Historicals and realtime processes to execute a query. Queries that exceed this limit will fail. This is an advance configuration that allows to protect in case Broker is under heavy load and not utilizing the data gathered in memory fast enough and leading to OOMs. This limit can be further reduced at query time using `maxScatterGatherBytes` in the context. Note that having large limit is not necessarily bad if broker is never under heavy concurrent load in which case data gathered is processed quickly and freeing up the memory used. Human-readable format is supported, see [here](human-readable-byte.md). |`Long.MAX_VALUE`|
 |`druid.server.http.maxSubqueryRows`|Maximum number of rows from all subqueries per query. Druid stores the subquery rows in temporary tables that live in the Java heap. `druid.server.http.maxSubqueryRows` is a guardrail to prevent the system from exhausting available heap. When a subquery exceeds the row limit, Druid throws a resource limit exceeded exception: "Subquery generated results beyond maximum."<br /><br />It is a good practice to avoid large subqueries in Druid. However, if you choose to raise the subquery row limit, you must also increase the heap size of all Brokers, Historicals, and task Peons that process data for the subqueries to accommodate the subquery results.<br /><br />There is no formula to calculate the correct value. Trial and error is the best approach.|100000|
 |`druid.server.http.maxSubqueryBytes`|Maximum number of bytes from all subqueries per query. Since the results are stored on the Java heap, `druid.server.http.maxSubqueryBytes` is a guardrail like `druid.server.http.maxSubqueryRows` to prevent the heap space from exhausting. When a subquery exceeds the byte limit, Druid throws a resource limit exceeded exception. A negative value for the guardrail indicates that Druid won't guardrail by memory. This can be set to 'disabled' which disables the results from being limited via the byte limit, 'auto' which sets this value automatically taking free heap space into account, or a positive long value depicting the number of bytes per query's subqueries' results can occupy. This is an experimental feature for now as this materializes the results in a different format.|'disabled'|
-|`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
+|`druid.server.http.gracefulShutdownTimeout`|How long Jetty waits on shutdown for in-flight requests, such as queries, to finish before closing the remaining connections. Idle connections are closed after about one second. This wait starts after `druid.server.http.unannouncePropagationDelay` elapses. `PT0S` disables the wait.|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context-reference.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |`Long.MAX_VALUE`|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks. |8 * 1024|
+|`druid.server.http.headerCacheSize`|Size of the cache Jetty keeps on each client connection to avoid re-parsing request headers that repeat across requests on that connection. Disabled (0) by default because the parsing it saves is negligible compared to the work of serving a Druid request, and each connection that uses the cache holds extra heap for as long as it stays open. Most deployments should leave this at 0.|0|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 |`druid.server.http.enableHSTS`|If set to true, druid services will add strict transport security header `Strict-Transport-Security: max-age=63072000; includeSubDomains` to all HTTP responses|`false`|
 
@@ -1967,6 +1974,7 @@ You can optionally only configure caching to be enabled on the Broker by setting
 |`druid.broker.cache.populateCache`|true, false|Populate the cache on the Broker.|false|
 |`druid.broker.cache.useResultLevelCache`|true, false|Enable result level caching on the Broker.|false|
 |`druid.broker.cache.populateResultLevelCache`|true, false|Populate the result level cache on the Broker.|false|
+|`druid.broker.cache.includeDatasourceAndIntervalsInResultLevelCacheKey`|true, false|Include the query's datasource and intervals in the result level cache key. By default the key has neither, so queries that differ only by interval or datasource share one cache entry and overwrite each other. Enabling this gives each of them its own entry, which helps when the same queries repeat over a few different intervals. Trade-offs: the cache holds more entries, and a query whose interval changes on every run, such as a rolling time window, adds a new entry each run that is never read again. Queries whose intervals cover the same data but differ elsewhere, such as an end time past the latest data, no longer reuse each other's entry. Changing this setting means existing result level cache entries are no longer read.|false|
 |`druid.broker.cache.resultLevelCacheLimit`|positive integer|Maximum size of query response that can be cached.|`Integer.MAX_VALUE`|
 |`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|`[scan]`|
 |`druid.broker.cache.cacheBulkMergeLimit`|positive integer or 0|Queries with more segments than this number will not attempt to fetch from cache at the broker level, leaving potential caching fetches (and cache result merging) to the Historicals|`Integer.MAX_VALUE`|
@@ -2009,7 +2017,7 @@ The following table lists available monitors and the respective services where t
 
 |Name|Description|Service|
 |----|-----------|-------|
-|`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker services. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|Broker, Historical, Indexer, Peon|
+|`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker services. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and errors.|Broker, Historical, Indexer, Peon|
 |`org.apache.druid.java.util.metrics.OshiSysMonitor`|Reports on various system activities and statuses using the [OSHI](https://github.com/oshi/oshi), a JNA-based (native) Operating System and Hardware Information library for Java.|Any|
 |`org.apache.druid.java.util.metrics.JvmMonitor`|Reports various JVM-related statistics.|Any|
 |`org.apache.druid.java.util.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|Any|
@@ -2282,6 +2290,21 @@ If runtime property only contains `druid.query.default.context.maxQueuedBytes=y`
 `druid.broker.http.maxQueuedBytes=x` and `druid.query.default.context.maxQueuedBytes=y`, then the value of
 `druid.query.default.context.maxQueuedBytes`, `y`, is use (given that query does not have `maxQueuedBytes` in the
 context). If query does have `maxQueuedBytes` in the context, then that value is use instead.
+
+### Query context validation
+
+The Broker checks the parameters that a query sets in its context. This applies to the top-level context of native queries, and to the context and `SET` statements of SQL queries, including the connection properties of JDBC connections.
+
+The Broker always rejects a recognized parameter with an invalid value. If you set `druid.query.context.rejectUnknownParameters` to `true`, it also rejects a parameter that Druid doesn't recognize, such as a misspelled parameter name, instead of ignoring it. The error names an invalid parameter and, for an unrecognized parameter, suggests the parameters with similar names, if any. For example: `Unknown query context parameter [useCahce]. Did you mean [useCache]?`
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.context.rejectUnknownParameters`|Whether the Broker rejects queries with unrecognized query context parameters. If `false`, the Broker ignores unrecognized parameters.|`false`|
+
+Druid also checks the default context that operators configure, in the same way: it always rejects invalid values, and rejects unrecognized parameters if `druid.query.context.rejectUnknownParameters` is `true`.
+
+* The Broker fails to start if `druid.query.default.context.*` or `druid.msq.dart.query.context.*` sets an invalid parameter.
+* The Coordinator rejects an update of the [Broker dynamic configuration](../api-reference/dynamic-configuration-api.md) whose `queryContext` sets an invalid parameter. To reject unrecognized parameters there, set `druid.query.context.rejectUnknownParameters` on the Coordinator as well as on the Broker, for example in `common.runtime.properties`.
 
 ### Search query config
 

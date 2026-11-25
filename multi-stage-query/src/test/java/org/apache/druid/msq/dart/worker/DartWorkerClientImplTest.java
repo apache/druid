@@ -22,10 +22,12 @@ package org.apache.druid.msq.dart.worker;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceClientFactoryImpl;
@@ -37,8 +39,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 
 public class DartWorkerClientImplTest
 {
@@ -203,6 +209,70 @@ public class DartWorkerClientImplTest
     finally {
       client.close();
     }
+  }
+
+  @Test
+  public void test_controllerClient_requestTimeouts()
+  {
+    final List<RequestBuilder> requests = captureRequests(
+        "localhost:8080",
+        client -> {
+          client.postFinish(WORKER_ID.toString());
+          client.stopWorker(WORKER_ID.toString());
+        }
+    );
+
+    Assertions.assertEquals(2, requests.size());
+    Assertions.assertEquals(DartWorkerClientImpl.CONTROLLER_REQUEST_TIMEOUT, requests.get(0).getTimeout());
+    Assertions.assertEquals(DartWorkerClientImpl.STOP_WORKER_TIMEOUT, requests.get(1).getTimeout());
+  }
+
+  @Test
+  public void test_workerClient_defaultRequestTimeout()
+  {
+    final List<RequestBuilder> requests = captureRequests(
+        null,
+        client -> client.postFinish(WORKER_ID.toString())
+    );
+
+    Assertions.assertEquals(1, requests.size());
+    Assertions.assertEquals(new RequestBuilder(HttpMethod.POST, "/").getTimeout(), requests.get(0).getTimeout());
+  }
+
+  /**
+   * Runs {@code fn} on a {@link DartWorkerClientImpl} with the given controller host, and returns the requests it
+   * sends.
+   */
+  private static List<RequestBuilder> captureRequests(
+      @Nullable final String controllerHost,
+      final Consumer<DartWorkerClientImpl> fn
+  )
+  {
+    final List<RequestBuilder> requests = new ArrayList<>();
+    final ServiceClient serviceClient = Mockito.mock(ServiceClient.class);
+    Mockito.when(serviceClient.asyncRequest(Mockito.any(), Mockito.any())).thenAnswer(invocation -> {
+      requests.add(invocation.getArgument(0));
+      return Futures.immediateFuture(null);
+    });
+
+    final ServiceClientFactory clientFactory = Mockito.mock(ServiceClientFactory.class);
+    Mockito.when(clientFactory.makeClient(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(serviceClient);
+
+    final DartWorkerClientImpl client = new DartWorkerClientImpl(
+        QUERY_ID,
+        clientFactory,
+        TestHelper.makeSmileMapper(),
+        controllerHost
+    );
+
+    try {
+      fn.accept(client);
+    }
+    finally {
+      client.close();
+    }
+
+    return requests;
   }
 
   /**

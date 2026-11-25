@@ -1188,8 +1188,18 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         try {
           // this will send HTTP request to worker for assigning task
           if (!runTaskOnWorker(taskItem, immutableWorker.getWorker().getHost())) {
-            if (taskItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
-              taskItem.revertStateFromPendingWorkerAssignToPending();
+            TaskStatus shutdownStatus = null;
+            synchronized (statusLock) {
+              if (taskItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
+                shutdownStatus = taskItem.shutdownStatus;
+                if (shutdownStatus == null) {
+                  taskItem.revertStateFromPendingWorkerAssignToPending();
+                }
+              }
+            }
+            if (shutdownStatus != null) {
+              // taskComplete(..) must be called outside of statusLock, see comments on method.
+              taskComplete(taskItem, null, shutdownStatus);
             }
           }
         }
@@ -1252,6 +1262,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.get(taskId);
       if (taskRunnerWorkItem != null) {
         if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
+          taskRunnerWorkItem.shutdownStatus = TaskStatus.failure(taskId, reason);
           workerHolderRunningTask = workers.get(taskRunnerWorkItem.getWorker().getHost());
           if (workerHolderRunningTask == null) {
             log.info("Can't shutdown! No worker running task[%s]", taskId);
@@ -1261,8 +1272,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
           pendingTaskIds.remove(taskId);
           pendingWorkItem = taskRunnerWorkItem;
         } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING_WORKER_ASSIGN) {
-          // The thread assigning this task owns the work item. Once the worker runs the task, or the item goes back
-          // to PENDING, a later shutdown request handles it.
+          // The assigning thread completes the task if assignment fails, and taskAddedOrUpdated
+          // asks the worker to shut it down if the worker runs it.
+          taskRunnerWorkItem.shutdownStatus = TaskStatus.failure(taskId, reason);
           pendingTaskIds.remove(taskId);
         } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
           tasks.remove(taskId);
@@ -1531,6 +1543,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
                 // fall through
               case RUNNING:
+                // A worker can report a task RUNNING before its task runner has it and ignore a shutdown request
+                shouldShutdownTask = taskItem.shutdownStatus != null;
                 if (worker.getHost().equals(taskItem.getWorker().getHost())) {
                   if (!announcement.getTaskLocation().equals(taskItem.getLocation())) {
                     log.info(
@@ -1809,6 +1823,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
     private Task task;
     private State state;
+
+    // Guarded by the enclosing runner's statusLock.
+    @Nullable
+    private TaskStatus shutdownStatus;
 
     HttpRemoteTaskRunnerWorkItem(
         String taskId,

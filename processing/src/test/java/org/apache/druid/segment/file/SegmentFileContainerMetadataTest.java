@@ -45,6 +45,17 @@ class SegmentFileContainerMetadataTest
   }
 
   @Test
+  void testDeserializedBundleIsInterned() throws Exception
+  {
+    // every loaded segment retains its containers' bundle names, which repeat across segments of a table
+    final String json = JSON_MAPPER.writeValueAsString(new SegmentFileContainerMetadata(100, 4096, "projA"));
+    Assertions.assertSame(
+        JSON_MAPPER.readValue(json, SegmentFileContainerMetadata.class).getBundle(),
+        JSON_MAPPER.readValue(json, SegmentFileContainerMetadata.class).getBundle()
+    );
+  }
+
+  @Test
   void testNullBundleNormalizesToRootAndOmitsFromJson() throws Exception
   {
     // Null in the constructor is the writer-side equivalent of "no explicit startFileBundle call"; the field

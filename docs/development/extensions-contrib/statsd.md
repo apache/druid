@@ -72,4 +72,9 @@ e.g.
 `"druid/coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
  "druid/historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" }`
 
+A service-prefixed mapping also applies to services whose names start with the mapped service name. When several
+mappings match, the one with the longest service name is used. For example, historicals with
+`druid.service=druid/historical/glacier` or `druid.service=druid/historical-hot` use the
+`druid/historical-segment/count` mapping.
+
 For most use-cases, the default mapping is sufficient.

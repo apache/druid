@@ -29,6 +29,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.server.RequestLogLine;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -51,6 +52,12 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
   @JsonProperty
   private Set<String> mutedQueryTypes = Set.of();
 
+  @JsonProperty
+  private boolean alwaysLogFailures = false;
+
+  @JsonProperty
+  private boolean muteSqlPlannedNativeQueries = false;
+
   @Override
   public RequestLogger get()
   {
@@ -58,7 +65,9 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
         delegate.get(),
         queryTimeThresholdMs,
         sqlQueryTimeThresholdMs,
-        mutedQueryTypes
+        mutedQueryTypes,
+        alwaysLogFailures,
+        muteSqlPlannedNativeQueries
     );
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
@@ -70,23 +79,44 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     private final long queryTimeThresholdMs;
     private final long sqlQueryTimeThresholdMs;
     private final Set<String> mutedQueryTypes;
+    private final boolean alwaysLogFailures;
+    private final boolean muteSqlPlannedNativeQueries;
 
+    /**
+     * @param alwaysLogFailures           if true, failed queries are logged regardless of every other filter
+     * @param muteSqlPlannedNativeQueries if true, native queries with a {@code sqlQueryId} in their context are not
+     *                                    logged
+     */
     public FilteredRequestLogger(
         RequestLogger logger,
         long queryTimeThresholdMs,
         long sqlQueryTimeThresholdMs,
-        Set<String> mutedQueryTypes
+        Set<String> mutedQueryTypes,
+        boolean alwaysLogFailures,
+        boolean muteSqlPlannedNativeQueries
     )
     {
       this.logger = logger;
       this.queryTimeThresholdMs = queryTimeThresholdMs;
       this.sqlQueryTimeThresholdMs = sqlQueryTimeThresholdMs;
       this.mutedQueryTypes = mutedQueryTypes;
+      this.alwaysLogFailures = alwaysLogFailures;
+      this.muteSqlPlannedNativeQueries = muteSqlPlannedNativeQueries;
     }
 
     public long getQueryTimeThresholdMs()
     {
       return queryTimeThresholdMs;
+    }
+
+    public boolean isAlwaysLogFailures()
+    {
+      return alwaysLogFailures;
+    }
+
+    public boolean isMuteSqlPlannedNativeQueries()
+    {
+      return muteSqlPlannedNativeQueries;
     }
 
     public RequestLogger getDelegate()
@@ -111,12 +141,7 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     @Override
     public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
     {
-      Object queryTime = requestLogLine.getQueryStats().getStats().get("query/time");
-      if (queryTime != null && ((Number) queryTime).longValue() >= queryTimeThresholdMs) {
-        Query<?> query = requestLogLine.getQuery();
-        if (query != null && mutedQueryTypes.contains(query.getType())) {
-          return;
-        }
+      if (shouldLog(requestLogLine, "query/time", queryTimeThresholdMs, muteSqlPlannedNativeQueries)) {
         logger.logNativeQuery(requestLogLine);
       }
     }
@@ -124,14 +149,33 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     @Override
     public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
     {
-      Object sqlQueryTime = requestLogLine.getQueryStats().getStats().get("sqlQuery/time");
-      if (sqlQueryTime != null && ((Number) sqlQueryTime).longValue() >= sqlQueryTimeThresholdMs) {
-        Query<?> query = requestLogLine.getQuery();
-        if (query != null && mutedQueryTypes.contains(query.getType())) {
-          return;
-        }
+      if (shouldLog(requestLogLine, "sqlQuery/time", sqlQueryTimeThresholdMs, false)) {
         logger.logSqlQuery(requestLogLine);
       }
+    }
+
+    private boolean shouldLog(
+        RequestLogLine requestLogLine,
+        String timeMetric,
+        long timeThresholdMs,
+        boolean muteSqlPlanned
+    )
+    {
+      final Map<String, Object> stats = requestLogLine.getQueryStats().getStats();
+      if (alwaysLogFailures && Boolean.FALSE.equals(stats.get("success"))) {
+        return true;
+      }
+
+      final Object queryTime = stats.get(timeMetric);
+      if (queryTime == null || ((Number) queryTime).longValue() < timeThresholdMs) {
+        return false;
+      }
+
+      final Query<?> query = requestLogLine.getQuery();
+      if (query == null) {
+        return true;
+      }
+      return !mutedQueryTypes.contains(query.getType()) && !(muteSqlPlanned && query.getSqlQueryId() != null);
     }
 
     @Override
@@ -142,6 +186,8 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
              ", queryTimeThresholdMs=" + queryTimeThresholdMs +
              ", sqlQueryTimeThresholdMs=" + sqlQueryTimeThresholdMs +
              ", mutedQueryTypes=" + mutedQueryTypes +
+             ", alwaysLogFailures=" + alwaysLogFailures +
+             ", muteSqlPlannedNativeQueries=" + muteSqlPlannedNativeQueries +
              '}';
     }
   }

@@ -158,6 +158,10 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
   private boolean allowTaskPodTemplateSelection = false;
 
   @JsonProperty
+  // Allow per-task replacement of the first container image tag via the task context.
+  private boolean allowTaskImageTagOverride = false;
+
+  @JsonProperty
   @Max(0xffff)
   // task pods are reached by pod IP, not service discovery, so druid.advertisedPlaintextPort can't apply to them
   private Integer advertisedPlaintextPort = null;
@@ -191,6 +195,7 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
       boolean useK8sSharedInformers,
       Period k8sSharedInformerResyncPeriod,
       boolean allowTaskPodTemplateSelection,
+      boolean allowTaskImageTagOverride,
       @Nullable Integer advertisedPlaintextPort
   )
   {
@@ -281,6 +286,7 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
         allowTaskPodTemplateSelection,
         this.allowTaskPodTemplateSelection
     );
+    this.allowTaskImageTagOverride = allowTaskImageTagOverride;
     this.advertisedPlaintextPort = advertisedPlaintextPort;
   }
 
@@ -428,6 +434,12 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
   public boolean isAllowTaskPodTemplateSelection()
   {
     return allowTaskPodTemplateSelection;
+  }
+
+  @Override
+  public boolean isAllowTaskImageTagOverride()
+  {
+    return allowTaskImageTagOverride;
   }
 
   @Override

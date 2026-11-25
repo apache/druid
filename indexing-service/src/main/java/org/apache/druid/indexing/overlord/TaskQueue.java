@@ -38,7 +38,6 @@ import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
-import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.TaskLock;
@@ -736,30 +735,13 @@ public class TaskQueue
 
     // Mark this task as complete, so it isn't managed while being cleaned up.
     entry.isComplete = true;
-    entry.updateStatus(taskStatus, DateTimes.nowUtc());
-
-    final TaskLocation taskLocation = taskRunner.getTaskLocation(task.getId());
+    entry.updateStatus(taskStatus.withLocation(taskRunner.getTaskLocation(task.getId())), DateTimes.nowUtc());
 
     // Save status to metadata store first, so if we crash while doing the rest of the shutdown, our successor
     // remembers that this task has completed.
-    try {
-      // The code block is only called when a task completes,
-      // and we need to check to make sure the metadata store has the correct status stored.
-      final Optional<TaskStatus> previousStatus = taskStorage.getStatus(task.getId());
-      if (!previousStatus.isPresent() || previousStatus.get().isComplete()) {
-        log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
-      } else {
-        taskStorage.setStatus(taskStatus.withLocation(taskLocation));
-      }
-    }
-    catch (Throwable e) {
-      // If persist fails, even after the retries performed in taskStorage, then metadata store and actual cluster
-      // state have diverged. Send out an alert and continue with the task shutdown routine.
-      log.makeAlert(e, "Failed to persist status for task")
-         .addData("task", task.getId())
-         .addData("statusCode", taskStatus.getStatusCode())
-         .emit();
-    }
+    // Keep the retry pending even if reporting a persistence failure throws.
+    entry.persistFailed = true;
+    entry.persistFailed = !persistTaskStatus(task, entry.taskInfo.getStatus());
 
     shutdownTaskOnRunner(task.getId(), reasonFormat, args);
     removeTaskLock(task);
@@ -767,6 +749,49 @@ public class TaskQueue
     requestManagement();
 
     log.info("Completed notifyStatus for task[%s] with status[%s]", task.getId(), taskStatus);
+  }
+
+  /**
+   * Persists a terminal task status if the task is still active in storage. Callers must pass a completed
+   * status and hold the per-task lock. Used for both the initial completion notification and storage sync retries.
+   * Persistence failures are reported through an alert and a metric. The completed in-memory entry is retained
+   * so that a later storage sync can retry the write.
+   *
+   * @return true if no further write is needed, or false if reading or writing the status failed
+   */
+  private boolean persistTaskStatus(final Task task, final TaskStatus taskStatus)
+  {
+    try {
+      // The code block is only called when a task completes,
+      // and we need to check to make sure the metadata store has the correct status stored.
+      final Optional<TaskStatus> previousStatus = taskStorage.getStatus(task.getId());
+      if (!previousStatus.isPresent()) {
+        log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
+      } else if (!previousStatus.get().isComplete()) {
+        taskStorage.setStatus(taskStatus);
+      }
+      // A failed write may have committed despite a lost acknowledgement. An already-terminal status needs no retry.
+      return true;
+    }
+    catch (Throwable e) {
+      // If persist fails, even after the retries performed in taskStorage, then metadata store and actual cluster
+      // state have diverged. Send out an alert and continue with the task shutdown routine.
+      // A later syncFromStorage retries persisting the completed status.
+      try {
+        log.makeAlert(e, "Failed to persist status for task")
+           .addData("task", task.getId())
+           .addData("statusCode", taskStatus.getStatusCode())
+           .emit();
+        final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+        IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+        emitter.emit(metricBuilder.setMetric("task/status/persistFailed/count", 1));
+      }
+      catch (Exception reportingException) {
+        // Reporting failures must not prevent task cleanup or persistence retries.
+        log.warn(reportingException, "Failed to report status persistence failure for task[%s]", task.getId());
+      }
+      return false;
+    }
   }
 
   /**
@@ -863,6 +888,18 @@ public class TaskQueue
         final MapDifference<String, TaskInfo> mapDifference = Maps.difference(oldTasks, newTasks);
         final Collection<TaskInfo> addedTasks = mapDifference.entriesOnlyOnRight().values();
         final Collection<TaskInfo> removedTasks = mapDifference.entriesOnlyOnLeft().values();
+
+        // A stale snapshot can include tasks whose status was persisted successfully. Retry only failed writes.
+        for (final TaskEntry taskEntry : activeTasks.values()) {
+          final String taskId = taskEntry.getTask().getId();
+          if (taskEntry.persistFailed && newTasks.containsKey(taskId)) {
+            updateTaskEntry(taskId, entry -> {
+              if (entry != null && entry.persistFailed) {
+                entry.persistFailed = !persistTaskStatus(entry.getTask(), entry.taskInfo.getStatus());
+              }
+            });
+          }
+        }
 
         // Remove tasks not present in metadata store if their lastUpdatedTime is before syncStartTime
         int numTasksRemoved = 0;
@@ -1069,7 +1106,13 @@ public class TaskQueue
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
     IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
 
-    emitter.emit(metricBuilder.setMetric(TaskMetrics.RUN_DURATION, status.getDuration()));
+    try {
+      emitter.emit(metricBuilder.setMetric(TaskMetrics.RUN_DURATION, status.getDuration()));
+    }
+    catch (Exception e) {
+      // Completion accounting and management notification must not depend on the emitter.
+      log.warn(e, "Failed to emit completion metric for task[%s]", task.getId());
+    }
 
     if (status.isSuccess()) {
       Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
@@ -1165,6 +1208,8 @@ public class TaskQueue
     private DateTime lastUpdatedTime;
     private ListenableFuture<TaskStatus> future = null;
     private boolean isComplete = false;
+    // Updated under the per-task lock and read by storage sync before acquiring that lock.
+    private volatile boolean persistFailed = false;
 
     TaskEntry(TaskInfo taskInfo, DateTime taskSubmittedTime)
     {

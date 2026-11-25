@@ -88,6 +88,7 @@
   "task/waiting/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "gauge" },
 
   "task/action/run/time": { "dimensions" : ["dataSource", "taskActionType"], "type" : "timer" },
+  "task/status/persistFailed/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
   "task/status/queue/count": { "dimensions" : [], "type" : "gauge" },
   "task/status/updated/count": { "dimensions" : [], "type" :  "count" },
 
@@ -187,6 +188,8 @@
   "tier/storage/capacity": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
   "tier/segmentCache/capacity": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
   "tier/segmentCache/used": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
+  "tier/segmentCache/utilization": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
+  "tierAlias/segmentCache/utilization": { "dimensions" : ["tierAlias"], "type" : "gauge"},
   "tier/required/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
   "tier/total/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
   "tier/replication/factor" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },

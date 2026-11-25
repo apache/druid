@@ -36,6 +36,7 @@ import org.apache.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
@@ -86,6 +87,12 @@ public class AdaptedLoadableSegment implements LoadableSegment
   private final ChannelCounters inputCounters;
 
   /**
+   * Row and byte counts recorded at delivery. They are only added to {@link #inputCounters} by
+   * {@link #countHandedOut()}.
+   */
+  private final AtomicReference<LoadableSegmentUtils.FileCounts> uncountedFile = new AtomicReference<>();
+
+  /**
    * Creates a wrapper around a supplier of an {@link AcquireSegmentResult}. The lifecycle of the supplied
    * {@link AsyncResource} is folded into the {@link AcquireSegmentAction} returned from {@link #acquire}: closing
    * the delivered segment (or the un-released action) closes the resource, releasing whatever it owns.
@@ -95,7 +102,8 @@ public class AdaptedLoadableSegment implements LoadableSegment
    *                             folded into the segment's close.
    * @param descriptor           descriptor containing the interval to use for filtering
    * @param description          user-oriented description for error messages
-   * @param inputCounters        counters for tracking input, updated at delivery via {@link #countDelivered}.
+   * @param inputCounters        counters for tracking input. Loads are counted at delivery via {@link #countDelivered},
+   *                             and files by {@link #countHandedOut()}.
    */
   public AdaptedLoadableSegment(
       final Supplier<AsyncResource<AcquireSegmentResult>> asyncSegmentSupplier,
@@ -159,10 +167,19 @@ public class AdaptedLoadableSegment implements LoadableSegment
     return action;
   }
 
+  @Override
+  public void countHandedOut()
+  {
+    final LoadableSegmentUtils.FileCounts counts = uncountedFile.getAndSet(null);
+    if (counts != null && inputCounters != null) {
+      inputCounters.addFile(counts.rows(), counts.bytes());
+    }
+  }
+
   /**
    * Counter accounting for a delivered acquire, installed on the returned action via
    * {@link AcquireSegmentAction#setOnRelease} so it runs exactly once, inside a successful
-   * {@link AcquireSegmentAction#release()}.
+   * {@link AcquireSegmentAction#release()}. Counts the load, and records the file for {@link #countHandedOut()}.
    */
   private void countDelivered(AcquireSegmentResult result)
   {
@@ -174,6 +191,6 @@ public class AdaptedLoadableSegment implements LoadableSegment
     // Use byteCount = 0 for adapted segments; we can't really tell what it is from the AcquireSegmentResult
     // (the "load size" may not be the entire size if the segment was fully or partially cached). Implementations will
     // call ChannelCounters#incrementBytes if they have something useful to put there.
-    inputCounters.addFile(rowCount, 0);
+    uncountedFile.set(new LoadableSegmentUtils.FileCounts(rowCount, 0));
   }
 }

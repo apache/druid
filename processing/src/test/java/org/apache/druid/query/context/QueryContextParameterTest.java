@@ -19,10 +19,13 @@
 
 package org.apache.druid.query.context;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContext;
@@ -38,6 +41,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -225,7 +229,7 @@ class QueryContextParameterTest
         assertThrows(BadQueryContextException.class, () -> parameter.parse(12.7d)).getMessage()
     );
     assertEquals(
-        "Query context parameter [ints] should be in integer format, but got [not-an-int]",
+        "Query context parameter [ints] should be in integer format, or a human-readable number such as '10 K' or '256 MiB', but got [not-an-int]",
         assertThrows(BadQueryContextException.class, () -> parameter.parse("not-an-int")).getMessage()
     );
 
@@ -273,13 +277,165 @@ class QueryContextParameterTest
   }
 
   @Test
-  void testBooleanParameterRejectsNonBooleans()
+  void testBooleanParameter()
   {
-    assertEquals(
-        "Query context parameter [useResultLevelCache] should be a boolean, but got [1]",
-        assertThrows(BadQueryContextException.class, () -> QueryContextParameters.USE_RESULT_LEVEL_CACHE.parse(1))
-            .getMessage()
+    final QueryContextParameter<Boolean> parameter = QueryContextParameters.USE_RESULT_LEVEL_CACHE;
+    assertEquals(true, parameter.parse(true));
+    assertEquals(true, parameter.parse("true"));
+    assertEquals(true, parameter.parse("TRUE"));
+    assertEquals(false, parameter.parse("False"));
+    assertEquals(true, parameter.parse("1"));
+    assertEquals(false, parameter.parse("0"));
+
+    // Such as from "SET useResultLevelCache = 1"
+    assertEquals(true, parameter.parse(1L));
+    assertEquals(false, parameter.parse(0L));
+    assertEquals(true, parameter.parse(1));
+
+    // Floating-point numbers are rejected, even when equal to 0 or 1
+    final List<Object> invalidValues = List.of(
+        1.0d,
+        0.0f,
+        "1.0",
+        "01",
+        "yes",
+        "",
+        " true",
+        2L,
+        -1L,
+        0.5d,
+        Double.NaN,
+        List.of(true)
     );
+    for (final Object invalid : invalidValues) {
+      assertEquals(
+          StringUtils.format(
+              "Context parameter [useResultLevelCache] is boolean, which allows only 0/1, '0'/'1', true/false, or 'true'/'false' (in any case), but was given [%s]",
+              invalid
+          ),
+          assertThrows(BadQueryContextException.class, () -> parameter.parse(invalid)).getMessage(),
+          String.valueOf(invalid)
+      );
+    }
+  }
+
+  @Test
+  void testBooleanParameterAcceptsBigInteger() throws Exception
+  {
+    final QueryContextParameter<Boolean> parameter = QueryContextParameters.USE_RESULT_LEVEL_CACHE;
+
+    // A context built by a Java caller
+    assertEquals(true, parameter.parse(BigInteger.ONE));
+    assertEquals(false, parameter.parse(BigInteger.ZERO));
+
+    // A context read from JSON by a mapper that keeps integers as BigInteger
+    final ObjectMapper mapper = new DefaultObjectMapper().enable(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS);
+    final Map<String, Object> context = mapper.readValue(
+        "{\"useResultLevelCache\": 1}",
+        new TypeReference<Map<String, Object>>() {}
+    );
+    assertEquals(BigInteger.class, context.get("useResultLevelCache").getClass());
+    assertEquals(true, QueryContext.of(context).get(parameter));
+
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(BigInteger.TWO));
+  }
+
+  @Test
+  void testIntegerParameterAcceptsHumanReadableNumbers()
+  {
+    final QueryContextParameter<Integer> parameter = QueryContextParameters.integerParameter("ints")
+        .description("Test parameter.")
+        .build();
+
+    // Such as from "SET ints = '1MiB'"
+    assertEquals(1_048_576, parameter.parse("1MiB"));
+    assertEquals(10_000, parameter.parse("10K"));
+    assertEquals(1_073_741_824, parameter.parse("1GiB"));
+
+    // With spaces between the number and the unit
+    assertEquals(1_048_576, parameter.parse("1 MiB"));
+    assertEquals(1_073_741_824, parameter.parse("1  GiB"));
+
+    // Negative numbers, with or without a unit
+    assertEquals(-1, parameter.parse("-1"));
+    assertEquals(-2_000, parameter.parse("-2K"));
+    assertEquals(-2_000_000, parameter.parse("-2 M"));
+    assertEquals(-2 * 1024 * 1024, parameter.parse("-2MiB"));
+    assertEquals(-2 * 1024 * 1024, parameter.parse("-2 MiB"));
+    assertEquals(-10 * 1024, parameter.parse("-10 Ki"));
+    assertEquals(-1_000_000_000, parameter.parse("-1g"));
+    assertEquals(-2_000_000, parameter.parse("-2 m"));
+    assertEquals(-3_000, parameter.parse("-3k"));
+
+    assertEquals(
+        "Query context parameter [ints] must be within the range [-2147483648, 2147483647], but was [2GiB]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("2GiB")).getMessage()
+    );
+    assertEquals(
+        "Query context parameter [ints] should be in integer format, or a human-readable number such as '10 K' or '256 MiB', but got [1 M iB]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("1 M iB")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("--1K"));
+  }
+
+  @Test
+  void testLongParameterAcceptsHumanReadableNumbers()
+  {
+    final QueryContextParameter<Long> parameter = QueryContextParameters.longParameter("longs")
+        .description("Test parameter.")
+        .build();
+
+    // Such as from "SET longs = '5GiB'"
+    assertEquals(2_000_000_000L, parameter.parse("2G"));
+    assertEquals(5L * 1024 * 1024 * 1024, parameter.parse("5GiB"));
+    assertEquals(1024L * 1024 * 1024 * 1024 * 1024, parameter.parse("1PiB"));
+
+    // With spaces between the number and the unit
+    assertEquals(1_048_576L, parameter.parse("1 MiB"));
+    assertEquals(3_000_000_000L, parameter.parse("3   G"));
+
+    // Negative numbers, with or without a unit
+    assertEquals(-1L, parameter.parse("-1"));
+    assertEquals(-2_000L, parameter.parse("-2K"));
+    assertEquals(-5_000_000_000L, parameter.parse("-5 G"));
+    assertEquals(-2L * 1024 * 1024, parameter.parse("-2MiB"));
+    assertEquals(-5L * 1024 * 1024 * 1024, parameter.parse("-5 GiB"));
+    assertEquals(-10L * 1024, parameter.parse("-10 Ki"));
+    assertEquals(-2L * 1024 * 1024 * 1024 * 1024, parameter.parse("-2 Ti"));
+    assertEquals(-3_000_000_000L, parameter.parse("-3g"));
+    assertEquals(-2_000_000L, parameter.parse("-2 m"));
+    assertEquals(-3_000L, parameter.parse("-3k"));
+
+    assertEquals(
+        "Query context parameter [longs] should be in long format, or a human-readable number such as '10 K' or '256 MiB', but got [1 M iB]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("1 M iB")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("--1K"));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("abc"));
+
+    // Beyond the range of a long
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("10000PiB"));
+  }
+
+  @Test
+  void testGroupBySizeParametersAreNonNegativeLongs()
+  {
+    for (final QueryContextParameter<Long> parameter : List.of(
+        QueryContextParameters.MAX_ON_DISK_STORAGE,
+        QueryContextParameters.MIN_SPILL_FILE_SIZE,
+        QueryContextParameters.MAX_SELECTOR_DICTIONARY_SIZE,
+        QueryContextParameters.MAX_MERGING_DICTIONARY_SIZE
+    )) {
+      assertEquals(1_073_741_824L, parameter.parse("1 GiB"), parameter.getName());
+      assertEquals(3_000_000L, parameter.parse("3M"), parameter.getName());
+      assertEquals(4L, parameter.parse(4), parameter.getName());
+      assertEquals(0L, parameter.parse(0), parameter.getName());
+
+      // A negative size is rejected, and a fractional one is no longer truncated
+      assertThrows(BadQueryContextException.class, () -> parameter.parse("-1K"), parameter.getName());
+      assertThrows(BadQueryContextException.class, () -> parameter.parse(-5), parameter.getName());
+      assertThrows(BadQueryContextException.class, () -> parameter.parse(1.5), parameter.getName());
+    }
   }
 
   @Test

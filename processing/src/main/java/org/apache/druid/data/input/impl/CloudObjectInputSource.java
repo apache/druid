@@ -79,6 +79,19 @@ public abstract class CloudObjectInputSource
       @Nullable SystemFields systemFields
   )
   {
+    this(scheme, uris, prefixes, objects, objectGlob, systemFields, CloudBucketValidator.REJECT_COLON);
+  }
+
+  protected CloudObjectInputSource(
+      String scheme,
+      @Nullable List<URI> uris,
+      @Nullable List<URI> prefixes,
+      @Nullable List<CloudObjectLocation> objects,
+      @Nullable String objectGlob,
+      @Nullable SystemFields systemFields,
+      CloudBucketValidator bucketValidator
+  )
+  {
     this.scheme = scheme;
     this.uris = uris;
     this.prefixes = prefixes;
@@ -87,6 +100,7 @@ public abstract class CloudObjectInputSource
     this.systemFields = systemFields == null ? SystemFields.none() : systemFields;
 
     illegalArgsChecker();
+    validateBuckets(bucketValidator);
   }
 
   @JsonProperty
@@ -309,6 +323,17 @@ public abstract class CloudObjectInputSource
       prefixes.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
     } else {
       throwIfIllegalArgs(true);
+    }
+  }
+
+  private void validateBuckets(CloudBucketValidator bucketValidator)
+  {
+    if (!CollectionUtils.isNullOrEmpty(objects)) {
+      objects.forEach(location -> bucketValidator.validate(location.getBucket()));
+    } else if (!CollectionUtils.isNullOrEmpty(uris)) {
+      uris.forEach(uri -> bucketValidator.validate(CloudObjectLocation.extractBucket(uri)));
+    } else if (!CollectionUtils.isNullOrEmpty(prefixes)) {
+      prefixes.forEach(uri -> bucketValidator.validate(CloudObjectLocation.extractBucket(uri)));
     }
   }
 

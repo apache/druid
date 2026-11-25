@@ -688,6 +688,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
           supervisorId, metrics.getAvgPartitionLag()
       ).emit();
       return Either.error("Lag is high but processing rate is zero");
+    } else if (config.isUsePollIdleRatio() && (metrics.getPollIdleRatio() < 0 || metrics.getPollIdleRatio() > 1)) {
+      return Either.error("Poll idle ratio metric not available");
     } else {
       return Either.value(true);
     }

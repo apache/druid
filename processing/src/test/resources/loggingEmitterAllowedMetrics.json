@@ -243,6 +243,7 @@
   "task/run/time": [],
   "task/running/count": [],
   "task/segmentAvailability/wait/time": [],
+  "task/status/persistFailed/count": [],
   "task/success/count": [],
   "task/waiting/count": [],
   "tier/historical/count": [],
@@ -252,6 +253,8 @@
   "tier/storage/required": [],
   "tier/storage/capacity":  [],
   "tier/segmentCache/used":  [],
+  "tier/segmentCache/utilization":  [],
+  "tierAlias/segmentCache/utilization":  [],
   "tier/segmentCache/capacity":  [],
   "zk/connected": [],
   "zk/reconnect/time": []

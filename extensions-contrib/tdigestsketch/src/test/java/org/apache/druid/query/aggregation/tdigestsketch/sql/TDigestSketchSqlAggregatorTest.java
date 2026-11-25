@@ -279,6 +279,40 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testComputingSketchAfterQuantile()
+  {
+    cannotVectorize();
+
+    testQuery(
+        "SELECT TDIGEST_QUANTILE(m1, 0.5), TDIGEST_GENERATE_SKETCH(m1) FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      new TDigestSketchAggregatorFactory(
+                          "a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION, TDigestConfig.builder().build()
+                      )
+                  )
+                  .postAggregators(
+                      new TDigestSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.5),
+                      new FieldAccessPostAggregator("a1", "a0:agg")
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ResultMatchMode.EQUALS_EPS,
+        ImmutableList.of(
+            new Object[]{
+                4.0,
+                "\"AAAAAT/wAAAAAAAAQBgAAAAAAABAWQAAAAAAAAAAAAY/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQAgAAAAAAAA/8AAAAAAAAEAQAAAAAAAAP/AAAAAAAABAFAAAAAAAAD/wAAAAAAAAQBgAAAAAAAA=\""
+            }
+        )
+    );
+  }
+
+  @Test
   public void testComputingQuantileOnPreAggregatedSketch()
   {
     cannotVectorize();

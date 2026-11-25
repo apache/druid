@@ -19,10 +19,19 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -42,9 +51,11 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -58,12 +69,14 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.BadJsonQueryException;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
@@ -74,6 +87,7 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TruncatedResponseContextException;
+import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
@@ -315,7 +329,8 @@ public class QueryResourceTest
   }
 
   /**
-   * Every {@link QueryResource} under test is built here, so a change to its constructor touches one call site.
+   * Every {@link QueryResource} under test, other than those of {@link #createBrokerQueryResource}, is built here, so a
+   * change to its constructor touches one call site.
    *
    * @param responseMapper mapper backing the response writer, i.e. the smile mapper unless the test needs json
    */
@@ -337,6 +352,31 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(jsonMapper, responseMapper),
         serverConfig
     );
+  }
+
+  private BrokerQueryResource createBrokerQueryResource(final QueryContextConfig queryContextConfig)
+  {
+    return new BrokerQueryResource(
+        createQueryLifecycleFactory(),
+        jsonMapper,
+        queryScheduler,
+        null,
+        new QueryResourceQueryResultPusherFactory(jsonMapper, ResponseContextConfig.newConfig(true), DRUID_NODE),
+        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper),
+        new ServerConfig(),
+        null,
+        queryContextConfig
+    );
+  }
+
+  /**
+   * Returns {@link #SIMPLE_TIMESERIES_QUERY} with the given context, as a client sends it.
+   */
+  private byte[] timeseriesQueryWithContext(final Map<String, Object> context) throws JsonProcessingException
+  {
+    final ObjectNode query = (ObjectNode) jsonMapper.readTree(SIMPLE_TIMESERIES_QUERY);
+    query.set("context", jsonMapper.valueToTree(context));
+    return jsonMapper.writeValueAsBytes(query);
   }
 
   @Test
@@ -1038,6 +1078,85 @@ public class QueryResourceTest
   }
 
   @Test
+  public void testUnknownContextParameterRejectedByBroker() throws IOException
+  {
+    final Response response = createBrokerQueryResource(new QueryContextConfig(true)).doPost(
+        new ByteArrayInputStream(timeseriesQueryWithContext(Map.of("useCahce", false))),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assertions.assertEquals(QueryException.BAD_QUERY_CONTEXT_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals(BadQueryContextException.ERROR_CLASS, e.getErrorClass());
+    Assertions.assertEquals("Unknown query context parameter [useCahce]. Did you mean [useCache]?", e.getMessage());
+  }
+
+  @Test
+  public void testUnknownContextParameterRejectedByCandidates() throws IOException
+  {
+    final Response response = createBrokerQueryResource(new QueryContextConfig(true)).getQueryTargets(
+        new ByteArrayInputStream(timeseriesQueryWithContext(Map.of("useCahce", false))),
+        null /*pretty*/,
+        -1,
+        null,
+        testServletRequest
+    );
+
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assertions.assertEquals(QueryException.BAD_QUERY_CONTEXT_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals("Unknown query context parameter [useCahce]. Did you mean [useCache]?", e.getMessage());
+  }
+
+  @Test
+  public void testInvalidContextValueRejectedByBroker() throws IOException
+  {
+    // Values are validated whether or not unknown parameters are rejected
+    final Response response = createBrokerQueryResource(new QueryContextConfig(false)).doPost(
+        new ByteArrayInputStream(timeseriesQueryWithContext(Map.of("maxRowsQueuedForOrdering", 0))),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assertions.assertEquals(QueryException.BAD_QUERY_CONTEXT_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals(
+        "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void testUnknownContextParameterAcceptedByBrokerWhenNotRejected() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        timeseriesQueryWithContext(Map.of("myTraceId", "abc-123")),
+        createBrokerQueryResource(new QueryContextConfig(false))
+    );
+    Assertions.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  @Test
+  public void testUnknownContextParameterAcceptedByDataServer() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        timeseriesQueryWithContext(Map.of("myTraceId", "abc-123"))
+    );
+    Assertions.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  @Test
   public void testIncompleteQuery() throws IOException
   {
     final Response response = queryResource.doPost(
@@ -1052,6 +1171,83 @@ public class QueryResourceTest
     Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
     Assertions.assertEquals(ValueInstantiationException.class.getName(), e.getErrorClass());
     Assertions.assertEquals("Invalid native query: dataSource can't be null", e.getMessage());
+  }
+
+  @Test
+  public void testQueryThatFailsJsonBinding() throws IOException
+  {
+    // Well-formed JSON that cannot be bound to a query is a user error, not a 500 from the catch-all handler.
+    // The error message itself is covered by BadJsonQueryExceptionTest.
+    final Response response = queryResource.doPost(
+        new ByteArrayInputStream(
+            StringUtils.replace(SIMPLE_TIMESERIES_QUERY, "\"timeseries\"", "\"noSuchQueryType\"")
+                       .getBytes(StandardCharsets.UTF_8)
+        ),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assertions.assertNotNull(response);
+    Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals(InvalidTypeIdException.class.getName(), e.getErrorClass());
+  }
+
+  @Test
+  public void testQueryWithBrokenDefinitionIsServerError() throws IOException
+  {
+    // A registered query type that Jackson cannot instantiate is a server-side defect, so it must not be reported
+    // as a bad request.
+    jsonMapper = jsonMapper.copy();
+    jsonMapper.registerSubtypes(new NamedType(BrokenQuery.class, "brokenQuery"));
+    queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
+    final MockHttpServletResponse asyncResponse = MockHttpServletResponse.forRequest(testServletRequest);
+    testServletRequest.remoteHost = "localhost";
+
+    final Response response = queryResource.doPost(
+        new ByteArrayInputStream(
+            StringUtils.replace(SIMPLE_TIMESERIES_QUERY, "\"timeseries\"", "\"brokenQuery\"")
+                       .getBytes(StandardCharsets.UTF_8)
+        ),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assertions.assertNull(response);
+    Assertions.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+    final QueryException e = jsonMapper.readValue(asyncResponse.baos.toByteArray(), QueryException.class);
+    Assertions.assertEquals(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals(InvalidDefinitionException.class.getName(), e.getErrorClass());
+  }
+
+  @Test
+  public void testBadInputRejectedByDeserializerIsBadRequest() throws IOException
+  {
+    for (final RuntimeException exception : List.of(
+        new IAE("bad granularity"),
+        InvalidInput.exception("bad granularity")
+    )) {
+      final Response response = postWithFailingGranularityDeserializer(exception);
+      Assertions.assertNotNull(response);
+      Assertions.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+      final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+      Assertions.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
+      Assertions.assertEquals(JsonMappingException.class.getName(), e.getErrorClass());
+      Assertions.assertTrue(e.getMessage().contains("bad granularity"), e.getMessage());
+    }
+  }
+
+  @Test
+  public void testBugInDeserializerIsServerError() throws IOException
+  {
+    final MockHttpServletResponse asyncResponse = MockHttpServletResponse.forRequest(testServletRequest);
+    testServletRequest.remoteHost = "localhost";
+
+    final Response response = postWithFailingGranularityDeserializer(new NullPointerException());
+    Assertions.assertNull(response);
+    Assertions.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+    final QueryException e = jsonMapper.readValue(asyncResponse.baos.toByteArray(), QueryException.class);
+    Assertions.assertEquals(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE, e.getErrorCode());
+    Assertions.assertEquals(JsonMappingException.class.getName(), e.getErrorClass());
   }
 
   @Test
@@ -2011,7 +2207,7 @@ public class QueryResourceTest
     final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig = Mockito.mock(BrokerViewOfBrokerConfig.class);
     Mockito.when(brokerViewOfBrokerConfig.getDynamicConfig()).thenReturn(dynamicConfig);
     Mockito.when(brokerViewOfBrokerConfig.snapshotForQuery())
-           .thenReturn(new QueryConfigSnapshot(Map.of(), dynamicConfig));
+           .thenReturn(new QueryConfigSnapshot(QueryContext.empty(), dynamicConfig));
 
     return createQueryResource(
         new QueryLifecycleFactory(
@@ -2118,5 +2314,40 @@ public class QueryResourceTest
   ) throws IOException
   {
     return queryResource.doPost(new ByteArrayInputStream(bytes), null, req);
+  }
+
+  /**
+   * Posts {@link #SIMPLE_TIMESERIES_QUERY} with a granularity deserializer that throws {@code exception}. Jackson wraps
+   * it in a plain {@link JsonMappingException}, as it does for any exception thrown while deserializing a property.
+   */
+  private Response postWithFailingGranularityDeserializer(final RuntimeException exception) throws IOException
+  {
+    jsonMapper = jsonMapper.copy();
+    jsonMapper.registerModule(
+        new SimpleModule().addDeserializer(
+            Granularity.class,
+            new JsonDeserializer<>()
+            {
+              @Override
+              public Granularity deserialize(final JsonParser p, final DeserializationContext ctxt)
+              {
+                throw exception;
+              }
+            }
+        )
+    );
+    queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
+    return queryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+  }
+
+  /**
+   * A query type with no creator, which Jackson rejects with an {@link InvalidDefinitionException}.
+   */
+  private abstract static class BrokenQuery implements Query<Object>
+  {
   }
 }

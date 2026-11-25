@@ -58,6 +58,7 @@ public class S3TaskLogs implements TaskLogs
       CurrentTimeMillisSupplier timeSupplier
   )
   {
+    S3Utils.checkAclSupported(config.getS3Bucket(), config.getDisableAcl(), "druid.indexer.logs.disableAcl");
     this.service = service;
     this.config = config;
     this.inputDataConfig = inputDataConfig;

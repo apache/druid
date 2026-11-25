@@ -1120,12 +1120,10 @@ public class DruidQuery
       final DataSource newDataSource = dataSourceFiltrationPair.lhs;
       final Filtration filtration = dataSourceFiltrationPair.rhs;
       String bound = minTime ? TimeBoundaryQuery.MIN_TIME : TimeBoundaryQuery.MAX_TIME;
-      Map<String, Object> context = new HashMap<>(plannerContext.queryContextMap());
-      if (minTime) {
-        QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME.set(context, aggregatorFactory.getName());
-      } else {
-        QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME.set(context, aggregatorFactory.getName());
-      }
+      final Map<String, Object> context = plannerContext.queryContext().override(
+          minTime ? QueryContextParameters.MIN_TIME_ARRAY_OUTPUT_NAME : QueryContextParameters.MAX_TIME_ARRAY_OUTPUT_NAME,
+          aggregatorFactory.getName()
+      ).asMap();
       return new TimeBoundaryQuery(
           newDataSource,
           filtration.getQuerySegmentSpec(),
@@ -1226,7 +1224,7 @@ public class DruidQuery
     if (!Granularities.ALL.equals(queryGranularity) || grouping.hasGroupingDimensionsDropped()) {
       QueryContextParameters.SKIP_EMPTY_BUCKETS.set(theContext, true);
     }
-    theContext.putAll(plannerContext.queryContextMap());
+    theContext.putAll(plannerContext.queryContext().asMap());
 
     final VirtualColumns virtualColumns = computeVirtualColumns(false);
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
@@ -1360,7 +1358,7 @@ public class DruidQuery
         Granularities.ALL,
         grouping.getAggregatorFactories(),
         postAggregators,
-        ImmutableSortedMap.copyOf(plannerContext.queryContextMap())
+        ImmutableSortedMap.copyOf(plannerContext.queryContext().asMap())
     );
   }
 
@@ -1419,7 +1417,7 @@ public class DruidQuery
         havingSpec,
         Optional.ofNullable(sorting).orElse(Sorting.none()).limitSpec(),
         grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
-        ImmutableSortedMap.copyOf(plannerContext.queryContextMap())
+        ImmutableSortedMap.copyOf(plannerContext.queryContext().asMap())
     );
     // We don't apply timestamp computation optimization yet when limit is pushed down. Maybe someday.
     if (query.getLimitSpec() instanceof DefaultLimitSpec && query.isApplyLimitPushDown()) {
@@ -1558,7 +1556,7 @@ public class DruidQuery
     return new WindowOperatorQuery(
         dataSourceFiltrationPair.lhs,
         new LegacySegmentSpec(dataSourceFiltrationPair.rhs.getIntervals()),
-        plannerContext.queryContextMap(),
+        plannerContext.queryContext().asMap(),
         windowing.getSignature(),
         operators,
         pushLeafOperator ? null : ImmutableList.of()
@@ -1622,7 +1620,7 @@ public class DruidQuery
     return new WindowOperatorQuery(
         newDataSource,
         new LegacySegmentSpec(scan.getIntervals()),
-        plannerContext.queryContextMap(),
+        plannerContext.queryContext().asMap(),
         signature,
         operators,
         null
@@ -1747,7 +1745,7 @@ public class DruidQuery
         orderByColumns,
         filtration.getDimFilter(),
         scanColumnsList,
-        plannerContext.queryContextMap(),
+        plannerContext.queryContext().asMap(),
         outputRowSignature.buildSafeSignature(scanColumnsList).getColumnTypes()
     );
   }
