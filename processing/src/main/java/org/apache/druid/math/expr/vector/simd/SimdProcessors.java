@@ -24,6 +24,7 @@ import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoubleLongFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoublesFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateLongDoubleFunction;
+import org.apache.druid.math.expr.vector.functional.DoubleBivariateLongsFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateDoubleFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateLongFunction;
 import org.apache.druid.math.expr.vector.functional.LongBivariateLongsFunction;
@@ -67,6 +68,9 @@ public final class SimdProcessors
       case SUB -> new SimdDoubleDoubleSubProcessor(left, right, scalarFallback);
       case MUL -> new SimdDoubleDoubleMulProcessor(left, right, scalarFallback);
       case DIV -> new SimdDoubleDoubleDivProcessor(left, right, scalarFallback);
+      case POW -> new SimdDoubleDoublePowProcessor(left, right, scalarFallback);
+      case ATAN2 -> new SimdDoubleDoubleAtan2Processor(left, right, scalarFallback);
+      case HYPOT -> new SimdDoubleDoubleHypotProcessor(left, right, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD binary op[%s]", op);
     };
   }
@@ -83,6 +87,9 @@ public final class SimdProcessors
       case SUB -> new SimdLongDoubleSubProcessor(left, right, scalarFallback);
       case MUL -> new SimdLongDoubleMulProcessor(left, right, scalarFallback);
       case DIV -> new SimdLongDoubleDivProcessor(left, right, scalarFallback);
+      case POW -> new SimdLongDoublePowProcessor(left, right, scalarFallback);
+      case ATAN2 -> new SimdLongDoubleAtan2Processor(left, right, scalarFallback);
+      case HYPOT -> new SimdLongDoubleHypotProcessor(left, right, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD binary op[%s]", op);
     };
   }
@@ -99,7 +106,25 @@ public final class SimdProcessors
       case SUB -> new SimdDoubleLongSubProcessor(left, right, scalarFallback);
       case MUL -> new SimdDoubleLongMulProcessor(left, right, scalarFallback);
       case DIV -> new SimdDoubleLongDivProcessor(left, right, scalarFallback);
+      case POW -> new SimdDoubleLongPowProcessor(left, right, scalarFallback);
+      case ATAN2 -> new SimdDoubleLongAtan2Processor(left, right, scalarFallback);
+      case HYPOT -> new SimdDoubleLongHypotProcessor(left, right, scalarFallback);
       default -> throw DruidException.defensive("Unsupported SIMD binary op[%s]", op);
+    };
+  }
+
+  public static ExprVectorProcessor<double[]> makeLongLongToDouble(
+      ExprVectorProcessor<?> left,
+      ExprVectorProcessor<?> right,
+      SimdSupportedBinaryOp op,
+      DoubleBivariateLongsFunction scalarFallback
+  )
+  {
+    return switch (op) {
+      case POW -> new SimdLongLongToDoublePowProcessor(left, right, scalarFallback);
+      case ATAN2 -> new SimdLongLongToDoubleAtan2Processor(left, right, scalarFallback);
+      case HYPOT -> new SimdLongLongToDoubleHypotProcessor(left, right, scalarFallback);
+      default -> throw DruidException.defensive("Unsupported SIMD binary op[%s] for long,long->double", op);
     };
   }
 
