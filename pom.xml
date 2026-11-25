@@ -2065,6 +2065,25 @@
                     <groupId>com.googlecode.fmpp-maven-plugin</groupId>
                     <artifactId>fmpp-maven-plugin</artifactId>
                     <version>1.0</version>
+                    <!--
+                      Exclude the legacy Log4j 1.x dependency transitively
+                      introduced by xbean-reflect through maven-project.
+                      Log4j 1.x is not required for parser generation,
+                      and FreeMarker supports alternative logging backends.
+                    -->
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.apache.maven</groupId>
+                            <artifactId>maven-project</artifactId>
+                            <version>3.0-alpha-2</version>
+                            <exclusions>
+                                <exclusion>
+                                    <groupId>log4j</groupId>
+                                    <artifactId>log4j</artifactId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+                    </dependencies>
               </plugin>
               <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
