@@ -28,7 +28,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Class included in {@link GetQueriesResponse} for queries running on the {@link NativeSqlEngine}. Instances are
@@ -181,44 +180,5 @@ public class NativeQueryInfo implements QueryInfo
   public DateTime getStartTime()
   {
     return startTime;
-  }
-
-  @Override
-  public boolean equals(final Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    final NativeQueryInfo that = (NativeQueryInfo) o;
-    return Objects.equals(queryId, that.queryId)
-           && Objects.equals(sqlQueryId, that.sqlQueryId)
-           && Objects.equals(queryType, that.queryType)
-           && Objects.equals(datasources, that.datasources)
-           && Objects.equals(identity, that.identity)
-           && Objects.equals(authenticator, that.authenticator)
-           && Objects.equals(startTime, that.startTime);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(queryId, sqlQueryId, queryType, datasources, identity, authenticator, startTime);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "NativeQueryInfo{" +
-           "queryId='" + queryId + '\'' +
-           ", sqlQueryId='" + sqlQueryId + '\'' +
-           ", queryType='" + queryType + '\'' +
-           ", datasources=" + datasources +
-           ", identity='" + identity + '\'' +
-           ", authenticator='" + authenticator + '\'' +
-           ", startTime=" + startTime +
-           '}';
   }
 }

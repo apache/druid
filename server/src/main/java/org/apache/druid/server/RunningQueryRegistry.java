@@ -27,9 +27,9 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -84,10 +84,7 @@ public class RunningQueryRegistry
   public List<Entry> getAll()
   {
     final List<Entry> retVal = new ArrayList<>(entries.values());
-    retVal.sort((a, b) -> {
-      final int timeCompare = a.getStartTime().compareTo(b.getStartTime());
-      return timeCompare != 0 ? timeCompare : a.getQueryId().compareTo(b.getQueryId());
-    });
+    retVal.sort(Comparator.comparing(Entry::getStartTime).thenComparing(Entry::getQueryId));
     return retVal;
   }
 
@@ -166,45 +163,6 @@ public class RunningQueryRegistry
     public DateTime getStartTime()
     {
       return startTime;
-    }
-
-    @Override
-    public boolean equals(final Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      final Entry entry = (Entry) o;
-      return Objects.equals(queryId, entry.queryId)
-             && Objects.equals(sqlQueryId, entry.sqlQueryId)
-             && Objects.equals(queryType, entry.queryType)
-             && Objects.equals(datasources, entry.datasources)
-             && Objects.equals(identity, entry.identity)
-             && Objects.equals(authenticator, entry.authenticator)
-             && Objects.equals(startTime, entry.startTime);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(queryId, sqlQueryId, queryType, datasources, identity, authenticator, startTime);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "Entry{" +
-             "queryId='" + queryId + '\'' +
-             ", sqlQueryId='" + sqlQueryId + '\'' +
-             ", queryType='" + queryType + '\'' +
-             ", datasources=" + datasources +
-             ", identity='" + identity + '\'' +
-             ", authenticator='" + authenticator + '\'' +
-             ", startTime=" + startTime +
-             '}';
     }
   }
 }

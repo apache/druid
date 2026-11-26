@@ -114,6 +114,27 @@ public class RunningQueryRegistryTest
     Assertions.assertEquals(1, registry.getAll().size());
   }
 
+  @Test
+  public void testRegisterWithoutQueryIdIsIgnored()
+  {
+    final Query<?> query = Mockito.mock(Query.class);
+    Mockito.when(query.getId()).thenReturn(null);
+
+    registry.register(query, AUTHENTICATION_RESULT);
+    Assertions.assertTrue(registry.getAll().isEmpty());
+  }
+
+  @Test
+  public void testUnregisterNullOrUnknownQueryIdIsNoOp()
+  {
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), AUTHENTICATION_RESULT);
+
+    registry.unregister(null);
+    registry.unregister("unknown");
+
+    Assertions.assertEquals(1, registry.getAll().size());
+  }
+
   private static Query<?> createQuery(
       final String queryId,
       final String queryType,

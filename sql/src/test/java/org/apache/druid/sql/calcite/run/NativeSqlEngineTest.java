@@ -136,6 +136,26 @@ public class NativeSqlEngineTest
   }
 
   @Test
+  public void testGetQueriesWithoutIdentityOrAuthenticatorIsEmpty()
+  {
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), USER);
+
+    // Requests without an authenticated identity or authenticator see no queries.
+    Assertions.assertTrue(
+        engine.getQueries(false, false, new AuthenticationResult("evan", "basicAuthorizer", null, null),
+                          AuthorizationResult.DENY)
+              .getQueries()
+              .isEmpty()
+    );
+    Assertions.assertTrue(
+        engine.getQueries(false, false, new AuthenticationResult(null, "basicAuthorizer", "basic", null),
+                          AuthorizationResult.DENY)
+              .getQueries()
+              .isEmpty()
+    );
+  }
+
+  @Test
   public void testGetQueriesReturnsEmptyAfterUnregister()
   {
     registry.register(createQuery("query-1", "timeseries", null, "foo"), USER);
