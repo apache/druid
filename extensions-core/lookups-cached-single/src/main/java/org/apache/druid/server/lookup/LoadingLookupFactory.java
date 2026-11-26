@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.lookup;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
@@ -46,17 +48,39 @@ public class LoadingLookupFactory implements LookupExtractorFactory
   @JsonProperty("reverseLoadingCacheSpec")
   private final LoadingCache<String, List<String>> reverseLoadingCache;
 
+  @JsonProperty("negativeLoadingCacheSpec")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  private final LoadingCache<String, String> negativeLoadingCache;
+
   private final String id = Integer.toHexString(System.identityHashCode(this));
   private final LoadingLookup loadingLookup;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   public LoadingLookupFactory(
-      @JsonProperty("dataFetcher") DataFetcher dataFetcher,
-      @JsonProperty("loadingCacheSpec") LoadingCache<String, String> loadingCache,
-      @JsonProperty("reverseLoadingCacheSpec") LoadingCache<String, List<String>> reverseLoadingCache
+      DataFetcher dataFetcher,
+      LoadingCache<String, String> loadingCache,
+      LoadingCache<String, List<String>> reverseLoadingCache
   )
   {
-    this(dataFetcher, loadingCache, reverseLoadingCache, new LoadingLookup(dataFetcher, loadingCache, reverseLoadingCache));
+    this(dataFetcher, loadingCache, reverseLoadingCache, (LoadingCache<String, String>) null);
+  }
+
+  @JsonCreator
+  public LoadingLookupFactory(
+      @JsonProperty("dataFetcher") DataFetcher dataFetcher,
+      @JsonProperty("loadingCacheSpec") LoadingCache<String, String> loadingCache,
+      @JsonProperty("reverseLoadingCacheSpec") LoadingCache<String, List<String>> reverseLoadingCache,
+      @JsonProperty("negativeLoadingCacheSpec") @Nullable LoadingCache<String, String> negativeLoadingCache
+  )
+  {
+    this(
+        dataFetcher,
+        loadingCache,
+        reverseLoadingCache,
+        negativeLoadingCache,
+        new LoadingLookup(dataFetcher, loadingCache, reverseLoadingCache, negativeLoadingCache)
+    );
   }
 
   protected LoadingLookupFactory(
@@ -66,9 +90,21 @@ public class LoadingLookupFactory implements LookupExtractorFactory
       LoadingLookup loadingLookup
   )
   {
+    this(dataFetcher, loadingCache, reverseLoadingCache, null, loadingLookup);
+  }
+
+  protected LoadingLookupFactory(
+      DataFetcher dataFetcher,
+      LoadingCache<String, String> loadingCache,
+      LoadingCache<String, List<String>> reverseLoadingCache,
+      @Nullable LoadingCache<String, String> negativeLoadingCache,
+      LoadingLookup loadingLookup
+  )
+  {
     this.dataFetcher = Preconditions.checkNotNull(dataFetcher);
     this.loadingCache = Preconditions.checkNotNull(loadingCache);
     this.reverseLoadingCache = Preconditions.checkNotNull(reverseLoadingCache);
+    this.negativeLoadingCache = negativeLoadingCache;
     this.loadingLookup = loadingLookup;
   }
 
@@ -146,14 +182,17 @@ public class LoadingLookupFactory implements LookupExtractorFactory
     if (loadingCache != null ? !loadingCache.equals(that.loadingCache) : that.loadingCache != null) {
       return false;
     }
-    return reverseLoadingCache != null
-           ? reverseLoadingCache.equals(that.reverseLoadingCache)
-           : that.reverseLoadingCache == null;
+    if (reverseLoadingCache != null
+        ? !reverseLoadingCache.equals(that.reverseLoadingCache)
+        : that.reverseLoadingCache != null) {
+      return false;
+    }
+    return Objects.equals(negativeLoadingCache, that.negativeLoadingCache);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataFetcher, loadingCache, reverseLoadingCache);
+    return Objects.hash(dataFetcher, loadingCache, reverseLoadingCache, negativeLoadingCache);
   }
 }

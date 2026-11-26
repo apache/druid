@@ -40,14 +40,25 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Once the key/value  pair is loaded eviction will occur according to the cache eviction policy.
  * This module comes with two loading cache implementations, the first {@link org.apache.druid.server.lookup.cache.loading.OnHeapLoadingCache}is onheap backed by a Guava cache implementation, the second {@link org.apache.druid.server.lookup.cache.loading.OffHeapLoadingCache}is MapDB offheap implementation.
  * Both implementations offer various eviction strategies.
+ * <p>
+ * A key that the {@link DataFetcher} has no value for is not cached by default, so every lookup of it goes back to
+ * the source. If a negative cache is configured, such keys are remembered in it, and looked up again only after
+ * their entry is evicted. Failures of the {@link DataFetcher} are never remembered.
  */
 public class LoadingLookup extends LookupExtractor
 {
   private static final Logger LOGGER = new Logger(LoadingLookup.class);
 
+  /**
+   * The value stored for a key in the negative cache. Only the presence of the key is meaningful.
+   */
+  private static final String ABSENT_MARKER = "";
+
   private final DataFetcher<String, String> dataFetcher;
   private final LoadingCache<String, String> loadingCache;
   private final LoadingCache<String, List<String>> reverseLoadingCache;
+  @Nullable
+  private final LoadingCache<String, String> negativeLoadingCache;
   private final AtomicBoolean isOpen;
   private final String id = Integer.toHexString(System.identityHashCode(this));
 
@@ -57,9 +68,24 @@ public class LoadingLookup extends LookupExtractor
       LoadingCache<String, List<String>> reverseLoadingCache
   )
   {
+    this(dataFetcher, loadingCache, reverseLoadingCache, null);
+  }
+
+  /**
+   * @param negativeLoadingCache remembers keys that the fetcher has no value for, or null to look such keys up every
+   *                             time. Only the presence of a key in this cache matters, not its value.
+   */
+  public LoadingLookup(
+      DataFetcher dataFetcher,
+      LoadingCache<String, String> loadingCache,
+      LoadingCache<String, List<String>> reverseLoadingCache,
+      @Nullable LoadingCache<String, String> negativeLoadingCache
+  )
+  {
     this.dataFetcher = Preconditions.checkNotNull(dataFetcher, "lookup must have a DataFetcher");
     this.loadingCache = Preconditions.checkNotNull(loadingCache, "loading lookup need a cache");
     this.reverseLoadingCache = Preconditions.checkNotNull(reverseLoadingCache, "loading lookup need reverse cache");
+    this.negativeLoadingCache = negativeLoadingCache;
     this.isOpen = new AtomicBoolean(true);
   }
 
@@ -76,8 +102,16 @@ public class LoadingLookup extends LookupExtractor
       return presentVal;
     }
 
+    if (negativeLoadingCache != null && negativeLoadingCache.getIfPresent(key) != null) {
+      return null;
+    }
+
+    // If fetch throws, nothing is cached, so a failure is never mistaken for a missing key.
     final String val = this.dataFetcher.fetch(key);
     if (val == null) {
+      if (negativeLoadingCache != null) {
+        negativeLoadingCache.putAll(Collections.singletonMap(key, ABSENT_MARKER));
+      }
       return null;
     }
 
@@ -130,6 +164,9 @@ public class LoadingLookup extends LookupExtractor
       LOGGER.info("Closing loading cache [%s]", id);
       loadingCache.close();
       reverseLoadingCache.close();
+      if (negativeLoadingCache != null) {
+        negativeLoadingCache.close();
+      }
     } else {
       LOGGER.info("Closing already closed lookup");
     }

@@ -134,6 +134,83 @@ public class LoadingLookupFactoryTest
   }
 
 
+  @Test
+  public void testSerDeserWithNegativeLoadingCacheSpec() throws IOException
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    mapper.registerSubtypes(MockDataFetcher.class);
+    mapper.registerSubtypes(LoadingLookupFactory.class);
+    final LoadingLookupFactory factory = new LoadingLookupFactory(
+        new MockDataFetcher(),
+        new OnHeapLoadingCache<>(0, 100, 100L, null, null),
+        new OnHeapLoadingCache<>(0, 100, 100L, null, null),
+        new OnHeapLoadingCache<>(0, 100, 1000L, null, 60_000L)
+    );
+
+    final String json = mapper.writeValueAsString(factory);
+
+    Assertions.assertTrue(json.contains("negativeLoadingCacheSpec"));
+    Assertions.assertEquals(factory, mapper.readerFor(LookupExtractorFactory.class).readValue(json));
+  }
+
+  @Test
+  public void testSerializationOmitsUnsetNegativeLoadingCacheSpec() throws IOException
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    mapper.registerSubtypes(MockDataFetcher.class);
+    mapper.registerSubtypes(LoadingLookupFactory.class);
+    final LoadingLookupFactory factory = new LoadingLookupFactory(
+        new MockDataFetcher(),
+        new OnHeapLoadingCache<>(0, 100, 100L, null, null),
+        new OnHeapLoadingCache<>(0, 100, 100L, null, null)
+    );
+
+    Assertions.assertFalse(mapper.writeValueAsString(factory).contains("negativeLoadingCacheSpec"));
+  }
+
+  @Test
+  public void testDeserializeSpecWithoutNegativeLoadingCacheSpec() throws IOException
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    mapper.registerSubtypes(MockDataFetcher.class);
+    mapper.registerSubtypes(LoadingLookupFactory.class);
+
+    // The shape that was valid before negativeLoadingCacheSpec existed.
+    final LookupExtractorFactory factory = mapper.readerFor(LookupExtractorFactory.class).readValue(
+        "{\"type\":\"loadingLookup\",\"dataFetcher\":{\"type\":\"mock\"},"
+        + "\"loadingCacheSpec\":{\"type\":\"guava\"},\"reverseLoadingCacheSpec\":{\"type\":\"guava\"}}"
+    );
+
+    Assertions.assertTrue(factory instanceof LoadingLookupFactory);
+  }
+
+  @Test
+  public void testReplacesWhenNegativeLoadingCacheSpecDiffers()
+  {
+    final LoadingLookupFactory withoutNegative = new LoadingLookupFactory(
+        dataFetcher,
+        lookupCache,
+        reverseLookupCache
+    );
+    final LoadingLookupFactory withNegative = new LoadingLookupFactory(
+        dataFetcher,
+        lookupCache,
+        reverseLookupCache,
+        new OnHeapLoadingCache<>(0, 100, 1000L, null, 60_000L)
+    );
+    final LoadingLookupFactory withSameNegative = new LoadingLookupFactory(
+        dataFetcher,
+        lookupCache,
+        reverseLookupCache,
+        new OnHeapLoadingCache<>(0, 100, 1000L, null, 60_000L)
+    );
+
+    Assertions.assertTrue(withoutNegative.replaces(withNegative));
+    Assertions.assertTrue(withNegative.replaces(withoutNegative));
+    Assertions.assertFalse(withNegative.replaces(withSameNegative));
+  }
+
+
   @JsonTypeName("mock")
   private static class MockDataFetcher implements DataFetcher
   {

@@ -133,7 +133,50 @@ This example demonstrates an off-heap lookup that will be cached once and never 
 |dataFetcher|JSON object|Specifies the lookup data fetcher type  to use in order to fetch data|yes|null|
 |loadingCacheSpec|JSON Object|Lookup cache spec implementation|yes |null|
 |reverseLoadingCacheSpec|JSON Object| Reverse lookup cache  implementation|yes |null|
+|`negativeLoadingCacheSpec`|JSON Object|Cache of keys that the data fetcher has no value for. See [Caching missing keys](#caching-missing-keys).|no |null (missing keys are not cached)|
 
+
+#### Caching missing keys
+
+By default, a key that the data fetcher has no value for is not cached, so every lookup of that key goes back to the lookup source.
+This is expensive when the same missing keys are looked up repeatedly, for example a database query for each event that carries an unknown key.
+
+To remember missing keys, set `negativeLoadingCacheSpec`. It takes the same cache specs as `loadingCacheSpec`, either `guava` or `mapDb`.
+A key in this cache is treated as having no value until its entry is evicted, and then it is fetched again.
+
+- Set `expireAfterWrite`, and preferably `maximumSize` (`maxEntriesSize` for `mapDb`), so entries do not stay forever. A missing key that gets a value later returns no value until its negative entry expires.
+- Only a missing key is remembered. If the data fetcher fails, for example a database error or a timeout, nothing is cached, so an outage is not mistaken for a missing key.
+- A key with a value is never added to this cache.
+
+```json
+{
+   "type": "loadingLookup",
+   "dataFetcher": {
+      "type": "jdbcDataFetcher",
+      "connectorConfig": {
+         "connectURI": "jdbc:mysql://localhost:3306/my_data_base",
+         "user": "druid",
+         "password": "druid"
+      },
+      "table": "lookup_table_name",
+      "keyColumn": "key_column_name",
+      "valueColumn": "value_column_name"
+   },
+   "loadingCacheSpec": {
+      "type": "guava",
+      "maximumSize": 500000,
+      "expireAfterWrite": 900000
+   },
+   "reverseLoadingCacheSpec": {
+      "type": "guava"
+   },
+   "negativeLoadingCacheSpec": {
+      "type": "guava",
+      "maximumSize": 100000,
+      "expireAfterWrite": 60000
+   }
+}
+```
 
 ##### Example Loading On-heap Guava
 
