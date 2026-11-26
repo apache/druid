@@ -269,4 +269,80 @@ class AdaptedLoadableSegmentTest
     adapted.acquire(AcquireMode.FULL).close();
     Assertions.assertThrows(Exception.class, () -> adapted.acquire(AcquireMode.FULL));
   }
+
+  @Test
+  void testAbandonFailedAcquisitionAllowsReacquireAndReinvokesSupplier() throws Exception
+  {
+    final TestSegment segment = new TestSegment();
+    final AtomicInteger supplierCalls = new AtomicInteger();
+    final AdaptedLoadableSegment adapted = new AdaptedLoadableSegment(
+        () -> {
+          if (supplierCalls.incrementAndGet() == 1) {
+            final SettableAsyncResource<AcquireSegmentResult> failed = new SettableAsyncResource<>();
+            failed.setException(noRoom());
+            return failed;
+          }
+          return AsyncResources.unmanaged(
+              new AcquireSegmentResult(ReferenceCountedSegmentProvider.unmanaged(segment), 0L, 0L, 0L)
+          );
+        },
+        DESCRIPTOR,
+        "test",
+        null
+    );
+
+    // not acquired yet: abandoning is a programming error
+    Assertions.assertThrows(DruidException.class, adapted::abandonFailedAcquisition);
+
+    final AcquireSegmentAction first = adapted.acquire(AcquireMode.FULL);
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> first.await(10_000L));
+    Assertions.assertEquals(DruidException.Category.CAPACITY_EXCEEDED, e.getCategory());
+    first.close();
+    // still acquired until abandoned
+    Assertions.assertThrows(DruidException.class, () -> adapted.acquire(AcquireMode.FULL));
+
+    adapted.abandonFailedAcquisition();
+    final AcquireSegmentAction second = adapted.acquire(AcquireMode.FULL);
+    final AcquireSegmentResult result = second.await(10_000L);
+    Assertions.assertTrue(result.getSegment().isPresent());
+    second.release().close();
+    Assertions.assertEquals(2, supplierCalls.get());
+  }
+
+  @Test
+  void testSupplierThrowLeavesSegmentAcquirable() throws Exception
+  {
+    final TestSegment segment = new TestSegment();
+    final AtomicInteger supplierCalls = new AtomicInteger();
+    final AdaptedLoadableSegment adapted = new AdaptedLoadableSegment(
+        () -> {
+          if (supplierCalls.incrementAndGet() == 1) {
+            throw noRoom();
+          }
+          return AsyncResources.unmanaged(
+              new AcquireSegmentResult(ReferenceCountedSegmentProvider.unmanaged(segment), 0L, 0L, 0L)
+          );
+        },
+        DESCRIPTOR,
+        "test",
+        null
+    );
+
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> adapted.acquire(AcquireMode.FULL));
+    Assertions.assertEquals(DruidException.Category.CAPACITY_EXCEEDED, e.getCategory());
+
+    // nothing was acquired: abandoning is a programming error, and a plain retry goes through
+    Assertions.assertThrows(DruidException.class, adapted::abandonFailedAcquisition);
+    final AcquireSegmentAction action = adapted.acquire(AcquireMode.FULL);
+    Assertions.assertTrue(action.await(10_000L).getSegment().isPresent());
+    action.release().close();
+    Assertions.assertEquals(2, supplierCalls.get());
+  }
+
+  private static DruidException noRoom()
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                         .build("no room");
+  }
 }

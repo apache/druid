@@ -171,8 +171,28 @@ public class RegularLoadableSegment implements LoadableSegment
       throw DruidException.defensive("Segment with descriptor[%s] is already acquired", descriptor);
     }
 
+    // Only mark the segment acquired once an action has been created successfully. Creating one can throw (the cached
+    // path reserves cache space up front, which fails when the cache is full) and in that case nothing was acquired,
+    // so the segment remains available to try again later.
+    final AcquireSegmentAction action = createAcquireSegmentAction(acquireMode);
     acquired = true;
+    return action;
+  }
 
+  @Override
+  public synchronized void abandonFailedAcquisition()
+  {
+    if (!acquired) {
+      throw DruidException.defensive("Segment with descriptor[%s] is not acquired", descriptor);
+    }
+
+    // The memoized dataSegmentFutureSupplier is deliberately left in place: a retry should reuse the DataSegment
+    // rather than making another call to the Coordinator.
+    acquired = false;
+  }
+
+  private AcquireSegmentAction createAcquireSegmentAction(AcquireMode acquireMode)
+  {
     if (cachedDataSegment != null) {
       // if we have a DataSegment object we can go through the SegmentManager directly
       final AcquireSegmentAction action = segmentManager.acquireSegment(cachedDataSegment, acquireMode);
