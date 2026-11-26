@@ -85,6 +85,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -94,6 +95,7 @@ public class QueryLifecycleTest
   private static final String DATASOURCE = "some_datasource";
   private static final String IDENTITY = "some_identity";
   private static final String AUTHORIZER = "some_authorizer";
+  private static final String AUTHENTICATOR = "some_authenticator";
 
   private static final Resource RESOURCE = new Resource(DATASOURCE, ResourceType.DATASOURCE);
 
@@ -157,6 +159,7 @@ public class QueryLifecycleTest
     runner = EasyMock.createMock(QueryRunner.class);
     metrics = EasyMock.createNiceMock(QueryMetrics.class);
     authenticationResult = EasyMock.createMock(AuthenticationResult.class);
+    EasyMock.expect(authenticationResult.getAuthenticatedBy()).andReturn(AUTHENTICATOR).anyTimes();
     authConfig = new AuthConfig();
     policyEnforcer = NoopPolicyEnforcer.instance();
 
@@ -207,6 +210,57 @@ public class QueryLifecycleTest
 
     QueryLifecycle lifecycle = createLifecycle();
     lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION);
+  }
+
+  @Test
+  public void testRunSimple_registersRunningQuery()
+  {
+    final RunningQueryRegistry registry = new RunningQueryRegistry();
+    final QueryLifecycle lifecycle = new QueryLifecycle(
+        conglomerate,
+        texasRanger,
+        metricsFactory,
+        emitter,
+        requestLogger,
+        authzMapper,
+        authConfig,
+        policyEnforcer,
+        new QueryConfigSnapshot(QueryContext.empty(), null),
+        registry,
+        System.currentTimeMillis(),
+        System.nanoTime()
+    );
+
+    EasyMock.expect(queryConfig.getContext()).andReturn(QueryContext.empty()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest)
+            .once();
+    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(runner)
+            .once();
+    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).once();
+    EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andAnswer(() -> {
+              // While the query is running, it is present in the registry.
+              final List<RunningQueryRegistry.Entry> runningQueries = registry.getAll();
+              Assertions.assertEquals(1, runningQueries.size());
+              Assertions.assertEquals(lifecycle.getQueryId(), runningQueries.get(0).getQueryId());
+              Assertions.assertEquals("timeseries", runningQueries.get(0).getQueryType());
+              Assertions.assertEquals(ImmutableList.of(DATASOURCE), runningQueries.get(0).getDatasources());
+              Assertions.assertEquals(IDENTITY, runningQueries.get(0).getIdentity());
+              return Sequences.empty();
+            })
+            .once();
+
+    replayAll();
+
+    lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION)
+             .getResults()
+             .toList();
+
+    // Once the query finishes, it is removed from the registry.
+    Assertions.assertTrue(registry.getAll().isEmpty());
   }
 
   @Test
@@ -904,6 +958,7 @@ public class QueryLifecycleTest
             QueryContext.empty(),
             BrokerDynamicConfig.builder().withQueryBlocklist(ImmutableList.of(rule)).build()
         ),
+        new RunningQueryRegistry(),
         System.currentTimeMillis(),
         System.nanoTime()
     );
@@ -956,6 +1011,7 @@ public class QueryLifecycleTest
             QueryContext.empty(),
             BrokerDynamicConfig.builder().withQueryBlocklist(ImmutableList.of(rule)).build()
         ),
+        new RunningQueryRegistry(),
         System.currentTimeMillis(),
         System.nanoTime()
     );

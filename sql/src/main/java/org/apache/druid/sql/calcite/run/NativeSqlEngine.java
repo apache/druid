@@ -34,11 +34,20 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.RunningQueryRegistry;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.destination.IngestDestination;
+import org.apache.druid.sql.http.GetQueriesResponse;
+import org.apache.druid.sql.http.NativeQueryInfo;
+import org.apache.druid.sql.http.QueryInfo;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -62,17 +71,20 @@ public class NativeSqlEngine implements SqlEngine
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final ObjectMapper jsonMapper;
   private final SqlStatementFactory sqlStatementFactory;
+  private final RunningQueryRegistry runningQueryRegistry;
 
   @Inject
   public NativeSqlEngine(
       final QueryLifecycleFactory queryLifecycleFactory,
       final ObjectMapper jsonMapper,
-      final SqlToolbox toolbox
+      final SqlToolbox toolbox,
+      final RunningQueryRegistry runningQueryRegistry
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.jsonMapper = jsonMapper;
     this.sqlStatementFactory = new SqlStatementFactory(toolbox.withEngine(this));
+    this.runningQueryRegistry = runningQueryRegistry;
   }
 
   @VisibleForTesting
@@ -82,15 +94,71 @@ public class NativeSqlEngine implements SqlEngine
       final SqlStatementFactory sqlStatementFactory
   )
   {
+    this(queryLifecycleFactory, jsonMapper, sqlStatementFactory, new RunningQueryRegistry());
+  }
+
+  @VisibleForTesting
+  public NativeSqlEngine(
+      final QueryLifecycleFactory queryLifecycleFactory,
+      final ObjectMapper jsonMapper,
+      final SqlStatementFactory sqlStatementFactory,
+      final RunningQueryRegistry runningQueryRegistry
+  )
+  {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.jsonMapper = jsonMapper;
     this.sqlStatementFactory = sqlStatementFactory;
+    this.runningQueryRegistry = runningQueryRegistry;
   }
 
   @Override
   public String name()
   {
     return NAME;
+  }
+
+  /**
+   * Returns the queries that are currently executing on this server. Completed queries are not retained by the native
+   * engine, so the {@code includeComplete} parameter has no effect. This engine has no way to collect queries from
+   * other servers, so the list is always local to this server, regardless of the {@code selfOnly} parameter.
+   */
+  @Override
+  public GetQueriesResponse getQueries(
+      final boolean selfOnly,
+      final boolean includeComplete,
+      final AuthenticationResult authenticationResult,
+      final AuthorizationResult stateReadAuthorization
+  )
+  {
+    final boolean canViewAllQueries = stateReadAuthorization.allowAccessWithNoRestriction();
+    final List<QueryInfo> queries = new ArrayList<>();
+
+    for (final RunningQueryRegistry.Entry entry : runningQueryRegistry.getAll()) {
+      final NativeQueryInfo queryInfo = NativeQueryInfo.fromEntry(entry);
+
+      if (canViewAllQueries) {
+        queries.add(queryInfo);
+      } else if (isOwnQuery(authenticationResult, entry)) {
+        queries.add(queryInfo.withoutAuthenticationResult());
+      }
+    }
+
+    return new GetQueriesResponse(queries);
+  }
+
+  /**
+   * Returns whether the given query belongs to the authenticated user, following the same rules as
+   * {@code DartSqlEngine#isOwnQuery}.
+   */
+  private static boolean isOwnQuery(
+      final AuthenticationResult authenticationResult,
+      final RunningQueryRegistry.Entry entry
+  )
+  {
+    return authenticationResult.getAuthenticatedBy() != null
+           && authenticationResult.getIdentity() != null
+           && Objects.equals(authenticationResult.getAuthenticatedBy(), entry.getAuthenticator())
+           && Objects.equals(authenticationResult.getIdentity(), entry.getIdentity());
   }
 
   @Override

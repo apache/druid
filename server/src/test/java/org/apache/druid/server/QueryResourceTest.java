@@ -835,6 +835,7 @@ public class QueryResourceTest
                 new AuthConfig(),
                 NoopPolicyEnforcer.instance(),
                 new QueryConfigSnapshot(overrideConfig.getContext(), null),
+                new RunningQueryRegistry(),
                 System.currentTimeMillis(),
                 System.nanoTime()
             )

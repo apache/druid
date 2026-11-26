@@ -381,16 +381,17 @@ WHERE deprecation IS NOT NULL
 
 :::info
  The `sys.queries` table is an experimental feature. You must enable it by setting the runtime property
- `druid.sql.planner.enableSysQueriesTable=true` on Broker processes. The main reason this table is experimental
-  is that it only shows queries from the [Dart](dart.md) engine, which is also experimental.
+ `druid.sql.planner.enableSysQueriesTable=true` on Broker processes. The table only shows queries from SQL engines
+ that support listing their queries: the [Dart](dart.md) engine (`msq-dart`) and the native engine (`native`).
+ Dart is also experimental.
 :::
 
 The queries table provides information about currently running and recently completed SQL queries.
 
 |Column|Type|Notes|
 |------|-----|-----|
-|id|VARCHAR|Execution ID for the query. For Dart queries, this is the `dartQueryId`.|
-|engine|VARCHAR|SQL engine that executed the query, e.g., `msq-dart`|
+|id|VARCHAR|Execution ID for the query. For Dart queries, this is the `dartQueryId`. For native engine queries, this is the native query ID.|
+|engine|VARCHAR|SQL engine that executed the query, e.g., `msq-dart` or `native`|
 |state|VARCHAR|Query status: `ACCEPTED`, `RUNNING`, `SUCCESS`, `FAILED`, or `CANCELED`|
 |info|VARCHAR|JSON-serialized query information including `sqlQueryId`, `sql`, `identity`, `startTime`, and other engine-specific details|
 
@@ -409,3 +410,33 @@ WHERE
  See `druid.msq.dart.controller.maxRetainedReportCount` and `druid.msq.dart.controller.maxRetainedReportDuration`
  for details on how long completed queries are retained.
 :::
+
+#### Native engine queries
+
+For the native engine, the queries table lists the queries that are currently executing on the Broker that runs the
+query. Completed queries are not retained, so `state` is always `RUNNING` for native engine queries. The `info` column
+contains the following fields:
+
+|Field|Notes|
+|-----|-----|
+|`engine`|Engine that is running the query, always `native`.|
+|`state`|State of the query, always `RUNNING`.|
+|`queryId`|Native query ID. This is the ID to use with the cancel API, `DELETE /druid/v2/{queryId}`.|
+|`sqlQueryId`|`sqlQueryId` of the SQL query that this native query belongs to, when the query came in through the SQL layer. This is the ID to use with the cancel API, `DELETE /druid/v2/sql/{sqlQueryId}`.|
+|`queryType`|Native query type, such as `timeseries`, `topN`, or `groupBy`.|
+|`datasources`|Names of the datasources queried by this native query.|
+|`identity`|Identity of the user that submitted the query. Only included when the user has READ permission on the `STATE` resource.|
+|`authenticator`|Authenticator that authenticated `identity`. Only included when the user has READ permission on the `STATE` resource.|
+|`startTime`|Time at which the query started executing on this Broker.|
+
+The native engine runs a single native query per SQL statement, so a SQL query that uses the native engine appears as a
+single row. Native queries that were submitted directly to `/druid/v2/` also appear in the table, and have no
+`sqlQueryId`.
+
+For example, to retrieve all native engine queries that are currently running:
+
+```sql
+SELECT id, "info"
+FROM sys.queries
+WHERE engine = 'native'
+```

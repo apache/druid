@@ -99,6 +99,7 @@ public class QueryLifecycle
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final QueryConfigSnapshot configSnapshot;
+  private final RunningQueryRegistry runningQueryRegistry;
   private final long startMs;
   private final long startNs;
 
@@ -124,6 +125,7 @@ public class QueryLifecycle
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
       final QueryConfigSnapshot configSnapshot,
+      final RunningQueryRegistry runningQueryRegistry,
       final long startMs,
       final long startNs
   )
@@ -137,6 +139,7 @@ public class QueryLifecycle
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.configSnapshot = configSnapshot;
+    this.runningQueryRegistry = runningQueryRegistry;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -417,6 +420,8 @@ public class QueryLifecycle
   {
     transition(State.AUTHORIZED, State.EXECUTING);
 
+    runningQueryRegistry.register(baseQuery, authenticationResult);
+
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
     @SuppressWarnings("unchecked")
@@ -449,6 +454,8 @@ public class QueryLifecycle
       // Never initialized, don't log or emit anything.
       return;
     }
+
+    runningQueryRegistry.unregister(baseQuery.getId());
 
     if (state == State.DONE) {
       log.warn("Tried to emit logs and metrics twice for query[%s]!", baseQuery.getId());

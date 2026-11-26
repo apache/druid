@@ -430,6 +430,58 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 A successful response results in an `HTTP 202` message code and an empty response body.
 
+### List running queries
+
+Returns the queries that are currently running, for each SQL engine that supports listing its queries. The native
+engine and the Dart engine support this API.
+
+For the native engine, the list contains the queries that are running on the server that receives the request. The
+native engine runs a single native query per SQL statement, so each SQL query appears as a single entry. The list also
+includes native queries that were submitted directly to the native query endpoint, `/druid/v2/`.
+
+Users with READ permission on the `STATE` resource see all running queries. Other users see only their own queries.
+
+#### URL
+
+`GET` `/druid/v2/sql/queries`
+
+#### Query parameters
+
+* `selfOnly`: If present, returns only queries that are running on this server. If absent, each engine may contact other
+servers to build a complete list. The native engine always returns queries that are local to the server.
+* `includeComplete`: If present, includes completed queries in the response. The number of completed queries returned is
+determined by engine-specific retention settings. The native engine does not retain completed queries.
+
+#### Sample request
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/queries"
+```
+
+#### Sample response
+
+The response contains one entry per running query. Engine-specific fields are included for each engine. For the native
+engine, `queryId` is the ID to use with the cancel API for native queries, and `sqlQueryId` is the ID to use with the
+cancel API for SQL queries.
+
+```json
+{
+  "queries": [
+    {
+      "engine": "native",
+      "queryId": "b3a4a4a1-4e39-4a01-a4d7-66f5e2f49c54",
+      "sqlQueryId": "request01",
+      "queryType": "timeseries",
+      "datasources": ["wikipedia"],
+      "identity": "user",
+      "authenticator": "basic",
+      "startTime": "2026-11-26T06:11:46.887Z",
+      "state": "RUNNING"
+    }
+  ]
+}
+```
+
 ### Query output format
 
 The following table shows examples of how Druid returns the column names and data types based on the result format and the type request.

@@ -19,6 +19,7 @@
 
 package org.apache.druid.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.guice.LazySingleton;
@@ -48,8 +49,40 @@ public class QueryLifecycleFactory
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
+  private final RunningQueryRegistry runningQueryRegistry;
 
   @Inject
+  public QueryLifecycleFactory(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final QuerySegmentWalker texasRanger,
+      final GenericQueryMetricsFactory queryMetricsFactory,
+      final ServiceEmitter emitter,
+      final RequestLogger requestLogger,
+      final AuthConfig authConfig,
+      final PolicyEnforcer policyEnforcer,
+      final AuthorizerMapper authorizerMapper,
+      final QueryConfigProvider queryConfigProvider,
+      @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig,
+      final RunningQueryRegistry runningQueryRegistry
+  )
+  {
+    this.conglomerate = conglomerate;
+    this.texasRanger = texasRanger;
+    this.queryMetricsFactory = queryMetricsFactory;
+    this.emitter = emitter;
+    this.requestLogger = requestLogger;
+    this.authorizerMapper = authorizerMapper;
+    this.queryConfigProvider = queryConfigProvider;
+    this.authConfig = authConfig;
+    this.policyEnforcer = policyEnforcer;
+    this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
+    this.runningQueryRegistry = runningQueryRegistry;
+  }
+
+  /**
+   * Constructor used by tests, which do not need a running-query registry.
+   */
+  @VisibleForTesting
   public QueryLifecycleFactory(
       final QueryRunnerFactoryConglomerate conglomerate,
       final QuerySegmentWalker texasRanger,
@@ -63,16 +96,19 @@ public class QueryLifecycleFactory
       @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
   )
   {
-    this.conglomerate = conglomerate;
-    this.texasRanger = texasRanger;
-    this.queryMetricsFactory = queryMetricsFactory;
-    this.emitter = emitter;
-    this.requestLogger = requestLogger;
-    this.authorizerMapper = authorizerMapper;
-    this.queryConfigProvider = queryConfigProvider;
-    this.authConfig = authConfig;
-    this.policyEnforcer = policyEnforcer;
-    this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
+    this(
+        conglomerate,
+        texasRanger,
+        queryMetricsFactory,
+        emitter,
+        requestLogger,
+        authConfig,
+        policyEnforcer,
+        authorizerMapper,
+        queryConfigProvider,
+        brokerViewOfBrokerConfig,
+        new RunningQueryRegistry()
+    );
   }
 
   public QueryLifecycle factorize()
@@ -93,6 +129,7 @@ public class QueryLifecycleFactory
         authConfig,
         policyEnforcer,
         configSnapshot,
+        runningQueryRegistry,
         System.currentTimeMillis(),
         System.nanoTime()
     );

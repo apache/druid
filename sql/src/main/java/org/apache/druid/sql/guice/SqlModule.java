@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.guice;
 
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -30,6 +32,7 @@ import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.NativeQuery;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.log.RequestLogger;
@@ -51,11 +54,14 @@ import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.view.DruidViewModule;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
+import org.apache.druid.sql.http.NativeQueryInfo;
 import org.apache.druid.sql.http.SqlHttpModule;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 
-public class SqlModule implements Module
+public class SqlModule implements DruidModule
 {
   public static final String PROPERTY_SQL_ENABLE = "druid.sql.enable";
   public static final String PROPERTY_SQL_ENABLE_JSON_OVER_HTTP = "druid.sql.http.enable";
@@ -203,5 +209,18 @@ public class SqlModule implements Module
     {
       // Do nothing, this class exists for the Provider methods
     }
+  }
+
+  @Override
+  public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+  {
+    return Collections.<com.fasterxml.jackson.databind.Module>singletonList(
+        new SimpleModule("SqlModule").registerSubtypes(
+            new NamedType(
+                NativeQueryInfo.class,
+                NativeSqlEngine.NAME
+            )
+        )
+    );
   }
 }
