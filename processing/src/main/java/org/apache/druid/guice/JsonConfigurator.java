@@ -187,11 +187,12 @@ public class JsonConfigurator
               } else {
                 path.append(".").append(pathPart);
               }
+              beanClazz = theField.getType();
             }
           }
         }
         catch (NoSuchFieldException e) {
-          throw new RuntimeException(e);
+          path = new StringBuilder(violation.getPropertyPath().toString());
         }
 
         messages.add(StringUtils.format("%s - %s", path.toString(), violation.getMessage()));
