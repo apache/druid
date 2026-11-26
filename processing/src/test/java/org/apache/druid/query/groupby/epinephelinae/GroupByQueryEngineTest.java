@@ -19,7 +19,19 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -28,6 +40,12 @@ import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class GroupByQueryEngineTest
 {
@@ -132,5 +150,40 @@ public class GroupByQueryEngineTest
     EasyMock.replay(factory);
     Assertions.assertTrue(GroupByQueryEngine.canPushDownLimit(factory, DIM));
     EasyMock.verify(factory);
+  }
+
+  @Test
+  public void testFilterCompactionWithLargeInList()
+  {
+    final DimensionSelector selector = EasyMock.createMock(DimensionSelector.class);
+    EasyMock.expect(selector.getValueCardinality()).andStubReturn(10000);
+    EasyMock.expect(selector.nameLookupPossibleInAdvance()).andStubReturn(true);
+    EasyMock.expect(selector.idLookup()).andStubReturn((IdLookup) value -> -1);
+    EasyMock.replay(selector);
+    final ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
+        .setDictionaryEncoded(true).setDictionaryValuesUnique(true).setHasMultipleValues(false);
+    final DefaultDimensionSpec dimension = new DefaultDimensionSpec(DIM, DIM);
+    final GroupByQuery query = GroupByQuery.builder()
+        .setDataSource("test")
+        .setInterval(Intervals.utc(0, 1000))
+        .setGranularity(Granularities.ALL)
+        .setDimensions(dimension)
+        .setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setContext(Map.of("enableFilterDictionaryCompaction", true))
+        .build();
+    final Set<String> values = IntStream.range(0, 4097).mapToObj(String::valueOf).collect(Collectors.toSet());
+    for (final DimFilter filter : List.of(
+        new InDimFilter(DIM, values),
+        new TypedInFilter(DIM, ColumnType.STRING, List.copyOf(values), null, null)
+    )) {
+      Assertions.assertEquals(values, GroupingEngine.getFilteredDimensionValues(
+          query.withDimFilter(filter),
+          new GroupByQueryConfig().withOverrides(query),
+          dimension,
+          name -> capabilities,
+          selector
+      ));
+    }
+    EasyMock.verify(selector);
   }
 }

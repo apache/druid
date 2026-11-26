@@ -22,15 +22,29 @@ package org.apache.druid.query.groupby.epinephelinae.vector;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
+import org.apache.druid.segment.IdMapping;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+
+import javax.annotation.Nullable;
 
 public class SingleValueStringGroupByVectorColumnSelector implements GroupByVectorColumnSelector
 {
   private final SingleValueDimensionVectorSelector selector;
+  @Nullable
+  private final IdMapping idMapping;
 
   SingleValueStringGroupByVectorColumnSelector(final SingleValueDimensionVectorSelector selector)
   {
+    this(selector, null);
+  }
+
+  SingleValueStringGroupByVectorColumnSelector(
+      final SingleValueDimensionVectorSelector selector,
+      @Nullable final IdMapping idMapping
+  )
+  {
     this.selector = selector;
+    this.idMapping = idMapping;
   }
 
   @Override
@@ -39,10 +53,16 @@ public class SingleValueStringGroupByVectorColumnSelector implements GroupByVect
     return Integer.BYTES;
   }
 
+  @Nullable
+  public String lookupName(final int id)
+  {
+    return selector.lookupName(idMapping == null ? id : idMapping.getReverseId(id));
+  }
+
   @Override
   public int getValueCardinality()
   {
-    return selector.getValueCardinality();
+    return idMapping == null ? selector.getValueCardinality() : idMapping.getValueCardinality();
   }
 
   @Override
@@ -56,7 +76,11 @@ public class SingleValueStringGroupByVectorColumnSelector implements GroupByVect
   {
     final int[] vector = selector.getRowVector();
 
-    if (keySize == Integer.BYTES) {
+    if (idMapping != null) {
+      for (int i = startRow, j = keyOffset; i < endRow; i++, j += keySize) {
+        keySpace.putInt(j, idMapping.getForwardedId(vector[i]));
+      }
+    } else if (keySize == Integer.BYTES) {
       keySpace.putIntArray(keyOffset, vector, startRow, endRow - startRow);
     } else {
       for (int i = startRow, j = keyOffset; i < endRow; i++, j += keySize) {
@@ -76,7 +100,7 @@ public class SingleValueStringGroupByVectorColumnSelector implements GroupByVect
   )
   {
     final int id = keyMemory.memory().getInt(keyMemory.position() + keyOffset);
-    resultRow.set(resultRowPosition, selector.lookupName(id));
+    resultRow.set(resultRowPosition, lookupName(id));
   }
 
   @Override

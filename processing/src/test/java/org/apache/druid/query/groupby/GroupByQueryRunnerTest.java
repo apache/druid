@@ -92,6 +92,7 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
 import org.apache.druid.query.dimension.RegexFilteredDimensionSpec;
@@ -110,6 +111,7 @@ import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExtractionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.JavaScriptDimFilter;
@@ -118,6 +120,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.having.DimensionSelectorHavingSpec;
@@ -496,6 +499,83 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   public void resetExpressionProcessing()
   {
     ExpressionProcessing.initializeForTests();
+  }
+
+  @Test
+  public void testGroupByFilterDictionaryCompaction()
+  {
+    assumeTimeOrdered();
+    final InDimFilter qualityFilter = new InDimFilter("quality", ImmutableSet.of("business", "automotive", "absent"));
+    final List<DimFilter> filters = Arrays.asList(
+        null,
+        qualityFilter,
+        new TypedInFilter("quality", ColumnType.STRING, List.of("business", "automotive", "business"), null, null),
+        new SelectorDimFilter("quality", "automotive", null),
+        new EqualityFilter("quality", ColumnType.STRING, "automotive", null),
+        new InDimFilter("market", ImmutableSet.of("spot")),
+        new InDimFilter("placementish", ImmutableSet.of("a")),
+        new AndDimFilter(List.of(qualityFilter, new InDimFilter("market", ImmutableSet.of("spot")))),
+        new AndDimFilter(List.of(qualityFilter, new InDimFilter("quality", ImmutableSet.of("business")))),
+        new AndDimFilter(List.of(qualityFilter, new InDimFilter("quality", ImmutableSet.of("health")))),
+        new OrDimFilter(List.of(qualityFilter, new SelectorDimFilter("market", "upfront", null))),
+        new NotDimFilter(qualityFilter),
+        new InDimFilter("quality", Arrays.asList("automotive", null), null),
+        new InDimFilter("quality", ImmutableSet.of("absent"))
+    );
+    for (final String column : List.of("quality", "placementish", "partial_null_column")) {
+      // Implicit unnesting of multivalue grouping columns is not supported by vector execution.
+      if (vectorize && "placementish".equals(column)) {
+        continue;
+      }
+      for (final DimFilter filter : filters) {
+        for (final boolean limit : List.of(false, true)) {
+          for (final int dimensionCount : new int[]{1, 2, 3, 4}) {
+            final List<DimensionSpec> dimensions = List.of(
+                new DefaultDimensionSpec(column, "alias"),
+                new DefaultDimensionSpec("market", "marketAlias"),
+                new DefaultDimensionSpec("placement", "placementAlias"),
+                new DefaultDimensionSpec("index", "numericAlias", ColumnType.DOUBLE)
+            );
+            final GroupByQuery.Builder builder = makeQueryBuilder()
+                .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+                .setDimensions(dimensions.subList(0, dimensionCount))
+                .setDimFilter(filter)
+                .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+                .setGranularity(Granularities.DAY)
+                .overrideContext(Map.of(
+                    "vectorSize", 7,
+                    "enableFilterDictionaryCompaction", true,
+                    "maxOnDiskStorage", 10_000_000L,
+                    "maxMergingDictionarySize", 1_000_000L
+                ));
+            if (limit) {
+              builder.setLimitSpec(new DefaultLimitSpec(OrderByColumnSpec.ascending("alias"), 2));
+            }
+            final GroupByQuery query = builder.build();
+            TestHelper.assertExpectedObjects(
+                GroupByQueryRunnerTestHelper.runQuery(
+                    factory,
+                    runner,
+                    query.withOverriddenContext(Map.of("forceHashAggregation", true))
+                ),
+                GroupByQueryRunnerTestHelper.runQuery(factory, runner, query),
+                "filter compaction, dimensions: " + dimensions.subList(0, dimensionCount)
+                + ", filter: " + filter + ", limit: " + limit
+            );
+            TestHelper.assertExpectedObjects(
+                GroupByQueryRunnerTestHelper.runQuery(
+                    factory,
+                    runner,
+                    query.withOverriddenContext(Map.of("enableFilterDictionaryCompaction", false))
+                ),
+                GroupByQueryRunnerTestHelper.runQuery(factory, runner, query),
+                "compaction enabled versus disabled, column: " + column + ", filter: " + filter
+            );
+          }
+        }
+      }
+    }
   }
 
   @Test

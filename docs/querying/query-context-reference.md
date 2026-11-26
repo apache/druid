@@ -992,6 +992,18 @@ The following parameters apply to [GroupBy queries](groupbyquery.md).
 |**Query type**|groupBy|
 |**Since**|31.0.0|
 
+### `enableFilterDictionaryCompaction`
+
+| | |
+|---|---|
+|**Description**|Overrides the value of `druid.query.groupBy.enableFilterDictionaryCompaction`.|
+|**Type**|Boolean|
+|**Default**|`druid.query.groupBy.enableFilterDictionaryCompaction`|
+|**Query**|JSON, SQL|
+|**Engine**|Native, MSQ, Dart|
+|**Query type**|groupBy|
+|**Since**|40.0.0|
+
 ### `forceHashAggregation`
 
 | | |

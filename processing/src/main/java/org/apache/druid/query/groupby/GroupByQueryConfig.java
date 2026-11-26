@@ -153,6 +153,9 @@ public class GroupByQueryConfig
   private boolean forceHashAggregation = false;
 
   @JsonProperty
+  private boolean enableFilterDictionaryCompaction = false;
+
+  @JsonProperty
   private int intermediateCombineDegree = 8;
 
   @JsonProperty
@@ -317,6 +320,11 @@ public class GroupByQueryConfig
     return forceHashAggregation;
   }
 
+  public boolean isEnableFilterDictionaryCompaction()
+  {
+    return enableFilterDictionaryCompaction;
+  }
+
   public int getIntermediateCombineDegree()
   {
     return intermediateCombineDegree;
@@ -422,6 +430,10 @@ public class GroupByQueryConfig
         QueryContextParameters.FORCE_HASH_AGGREGATION,
         isForceHashAggregation()
     );
+    newConfig.enableFilterDictionaryCompaction = queryContext.getOrDefault(
+        QueryContextParameters.ENABLE_FILTER_DICTIONARY_COMPACTION,
+        isEnableFilterDictionaryCompaction()
+    );
     newConfig.forcePushDownNestedQuery = queryContext.getOrDefault(
         QueryContextParameters.FORCE_PUSH_DOWN_NESTED_QUERY,
         isForcePushDownNestedQuery()
@@ -469,6 +481,7 @@ public class GroupByQueryConfig
            ", defaultOnDiskStorage=" + getDefaultOnDiskStorage().getBytes() + // use the getter because of special behavior for mirroring maxOnDiskStorage if defaultOnDiskStorage not explicitly set.
            ", forcePushDownLimit=" + forcePushDownLimit +
            ", forceHashAggregation=" + forceHashAggregation +
+           ", enableFilterDictionaryCompaction=" + enableFilterDictionaryCompaction +
            ", intermediateCombineDegree=" + intermediateCombineDegree +
            ", numParallelCombineThreads=" + numParallelCombineThreads +
            ", vectorize=" + vectorize +

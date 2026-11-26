@@ -31,6 +31,7 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -47,6 +48,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
@@ -59,6 +61,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -126,10 +129,37 @@ public class VectorGroupByEngine
                   if (dimensionSpec instanceof DefaultDimensionSpec) {
                     // Delegate creation of GroupByVectorColumnSelector to the column selector factory, so that
                     // virtual columns (like ExpressionVirtualColumn) can control their own grouping behavior.
-                    return columnSelectorFactory.makeGroupByVectorColumnSelector(
-                        dimensionSpec.getDimension(),
-                        config.getDeferExpressionDimensions()
-                    );
+                    final GroupByVectorColumnSelector groupingSelector =
+                        columnSelectorFactory.makeGroupByVectorColumnSelector(
+                            dimensionSpec.getDimension(),
+                            config.getDeferExpressionDimensions()
+                        );
+                    if (config.isEnableFilterDictionaryCompaction()
+                        && query.getFilter() != null
+                        && !query.getVirtualColumns().exists(dimensionSpec.getDimension())
+                        && groupingSelector instanceof SingleValueStringGroupByVectorColumnSelector) {
+                      final SingleValueDimensionVectorSelector selector =
+                          columnSelectorFactory.makeSingleValueDimensionSelector(dimensionSpec);
+                      final Set<String> values = GroupingEngine.getFilteredDimensionValues(
+                          query,
+                          config,
+                          dimensionSpec,
+                          columnSelectorFactory,
+                          selector
+                      );
+                      if (values != null) {
+                        return new SingleValueStringGroupByVectorColumnSelector(
+                            selector,
+                            ListFilteredDimensionSpec.buildAllowListIdMapping(
+                                values,
+                                selector.getValueCardinality(),
+                                selector.idLookup(),
+                                selector::lookupName
+                            )
+                        );
+                      }
+                    }
+                    return groupingSelector;
                   } else {
                     return ColumnProcessors.makeVectorProcessor(
                         dimensionSpec,
