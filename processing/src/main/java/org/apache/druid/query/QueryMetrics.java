@@ -228,6 +228,16 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void sqlQueryId(@SuppressWarnings("UnusedParameters") String sqlQueryId);
 
   /**
+   * Sets the engine that runs the query as a dimension, such as {@link DefaultQueryMetrics#NATIVE_ENGINE}. May be
+   * called after {@link #query}, so delegating implementations must delegate it rather than throw.
+   */
+  @PublicApi
+  default void engine(String engine)
+  {
+    // Emit nothing by default.
+  }
+
+  /**
    * Sets {@link Query#getContext()} of the given query as dimension.
    */
   @PublicApi

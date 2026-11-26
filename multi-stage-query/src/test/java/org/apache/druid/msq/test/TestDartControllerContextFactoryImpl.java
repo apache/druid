@@ -39,6 +39,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.DartControllerContext;
@@ -47,7 +48,6 @@ import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.dart.worker.DartWorkerService;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
-import org.apache.druid.msq.exec.MSQMetricEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerImpl;
@@ -57,6 +57,7 @@ import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -133,9 +134,15 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
       }
 
       @Override
-      public void emitMetric(MSQMetricEventBuilder metricBuilder)
+      public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
       {
         serviceEmitter.emit(metricBuilder.build("controller", queryId()));
+      }
+
+      @Override
+      public void emitQueryMetrics(QueryMetrics<?> queryMetrics)
+      {
+        queryMetrics.emit(serviceEmitter);
       }
 
       @Override

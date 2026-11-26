@@ -46,11 +46,12 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
-import org.apache.druid.msq.exec.MSQMetricEventBuilder;
+import org.apache.druid.msq.exec.MSQMetrics;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerFailureListener;
@@ -67,8 +68,13 @@ import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
 import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.MapQueryToolChestWarehouse;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
@@ -375,13 +381,41 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   }
 
   @Override
-  public void emitMetric(MSQMetricEventBuilder metricBuilder)
+  public ServiceMetricEvent.Builder makeMetricBuilder()
+  {
+    return new ServiceMetricEvent.Builder();
+  }
+
+  @Override
+  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
   {
     serviceEmitter.emit(
         metricBuilder.setDimension(
             MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION,
             MSQTestOverlordServiceClient.METRIC_CONTROLLER_TASK_TYPE
         )
+    );
+  }
+
+  @Override
+  public QueryMetrics<?> makeQueryMetrics(final Query<?> query)
+  {
+    return MSQMetrics.makeQueryMetrics(
+        new MapQueryToolChestWarehouse(Map.of()),
+        DefaultGenericQueryMetricsFactory.instance(),
+        query,
+        MSQTaskSqlEngine.NAME
+    );
+  }
+
+  @Override
+  public void emitQueryMetrics(final QueryMetrics<?> queryMetrics)
+  {
+    MSQMetrics.emitQueryMetrics(
+        queryMetrics,
+        serviceEmitter,
+        MSQTaskSqlEngine.NAME,
+        Map.of(MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION, MSQTestOverlordServiceClient.METRIC_CONTROLLER_TASK_TYPE)
     );
   }
 

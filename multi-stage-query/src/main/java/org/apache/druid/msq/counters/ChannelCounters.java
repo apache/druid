@@ -75,6 +75,20 @@ public class ChannelCounters implements QueryCounter
   @GuardedBy("this")
   private final LongList loadWait = new LongArrayList();
 
+  /**
+   * Maximum time to load a single segment, in nanos. Not part of the {@link Snapshot}, only used for
+   * {@link #getLoadStats()}.
+   */
+  @GuardedBy("this")
+  private long maxLoadTime;
+
+  /**
+   * Maximum time spent waiting to load a single segment, in nanos. Not part of the {@link Snapshot}, only used for
+   * {@link #getLoadStats()}.
+   */
+  @GuardedBy("this")
+  private long maxLoadWait;
+
   @GuardedBy("this")
   private final LongList queries = new LongArrayList();
 
@@ -202,6 +216,25 @@ public class ChannelCounters implements QueryCounter
       loadTime.set(partitionNumber, loadTime.getLong(partitionNumber) + nTime);
       loadWait.set(partitionNumber, loadWait.getLong(partitionNumber) + nWait);
       loadFiles.set(partitionNumber, loadFiles.getLong(partitionNumber) + nFiles);
+      maxLoadTime = Math.max(maxLoadTime, nTime);
+      maxLoadWait = Math.max(maxLoadWait, nWait);
+    }
+  }
+
+  /**
+   * Returns stats for segments loaded through {@link #addLoad}, across all partitions.
+   */
+  public SegmentLoadStats getLoadStats()
+  {
+    synchronized (this) {
+      return new SegmentLoadStats(
+          sum(loadFiles),
+          sum(loadBytes),
+          sum(loadTime),
+          maxLoadTime,
+          sum(loadWait),
+          maxLoadWait
+      );
     }
   }
 
@@ -329,6 +362,15 @@ public class ChannelCounters implements QueryCounter
           totalQueriesArray
       );
     }
+  }
+
+  private static long sum(final LongList longList)
+  {
+    long sum = 0;
+    for (int i = 0; i < longList.size(); i++) {
+      sum += longList.getLong(i);
+    }
+    return sum;
   }
 
   @Nullable

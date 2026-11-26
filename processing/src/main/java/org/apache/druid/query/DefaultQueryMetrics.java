@@ -23,11 +23,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.FastIntervalStringFormatter;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,6 +57,11 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public static final String QUERY_ON_DEMAND_WAIT_TIME_MAX = "query/load/wait/max";
   public static final String QUERY_ON_DEMAND_LOAD_COUNT = "query/load/count";
   public static final String QUERY_ON_DEMAND_LOAD_BYTES = "query/load/bytes/total";
+
+  /**
+   * Value of {@link DruidMetrics#ENGINE} for native queries.
+   */
+  public static final String NATIVE_ENGINE = "native";
 
   protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
   protected final Map<String, Number> metrics = new HashMap<>();
@@ -109,6 +114,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     queryId(query);
     subQueryId(query);
     sqlQueryId(query);
+    engine(NATIVE_ENGINE);
     context(query);
   }
 
@@ -149,13 +155,13 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void queryId(QueryType query)
   {
-    setDimension(DruidMetrics.ID, StringUtils.nullToEmptyNonDruidDataString(query.getId()));
+    setQueryId(query.getId());
   }
 
   @Override
   public void queryId(String queryId)
   {
-    setDimension(DruidMetrics.ID, StringUtils.nullToEmptyNonDruidDataString(queryId));
+    setQueryId(queryId);
   }
 
   @Override
@@ -468,5 +474,13 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   private QueryMetrics<QueryType> reportMillisTimeMetric(String metricName, long timeNs)
   {
     return reportMetric(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));
+  }
+
+  private void setQueryId(@Nullable String queryId)
+  {
+    if (queryId != null) {
+      setDimension(DruidMetrics.ID, queryId);
+      setDimension(DruidMetrics.QUERY_ID, queryId);
+    }
   }
 }

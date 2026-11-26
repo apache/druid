@@ -22,19 +22,22 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.DruidNode;
+import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.io.File;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Context used by multi-stage query workers.
@@ -62,10 +65,17 @@ public interface WorkerContext extends Closeable
   Injector injector();
 
   /**
-   * Emit the metric in the {@link MSQMetricEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
-   * context dependant dimensions.
+   * Returns new {@link QueryMetrics} for a worker query metric.
+   *
+   * @param tableNames tables read by the query
+   * @param intervals intervals read by the query
    */
-  void emitMetric(MSQMetricEventBuilder metricBuilder);
+  QueryMetrics<?> makeQueryMetrics(Set<String> tableNames, Collection<Interval> intervals);
+
+  /**
+   * Emits the provided {@link QueryMetrics}.
+   */
+  void emitQueryMetrics(QueryMetrics<?> queryMetrics);
 
   /**
    * Callback from the worker implementation to "register" the worker. Used in

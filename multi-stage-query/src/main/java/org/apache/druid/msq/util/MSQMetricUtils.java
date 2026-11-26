@@ -19,12 +19,17 @@
 
 package org.apache.druid.msq.util;
 
+import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.joda.time.Interval;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -45,5 +50,25 @@ public class MSQMetricUtils
       }
     }
     return intervals;
+  }
+
+  /**
+   * Returns the number of segments read through the provided input slices, such as those of a {@link WorkOrder},
+   * including segments queried from data servers such as realtime tasks. Reported as {@code query/segments/count}.
+   */
+  public static long countSegments(final List<InputSlice> inputSlices)
+  {
+    long count = 0;
+    for (final InputSlice inputSlice : inputSlices) {
+      if (inputSlice instanceof SegmentsInputSlice segmentsInputSlice) {
+        count += segmentsInputSlice.getDescriptors().size();
+        if (segmentsInputSlice.getQueryableServers() != null) {
+          for (final DataServerRequestDescriptor server : segmentsInputSlice.getQueryableServers()) {
+            count += server.getSegments().size();
+          }
+        }
+      }
+    }
+    return count;
   }
 }
