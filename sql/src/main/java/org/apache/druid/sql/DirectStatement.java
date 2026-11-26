@@ -228,7 +228,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
                 prepareResult = planner.prepareResult();
                 // Double check needed by SqlResourceTest
                 transition(State.PREPARED);
-                reporter.planningTimeNanos(System.nanoTime() - planningStartNanos);
+                reportPlanningTime(planningStartNanos);
               }
               catch (RuntimeException | AssertionError e) {
                 // On timeout, the failure is a side effect of aborting the planner; surface it as a timeout.
@@ -248,20 +248,33 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     }
     catch (RelOptPlanner.CannotPlanException e) {
       // Not sure if this is even thrown here.
+      reportPlanningTime(planningStartNanos);
       throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
                           .ofCategory(DruidException.Category.UNCATEGORIZED)
                           .build(e, "Problem planning SQL query");
     }
     catch (RuntimeException e) {
       state = State.FAILED;
+      reportPlanningTime(planningStartNanos);
       reporter.failed(e);
       throw e;
     }
     catch (AssertionError e) {
       state = State.FAILED;
+      reportPlanningTime(planningStartNanos);
       reporter.failed(e);
       throw InvalidSqlInput.exception(e, "Calcite assertion violated: [%s]", e.getMessage());
     }
+  }
+
+  /**
+   * Reports the time spent planning so far. This is called whether planning succeeded or failed, so that a query that
+   * fails while planning, including one aborted by the planning timeout, reports the time it spent planning before it
+   * failed instead of leaving the {@code sqlQuery/planningTimeMs} metric at 0.
+   */
+  private void reportPlanningTime(long planningStartNanos)
+  {
+    reporter.planningTimeNanos(System.nanoTime() - planningStartNanos);
   }
 
   /**

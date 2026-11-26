@@ -24,11 +24,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -47,6 +49,7 @@ import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -88,11 +91,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.assertResultsEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -213,6 +218,118 @@ public class SqlStatementTest
     assertFalse(resultSet.runnable());
     resultSet.close();
     stmt.close();
+  }
+
+  /**
+   * The {@code sqlQuery/planningTimeMs} stat logged for the one SQL query that the test ran.
+   */
+  private long loggedPlanningTimeMs()
+  {
+    final List<RequestLogLine> logs = ((TestRequestLogger) sqlToolbox.requestLogger).getSqlQueryLogs();
+    assertEquals(1, logs.size());
+    return (Long) logs.get(0).getQueryStats().getStats().get("sqlQuery/planningTimeMs");
+  }
+
+  /**
+   * A statement that plans for {@code planningMillis} and then fails with the given throwable.
+   */
+  private DirectStatement newStatementFailingPlanningAfter(
+      final long planningMillis,
+      final Supplier<Throwable> failure
+  )
+  {
+    final SqlQueryPlus sqlReq = queryPlus(
+        "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
+    return new DirectStatement(sqlToolbox, sqlReq, null)
+    {
+      @Override
+      protected PlannerResult createPlan(DruidPlanner planner)
+      {
+        try {
+          Thread.sleep(planningMillis);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+        final Throwable t = failure.get();
+        if (t instanceof Error) {
+          throw (Error) t;
+        }
+        throw (RuntimeException) t;
+      }
+    };
+  }
+
+  /**
+   * A query that fails while planning reports the time it spent planning, not 0.
+   */
+  @Test
+  public void testPlanningFailureReportsPlanningTime()
+  {
+    final DirectStatement stmt = newStatementFailingPlanningAfter(50, () -> InvalidSqlInput.exception("bad query"));
+
+    assertThrows(DruidException.class, stmt::plan);
+    stmt.close();
+
+    assertTrue(loggedPlanningTimeMs() >= 50);
+  }
+
+  @Test
+  public void testPlanningAssertionErrorReportsPlanningTime()
+  {
+    final DirectStatement stmt = newStatementFailingPlanningAfter(50, () -> new AssertionError("calcite assertion"));
+
+    assertThrows(DruidException.class, stmt::plan);
+    stmt.close();
+
+    assertTrue(loggedPlanningTimeMs() >= 50);
+  }
+
+  @Test
+  public void testCannotPlanReportsPlanningTime()
+  {
+    final DirectStatement stmt = newStatementFailingPlanningAfter(
+        50,
+        () -> new RelOptPlanner.CannotPlanException("cannot plan")
+    );
+
+    assertThrows(DruidException.class, stmt::plan);
+    stmt.close();
+
+    assertTrue(loggedPlanningTimeMs() >= 50);
+  }
+
+  /**
+   * A query aborted by the planning timeout reports at least the time budget as its planning time.
+   */
+  @Test
+  @Timeout(30)
+  public void testPlanningTimeoutReportsPlanningTime()
+  {
+    final SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
+        .queryContext(QueryContext.of(ImmutableMap.of(QueryContextParameters.MAX_PLANNING_TIME_MS.getName(), 100)))
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+    final DirectStatement stmt = new DirectStatement(sqlToolbox, sqlReq, null)
+    {
+      @Override
+      protected PlannerResult createPlan(DruidPlanner planner)
+      {
+        final CancelFlag cancelFlag = planner.getPlannerContext().getCancelFlag();
+        while (!cancelFlag.isCancelRequested() && !Thread.currentThread().isInterrupted()) {
+          // spin until the watchdog aborts us
+        }
+        throw new RuntimeException("Preparation aborted");
+      }
+    };
+
+    assertThrows(QueryTimeoutException.class, stmt::plan);
+    stmt.close();
+
+    assertTrue(loggedPlanningTimeMs() >= 100);
   }
 
   @Test
