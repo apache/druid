@@ -286,8 +286,12 @@ public class DirectStatement extends AbstractStatement implements Cancelable
            && TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - planningStartNanos) >= maxPlanningTimeMs;
   }
 
+  /**
+   * Records the planning timeout with the {@link SqlExecutionReporter} and returns the exception to throw.
+   */
   private QueryTimeoutException planningTimedOut(long maxPlanningTimeMs)
   {
+    reporter.recordPlanningTimeout();
     return new QueryTimeoutException(
         StringUtils.format(
             "Query planning for [%s] exceeded the configured maximum planning time of [%,d] ms. This may "

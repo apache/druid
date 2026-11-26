@@ -56,6 +56,7 @@ public class SqlExecutionReporter
   private Throwable e;
   private long bytesWritten;
   private long planningTimeNanos;
+  private boolean planningTimedOut;
 
   public SqlExecutionReporter(
       final AbstractStatement stmt,
@@ -96,6 +97,17 @@ public class SqlExecutionReporter
     this.planningTimeNanos = planningTimeNanos;
   }
 
+  /**
+   * Records that this query failed because planning exceeded the maximum planning time
+   * ({@code maxPlanningTimeMs}). This is a flag of its own, rather than something derived from the exception passed
+   * to {@link #failed}, because {@code failed} may be called again later with a different, converted exception, for
+   * example by the HTTP result pusher. When set, {@link #emit()} emits {@code sqlQuery/planningTimeout/count}.
+   */
+  public void recordPlanningTimeout()
+  {
+    this.planningTimedOut = true;
+  }
+
   public void emit()
   {
     final boolean success = e == null;
@@ -132,6 +144,9 @@ public class SqlExecutionReporter
       metricBuilder.setDimension(DruidMetrics.STATUS_CODE, statusCode);
 
       emitter.emit(metricBuilder.setMetric("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs)));
+      if (planningTimedOut) {
+        emitter.emit(metricBuilder.setMetric("sqlQuery/planningTimeout/count", 1));
+      }
       if (bytesWritten >= 0) {
         emitter.emit(metricBuilder.setMetric("sqlQuery/bytes", bytesWritten));
       }

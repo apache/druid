@@ -191,6 +191,7 @@
   "service/heartbeat": [],
   "sqlQuery/bytes": [],
   "sqlQuery/planningTimeMs": [],
+  "sqlQuery/planningTimeout/count": [],
   "sqlQuery/time": [],
   "sys/cpu": [],
   "sys/disk/queue": [],
