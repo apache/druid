@@ -84,7 +84,7 @@ public class CoordinatorResource
       @QueryParam("simple") String simple,
       @QueryParam("full") String full,
       @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView,
-      @QueryParam("ignoreUnloadedSegments") @Nullable String ignoreUnloadedSegments
+      @QueryParam("ignorePendingHandoffAndCompaction") @Nullable String ignorePendingHandoffAndCompaction
   )
   {
     if (simple != null) {
@@ -95,7 +95,7 @@ public class CoordinatorResource
       return Response.ok(
           coordinator.getTierToDatasourceToUnderReplicatedCount(
               computeUsingClusterView != null,
-              ignoreUnloadedSegments != null
+              ignorePendingHandoffAndCompaction != null
           )
       ).build();
     }

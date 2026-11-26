@@ -110,7 +110,7 @@ public class CoordinatorResourceTest
   }
 
   @Test
-  public void testGetLoadStatusFullPassesIgnoreUnloadedSegments()
+  public void testGetLoadStatusFullPassesIgnorePendingHandoffAndCompaction()
   {
     final Map<String, Object2LongMap<String>> underReplicated = Map.of("tier1", new Object2LongOpenHashMap<>());
     EasyMock.expect(mock.getTierToDatasourceToUnderReplicatedCount(false, true)).andReturn(underReplicated).once();

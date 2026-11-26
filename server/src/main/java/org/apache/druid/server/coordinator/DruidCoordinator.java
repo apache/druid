@@ -229,11 +229,11 @@ public class DruidCoordinator
 
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(
       boolean useClusterView,
-      boolean ignorePendingFirstLoad
+      boolean ignorePendingHandoffAndCompaction
   )
   {
     final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
-    return computeUnderReplicated(dataSegments, useClusterView, ignorePendingFirstLoad);
+    return computeUnderReplicated(dataSegments, useClusterView, ignorePendingHandoffAndCompaction);
   }
 
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(
@@ -432,19 +432,19 @@ public class DruidCoordinator
   private Map<String, Object2LongMap<String>> computeUnderReplicated(
       Iterable<DataSegment> dataSegments,
       boolean computeUsingClusterView,
-      boolean ignorePendingFirstLoad
+      boolean ignorePendingHandoffAndCompaction
   )
   {
     if (segmentReplicationStatus == null) {
       return Collections.emptyMap();
     } else {
-      final Set<SegmentId> overshadowingSegmentIds = ignorePendingFirstLoad
+      final Set<SegmentId> overshadowingSegmentIds = ignorePendingHandoffAndCompaction
           ? metadataManager.segments().getRecentDataSourcesSnapshot().getIdsOfSegmentsOvershadowingUsedSegments()
           : Set.of();
       return segmentReplicationStatus.getTierToDatasourceToUnderReplicated(
           dataSegments,
           !computeUsingClusterView,
-          ignorePendingFirstLoad,
+          ignorePendingHandoffAndCompaction,
           overshadowingSegmentIds
       );
     }

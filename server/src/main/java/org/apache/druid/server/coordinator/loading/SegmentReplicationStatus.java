@@ -91,7 +91,7 @@ public class SegmentReplicationStatus
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicated(
       Iterable<DataSegment> usedSegments,
       boolean ignoreMissingServers,
-      boolean ignorePendingFirstLoad,
+      boolean ignorePendingHandoffAndCompaction,
       Set<SegmentId> overshadowingSegmentIds
   )
   {
@@ -102,7 +102,7 @@ public class SegmentReplicationStatus
       if (tierToReplicaCount == null) {
         continue;
       }
-      if (ignorePendingFirstLoad
+      if (ignorePendingHandoffAndCompaction
           && (totalReplicaCounts.get(segment.getId()).loadedOnRealtime() > 0
               || overshadowingSegmentIds.contains(segment.getId()))) {
         continue;

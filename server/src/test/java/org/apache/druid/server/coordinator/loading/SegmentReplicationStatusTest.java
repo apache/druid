@@ -144,7 +144,7 @@ public class SegmentReplicationStatusTest
   }
 
   @Test
-  public void testIgnorePendingFirstLoad()
+  public void testIgnorePendingHandoffAndCompaction()
   {
     final SegmentId segmentId = segments.get(0).getId();
 
@@ -175,13 +175,19 @@ public class SegmentReplicationStatusTest
   )
   {
     final DataSegment segment = segments.get(0);
-    final SegmentReplicationStatus status = new SegmentReplicationStatus(Map.of(segment.getId(), Map.of(TIER_1, count)));
-    for (boolean ignorePendingFirstLoad : new boolean[]{false, true}) {
+    final SegmentReplicationStatus status =
+        new SegmentReplicationStatus(Map.of(segment.getId(), Map.of(TIER_1, count)));
+    for (boolean ignorePendingHandoffAndCompaction : new boolean[]{false, true}) {
       final Object2LongMap<String> datasourceToCount = status
-          .getTierToDatasourceToUnderReplicated(List.of(segment), false, ignorePendingFirstLoad, overshadowingSegmentIds)
+          .getTierToDatasourceToUnderReplicated(
+              List.of(segment),
+              false,
+              ignorePendingHandoffAndCompaction,
+              overshadowingSegmentIds
+          )
           .getOrDefault(TIER_1, new Object2LongOpenHashMap<>());
       Assertions.assertEquals(
-          ignorePendingFirstLoad ? expectedWithFlag : expectedWithoutFlag,
+          ignorePendingHandoffAndCompaction ? expectedWithFlag : expectedWithoutFlag,
           datasourceToCount.getLong(segment.getDataSource())
       );
     }
