@@ -50,6 +50,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.RollupBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.RollupTableProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -123,6 +124,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -1125,6 +1127,46 @@ public class CompactionTaskTest
     );
 
     Assertions.assertEquals(Set.of(), ((CombinedDataSchema) dataSchema).getMultiValuedDimensions());
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithSealedRollupBaseTableReportsItsDeclaredMultiValuedColumns()
+      throws IOException
+  {
+    // The sealed table names the grouping column that holds several values per row, so compaction can hand the
+    // runner the real answer without reading a segment to find it. Everything it does not name holds one value.
+    final RollupTableProjectionSpec declaresAMultiValuedColumn =
+        RollupTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(RollupBaseTableProjectionSpec.toMultiValueVirtualColumn("string_dim_0")))
+            .groupingColumns(
+                new StringDimensionSchema("string_dim_0"),
+                new StringDimensionSchema("string_dim_1"),
+                new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME)
+            )
+            .build();
+
+    final DataSchema dataSchema = Iterables.getOnlyElement(
+        CompactionTask.createInputDataSchemas(
+            toolbox,
+            LockGranularity.TIME_CHUNK,
+            new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+            null,
+            null,
+            null,
+            new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
+            null,
+            declaresAMultiValuedColumn,
+            true,
+            false,
+            METRIC_BUILDER,
+            true
+        ).values()
+    );
+
+    Assertions.assertEquals(
+        Set.of("string_dim_0"),
+        ((CombinedDataSchema) dataSchema).getMultiValuedDimensions()
+    );
   }
 
   @Test

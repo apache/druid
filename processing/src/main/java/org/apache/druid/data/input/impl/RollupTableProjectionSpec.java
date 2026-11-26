@@ -82,8 +82,12 @@ public final class RollupTableProjectionSpec implements RollupBaseTableProjectio
   {
     BaseTableProjectionSpec.validateDeclaredColumns(groupingColumns, "groupingColumns", TYPE_NAME);
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
-    BaseTableProjectionSpec.validateGranularityOnlyVirtualColumns(this.virtualColumns, TYPE_NAME);
-    this.groupingColumns = Collections.unmodifiableList(new ArrayList<>(groupingColumns));
+    this.groupingColumns = List.copyOf(groupingColumns);
+    RollupBaseTableProjectionSpec.validateGroupingCarrierVirtualColumns(
+        this.virtualColumns,
+        this.groupingColumns,
+        TYPE_NAME
+    );
     this.aggregators = aggregators == null ? new AggregatorFactory[0] : aggregators;
     validateAggregators(this.groupingColumns, this.aggregators);
     this.dimensionsSpec = DimensionsSpec.builder()
@@ -305,6 +309,14 @@ public final class RollupTableProjectionSpec implements RollupBaseTableProjectio
         throw InvalidInput.exception(
             "aggregator cannot be named [%s]; it is the query-granularity virtual column, not a metric column",
             Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+        );
+      }
+      if (aggregator.getName().startsWith(MULTI_VALUE_VIRTUAL_COLUMN_PREFIX)) {
+        throw InvalidInput.exception(
+            "aggregator cannot be named [%s]; the [%s] prefix is reserved for the virtual columns that declare a"
+            + " column to be multi-valued",
+            aggregator.getName(),
+            MULTI_VALUE_VIRTUAL_COLUMN_PREFIX
         );
       }
       if (!names.add(aggregator.getName())) {

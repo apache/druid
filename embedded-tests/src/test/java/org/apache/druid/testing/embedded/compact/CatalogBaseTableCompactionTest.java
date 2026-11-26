@@ -23,6 +23,7 @@ import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.RollupTableBaseTableMetadata;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
@@ -32,6 +33,8 @@ import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.RollupBaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.RollupTableProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.CompactionEngine;
@@ -44,8 +47,11 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.coordinator.CatalogDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -70,6 +76,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -92,6 +99,11 @@ public class CatalogBaseTableCompactionTest extends EmbeddedClusterTestBase
    * carrying forward what the segments already have.
    */
   private static final String PROJECTION_NAME = "by_country";
+  /**
+   * Holds several values per row, which a sealed table can only communicate by declaring it.
+   */
+  private static final String MULTI_VALUE_COLUMN = "tags";
+  private static final String COUNT_COLUMN = "count";
 
   private final EmbeddedOverlord overlord = new EmbeddedOverlord()
       .addProperty("druid.catalog.client.maxSyncRetries", "0")
@@ -198,6 +210,35 @@ public class CatalogBaseTableCompactionTest extends EmbeddedClusterTestBase
   }
 
   @Test
+  public void test_compactRollupBaseTable_withSealedCatalogTable_groupsDeclaredMultiValuedColumnAsASet()
+      throws IOException
+  {
+    ingestRollupSegment();
+
+    // Sealing means compaction never reads the segments, so it cannot discover that 'tags' holds several values per
+    // row. The catalog table declares it with MV_TO_ARRAY, which is what lets the rows be grouped by the whole set.
+    // Without the declaration, grouping by a multi-valued column one value at a time is refused outright.
+    createRollupCatalogTable();
+    configureCompaction();
+    runCompaction();
+
+    final CompactionState compactionState = getOnlyUsedSegment().getLastCompactionState();
+    Assertions.assertNotNull(compactionState);
+    Assertions.assertEquals(
+        Set.of(MULTI_VALUE_COLUMN),
+        ((RollupBaseTableProjectionSpec) compactionState.getBaseTable()).getMultiValuedColumns()
+    );
+
+    // Rolled up by the whole value set: the two rows tagged [a, b] combined into one and [c] stayed on its own, so
+    // three ingested rows became two and the counts still total three. Grouping the values one at a time would have
+    // left three rows ('a', 'b' and 'c') totalling five.
+    Assertions.assertEquals(
+        "2,3",
+        cluster.runSql("SELECT COUNT(*), SUM(\"%s\") FROM %s", COUNT_COLUMN, dataSource)
+    );
+  }
+
+  @Test
   public void test_compactClusteredBaseTable_withClusterKeys_partitionsByRange() throws IOException
   {
     ingestClusteredSegment();
@@ -293,6 +334,88 @@ public class CatalogBaseTableCompactionTest extends EmbeddedClusterTestBase
     }
     final TableMetadata table = builder.build();
     new TestCatalogClient(cluster).createTable(table, true);
+  }
+
+  /**
+   * The carriers of the rollup layout used here: {@link #MULTI_VALUE_COLUMN} holds more than one value per row, and
+   * the table rolls up to the hour, which is what lets rows at different minutes combine.
+   */
+  private static VirtualColumns rollupCarriers()
+  {
+    return VirtualColumns.create(
+        RollupBaseTableProjectionSpec.toMultiValueVirtualColumn(MULTI_VALUE_COLUMN),
+        Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+    );
+  }
+
+  /**
+   * A sealed rollup table that declares {@link #MULTI_VALUE_COLUMN} to hold more than one value per row, which is the
+   * only way compaction can know it without reading the segments.
+   */
+  private void createRollupCatalogTable()
+  {
+    final TableMetadata table =
+        TableBuilder.datasource(dataSource, "HOUR")
+                    .column(MULTI_VALUE_COLUMN, Columns.SQL_VARCHAR)
+                    .column(Columns.TIME_COLUMN, Columns.LONG)
+                    .column(COUNT_COLUMN, Columns.LONG)
+                    .baseTable(
+                        new RollupTableBaseTableMetadata(
+                            rollupCarriers(),
+                            new AggregatorFactory[]{new LongSumAggregatorFactory(COUNT_COLUMN, COUNT_COLUMN)},
+                            null
+                        )
+                    )
+                    .property(DatasourceDefn.SEALED_PROPERTY, true)
+                    .build();
+    new TestCatalogClient(cluster).createTable(table, true);
+  }
+
+  /**
+   * Ingests a rollup segment whose {@link #MULTI_VALUE_COLUMN} genuinely holds several values per row, so that how
+   * compaction groups it is observable in the result rather than only in the recorded spec.
+   */
+  private void ingestRollupSegment() throws IOException
+  {
+    final File inputFile = new File(cluster.getTestFolder().newFolder(), "rollup-input.json");
+    Files.write(
+        inputFile.toPath(),
+        ("{\"time\":\"2024-01-01T00:10:00Z\",\"tags\":[\"a\",\"b\"],\"count\":1}\n"
+         + "{\"time\":\"2024-01-01T00:20:00Z\",\"tags\":[\"a\",\"b\"],\"count\":1}\n"
+         + "{\"time\":\"2024-01-01T00:30:00Z\",\"tags\":[\"c\"],\"count\":1}\n")
+            .getBytes(StandardCharsets.UTF_8)
+    );
+
+    final String taskId = IdUtils.getRandomId();
+    final ParallelIndexSupervisorTask task = TaskBuilder
+        .ofTypeIndexParallel()
+        .jsonInputFormat()
+        .localInputSourceWithFiles(inputFile)
+        .dataSchema(
+            builder -> builder
+                .withDataSource(dataSource)
+                .withTimestamp(new TimestampSpec("time", "iso", null))
+                .withSegmentGranularity(
+                    new SegmentGranularitySpec(Granularities.HOUR, List.of(Intervals.of("2024-01-01/2024-01-02")))
+                )
+                .withBaseTable(
+                    RollupTableProjectionSpec
+                        .builder()
+                        .virtualColumns(rollupCarriers())
+                        .groupingColumns(
+                            new StringDimensionSchema(MULTI_VALUE_COLUMN),
+                            new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME)
+                        )
+                        .aggregators(new LongSumAggregatorFactory(COUNT_COLUMN, COUNT_COLUMN))
+                        .build()
+                )
+        )
+        .tuningConfig(t -> t.withMaxNumConcurrentSubTasks(1))
+        .withId(taskId);
+
+    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
+    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
   }
 
   private void configureCompaction()

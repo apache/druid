@@ -856,15 +856,16 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       // removed).
       //
       // Which string columns hold multiple values is only knowable from the segments, so a sealed table declares the
-      // answer instead of paying to read it: a declared string column holds one value per row, since a base table has
-      // no way to say otherwise yet. A table whose data disagrees fails rather than being stored wrongly, after the
-      // shuffle for a range partition column and at the groupBy for a rollup grouping column.
+      // answer instead of paying to read it: a rollup layout names the ones that do, and every column it does not
+      // name holds a single value. That is a set rather than the null that means "unknown", so only the named
+      // columns are grouped as arrays. A table whose data disagrees fails rather than being stored wrongly, after
+      // the shuffle for a range partition column and at the groupBy for an undeclared grouping column.
       final boolean analyzeSchema = !sealed;
       final boolean analyzeProjections = !sealed && projections == null;
       final boolean analyzeMultiValued = analyzeSchema && (rangePartitioned || needMultiValuedColumns);
       BaseTableProjectionSpec baseTableSpec = baseTable.withQueryGranularity(granularitySpec.getQueryGranularity());
       List<AggregateProjectionSpec> projectionSpecs = projections;
-      Set<String> multiValuedDimensions = sealed ? Set.of() : null;
+      Set<String> multiValuedDimensions = sealed ? declaredMultiValuedColumns(baseTableSpec) : null;
       if (analyzeSchema || analyzeMultiValued) {
         final ExistingSegmentAnalyzer analyzer = new ExistingSegmentAnalyzer(
             segments,
@@ -1017,6 +1018,19 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       names.add(declaredColumn.getName());
     }
     return names;
+  }
+
+  /**
+   * The columns {@code baseTable} declares to hold more than one value per row. Only a rollup layout can say this,
+   * because grouping is the only thing that has to know, so every other layout declares none rather than leaving it
+   * open.
+   */
+  private static Set<String> declaredMultiValuedColumns(BaseTableProjectionSpec baseTable)
+  {
+    if (baseTable instanceof RollupBaseTableProjectionSpec) {
+      return ((RollupBaseTableProjectionSpec) baseTable).getMultiValuedColumns();
+    }
+    return Set.of();
   }
 
   /**
