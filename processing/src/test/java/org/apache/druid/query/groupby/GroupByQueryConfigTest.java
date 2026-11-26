@@ -37,6 +37,7 @@ public class GroupByQueryConfigTest
       .<String, String>builder()
       .put("singleThreaded", "true")
       .put("bufferGrouperInitialBuckets", "1")
+      .put("maxMultiDimensionArrayCardinality", "1024")
       .put("defaultOnDiskStorage", "1M")
       .put("maxOnDiskStorage", "4M")
       .put("maxSelectorDictionarySize", "5")
@@ -52,6 +53,8 @@ public class GroupByQueryConfigTest
 
     Assertions.assertEquals(true, config.isSingleThreaded());
     Assertions.assertEquals(1, config.getBufferGrouperInitialBuckets());
+    Assertions.assertEquals(1024, config.getMaxMultiDimensionArrayCardinality());
+    Assertions.assertEquals(4096, new GroupByQueryConfig().getMaxMultiDimensionArrayCardinality());
     Assertions.assertEquals(4_000_000, config.getMaxOnDiskStorage().getBytes());
     Assertions.assertEquals(123, config.getMaxSpillFileCount());
     Assertions.assertEquals(1_000_000, config.getDefaultOnDiskStorage().getBytes());
@@ -75,6 +78,7 @@ public class GroupByQueryConfigTest
 
     Assertions.assertEquals(true, config2.isSingleThreaded());
     Assertions.assertEquals(1, config2.getBufferGrouperInitialBuckets());
+    Assertions.assertEquals(1024, config2.getMaxMultiDimensionArrayCardinality());
     Assertions.assertEquals(1_000_000, config2.getMaxOnDiskStorage().getBytes());
     Assertions.assertEquals(123, config2.getMaxSpillFileCount());
     Assertions.assertEquals(5, config2.getConfiguredMaxSelectorDictionarySize());
@@ -112,6 +116,7 @@ public class GroupByQueryConfigTest
 
     Assertions.assertEquals(true, config2.isSingleThreaded());
     Assertions.assertEquals(1, config2.getBufferGrouperInitialBuckets());
+    Assertions.assertEquals(1024, config2.getMaxMultiDimensionArrayCardinality());
     Assertions.assertEquals(3_000_000, config2.getMaxOnDiskStorage().getBytes());
     Assertions.assertEquals(333, config2.getMaxSpillFileCount());
     Assertions.assertEquals(3, config2.getConfiguredMaxSelectorDictionarySize());

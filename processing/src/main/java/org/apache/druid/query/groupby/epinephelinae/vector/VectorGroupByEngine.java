@@ -394,6 +394,18 @@ public class VectorGroupByEngine
             keyOffset += selector.getGroupingKeySize();
           }
 
+          if (vectorGrouper instanceof BufferArrayGrouper && selectors.size() > 1) {
+            // Pack the existing dictionary-id keys in place for the integer array grouper.
+            for (int row = 0; row < granularizer.getEndOffset() - startOffset; row++) {
+              int key = 0;
+              for (int dimension = 0; dimension < selectors.size(); dimension++) {
+                key = key * (selectors.get(dimension).getValueCardinality() + 1)
+                      + keySpace.getInt((long) row * keySize + (long) dimension * Integer.BYTES) + 1;
+              }
+              keySpace.putInt((long) row * Integer.BYTES, key);
+            }
+          }
+
           // Aggregate this vector.
           final AggregateResult result = vectorGrouper.aggregateVector(
               keySpace,
@@ -439,19 +451,28 @@ public class VectorGroupByEngine
               resultRow.set(0, timestamp.getMillis());
             }
 
-            // Add dimensions.
-            int keyOffset = 0;
-            for (int i = 0; i < selectors.size(); i++) {
-              final GroupByVectorColumnSelector selector = selectors.get(i);
-
-              selector.writeKeyToResultRow(
-                  entry.getKey(),
-                  keyOffset,
+            if (vectorGrouper instanceof BufferArrayGrouper && selectors.size() > 1) {
+              GroupingEngine.writeArrayAggregationKeyToResultRow(
+                  entry.getKey().memory().getInt(entry.getKey().position()),
+                  selectors,
                   resultRow,
-                  resultRowDimensionStart + i
+                  resultRowDimensionStart
               );
+            } else {
+              // Add dimensions.
+              int keyOffset = 0;
+              for (int i = 0; i < selectors.size(); i++) {
+                final GroupByVectorColumnSelector selector = selectors.get(i);
 
-              keyOffset += selector.getGroupingKeySize();
+                selector.writeKeyToResultRow(
+                    entry.getKey(),
+                    keyOffset,
+                    resultRow,
+                    resultRowDimensionStart + i
+                );
+
+                keyOffset += selector.getGroupingKeySize();
+              }
             }
 
             // Convert dimension values to desired output types, possibly.

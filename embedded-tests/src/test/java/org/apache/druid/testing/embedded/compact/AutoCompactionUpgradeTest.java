@@ -48,7 +48,9 @@ public class AutoCompactionUpgradeTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
-      .addProperty("druid.manager.segments.useIncrementalCache", "always");
+      .addProperty("druid.manager.segments.useIncrementalCache", "always")
+      // This test inserts a config for a datasource without segments; cleanup would delete it.
+      .addProperty("druid.coordinator.kill.compaction.on", "false");
 
   protected CompactionResourceTestClient compactionResource;
 

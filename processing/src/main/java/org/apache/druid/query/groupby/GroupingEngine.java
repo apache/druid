@@ -994,11 +994,31 @@ public class GroupingEngine
       columnCapabilities = columnInspector.getColumnCapabilities(columnName);
       cardinality = groupingSelectors.get(0).getValueCardinality();
     } else {
-      // Cannot use array-based aggregation with more than one dimension.
-      return -1;
+      final int maxCardinality = Math.min(querySpecificConfig.getMaxMultiDimensionArrayCardinality(), Integer.MAX_VALUE - 1);
+      long cardinalityProduct = 1;
+      for (int i = 0; i < dimensions.size(); i++) {
+        final DimensionSpec dimension = dimensions.get(i);
+        final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(dimension.getDimension());
+        final int dimensionCardinality = groupingSelectors.get(i).getValueCardinality();
+        if (dimension.getClass() != DefaultDimensionSpec.class
+            || !ColumnType.STRING.equals(dimension.getOutputType())
+            || query.getVirtualColumns().exists(dimension.getDimension())
+            || !Types.is(capabilities, ValueType.STRING)
+            || !capabilities.isDictionaryEncoded().isTrue()
+            || !capabilities.areDictionaryValuesUnique().isTrue()
+            || !capabilities.hasMultipleValues().isFalse()
+            || dimensionCardinality <= 0
+            || cardinalityProduct > maxCardinality / ((long) dimensionCardinality + 1)) {
+          return -1;
+        }
+        // Include the missing-value slot for each dimension in the mixed-radix key.
+        cardinalityProduct *= (long) dimensionCardinality + 1;
+      }
+      columnCapabilities = columnInspector.getColumnCapabilities(dimensions.get(0).getDimension());
+      cardinality = (int) cardinalityProduct;
     }
 
-    // Choose array-based aggregation if the grouping key is a single string dimension of a known cardinality
+    // Choose array-based aggregation when the string grouping keys have a known, bounded cardinality.
     if (Types.is(columnCapabilities, ValueType.STRING) && cardinality > 0) {
       final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs().toArray(new AggregatorFactory[0]);
       final long requiredBufferCapacity = BufferArrayGrouper.requiredBufferCapacity(
@@ -1014,6 +1034,25 @@ public class GroupingEngine
       }
     } else {
       return -1;
+    }
+  }
+
+  /**
+   * Decodes a multidimensional array key into the original string grouping values.
+   */
+  public static void writeArrayAggregationKeyToResultRow(
+      int key,
+      final List<? extends GroupingSelector> selectors,
+      final ResultRow resultRow,
+      final int dimensionStart
+  )
+  {
+    for (int i = selectors.size() - 1; i >= 0; i--) {
+      final GroupingSelector selector = selectors.get(i);
+      final int radix = selector.getValueCardinality() + 1;
+      final int id = key % radix - 1;
+      key /= radix;
+      resultRow.set(dimensionStart + i, id < 0 ? null : selector.lookupName(id));
     }
   }
 

@@ -24,6 +24,8 @@ import org.apache.druid.query.groupby.epinephelinae.GroupingSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 
+import javax.annotation.Nullable;
+
 public class GroupByColumnSelectorPlus extends ColumnSelectorPlus<GroupByColumnSelectorStrategy> implements
     GroupingSelector
 {
@@ -61,6 +63,13 @@ public class GroupByColumnSelectorPlus extends ColumnSelectorPlus<GroupByColumnS
   public int getResultRowPosition()
   {
     return resultRowPosition;
+  }
+
+  @Nullable
+  @Override
+  public String lookupName(final int id)
+  {
+    return ((DimensionDictionarySelector) getSelector()).lookupName(id);
   }
 
   @Override
