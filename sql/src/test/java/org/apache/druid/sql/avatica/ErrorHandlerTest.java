@@ -21,6 +21,8 @@ package org.apache.druid.sql.avatica;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.PersonaBasedErrorTransformStrategy;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -77,6 +79,31 @@ public class ErrorHandlerTest
     ServerConfig serverConfig = new ServerConfig();
     ErrorHandler errorHandler = new ErrorHandler(serverConfig);
     Assertions.assertFalse(errorHandler.hasAffectingErrorResponseTransformStrategy());
+  }
+
+  @Test
+  public void testErrorHandlerWithPersonaStrategyHidesNonUserDruidException()
+  {
+    ErrorHandler errorHandler = new ErrorHandler(new ServerConfig(PersonaBasedErrorTransformStrategy.INSTANCE));
+    DruidException input = DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                         .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                         .build("internal detail");
+
+    RuntimeException output = errorHandler.sanitize(input);
+    Assertions.assertTrue(output.getMessage().contains("Error ID"), output.getMessage());
+    Assertions.assertFalse(output.getMessage().contains("internal detail"), output.getMessage());
+  }
+
+  @Test
+  public void testErrorHandlerWithPersonaStrategyKeepsUserDruidException()
+  {
+    ErrorHandler errorHandler = new ErrorHandler(new ServerConfig(PersonaBasedErrorTransformStrategy.INSTANCE));
+    DruidException input = DruidException.forPersona(DruidException.Persona.USER)
+                                         .ofCategory(DruidException.Category.INVALID_INPUT)
+                                         .build("bad interval");
+
+    RuntimeException output = errorHandler.sanitize(input);
+    Assertions.assertTrue(output.getMessage().contains("bad interval"), output.getMessage());
   }
 
   @Test
