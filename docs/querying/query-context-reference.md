@@ -381,7 +381,7 @@ The following parameters apply to native queries and, unless noted, to SQL queri
 
 | | |
 |---|---|
-|**Description**|Query timeout in millis, beyond which unfinished queries will be cancelled. 0 timeout means `no timeout` (up to the server-side maximum query timeout, `druid.server.http.maxQueryTimeout`). To set the default timeout and maximum timeout, see [Broker configuration](../configuration/index.md#broker).|
+|**Description**|Query timeout in milliseconds, beyond which unfinished queries will be cancelled. Accepts an integer number of milliseconds, a suffixed duration such as `30s`, or a fixed-length ISO-8601 duration such as `PT30S`. Sub-millisecond durations round up to the next millisecond. 0 timeout means `no timeout` (up to the server-side maximum query timeout, `druid.server.http.maxQueryTimeout`). To set the default timeout and maximum timeout, see [Broker configuration](../configuration/index.md#broker).|
 |**Type**|Long|
 |**Default**|`druid.server.http.defaultQueryTimeout`|
 |**Query**|JSON, SQL|

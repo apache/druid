@@ -20,9 +20,11 @@
 package org.apache.druid.initialization;
 
 import com.google.common.collect.ImmutableList;
+import jakarta.validation.Validation;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
+import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.eclipse.jetty.http.UriCompliance;
@@ -30,6 +32,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.HttpMethod;
+import java.util.Properties;
 
 public class ServerConfigTest
 {
@@ -93,6 +96,83 @@ public class ServerConfigTest
     Assertions.assertEquals(UriCompliance.RFC3986, modifiedConfig2.getUriCompliance());
     Assertions.assertFalse(modifiedConfig2.isEnforceStrictSNIHostChecking());
     Assertions.assertEquals(512, modifiedConfig2.getHeaderCacheSize());
+  }
+
+  @Test
+  public void testHumanReadableQueryTimeoutProperties()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.server.http.defaultQueryTimeout", "5m");
+    properties.setProperty("druid.server.http.maxQueryTimeout", "PT10M");
+
+    final ServerConfig config = fromProperties(properties);
+    Assertions.assertEquals(300_000L, config.getDefaultQueryTimeout());
+    Assertions.assertEquals(600_000L, config.getMaxQueryTimeout());
+  }
+
+  @Test
+  public void testLegacyQueryTimeoutPropertiesKeepFullLongRange()
+  {
+    final ServerConfig defaults = fromProperties(new Properties());
+    Assertions.assertEquals(300_000L, defaults.getDefaultQueryTimeout());
+    Assertions.assertEquals(Long.MAX_VALUE, defaults.getMaxQueryTimeout());
+
+    final Properties properties = new Properties();
+    properties.setProperty("druid.server.http.defaultQueryTimeout", "300000");
+    properties.setProperty("druid.server.http.maxQueryTimeout", String.valueOf(Long.MAX_VALUE));
+
+    final ServerConfig config = fromProperties(properties);
+    Assertions.assertEquals(300_000L, config.getDefaultQueryTimeout());
+    Assertions.assertEquals(Long.MAX_VALUE, config.getMaxQueryTimeout());
+  }
+
+  @Test
+  public void testQueryTimeoutSubMillisecondValuesRoundUp()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.server.http.defaultQueryTimeout", "250us");
+    properties.setProperty("druid.server.http.maxQueryTimeout", "PT0.000001S");
+
+    final ServerConfig config = fromProperties(properties);
+    Assertions.assertEquals(1L, config.getDefaultQueryTimeout());
+    Assertions.assertEquals(1L, config.getMaxQueryTimeout());
+  }
+
+  @Test
+  public void testQueryTimeoutJsonKeepsNumericMillisecondSerialization() throws Exception
+  {
+    final ServerConfig config = OBJECT_MAPPER.readValue(
+        "{\"defaultQueryTimeout\":\"30s\",\"maxQueryTimeout\":\"PT1M\"}",
+        ServerConfig.class
+    );
+    Assertions.assertEquals(30_000L, config.getDefaultQueryTimeout());
+    Assertions.assertEquals(60_000L, config.getMaxQueryTimeout());
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    Assertions.assertTrue(OBJECT_MAPPER.readTree(json).get("defaultQueryTimeout").isIntegralNumber());
+    Assertions.assertTrue(OBJECT_MAPPER.readTree(json).get("maxQueryTimeout").isIntegralNumber());
+  }
+
+  @Test
+  public void testInvalidQueryTimeoutPropertiesAreRejected()
+  {
+    for (String invalid : new String[]{"-5s", "1.5h", "P1M", "30S", "9999999999d"}) {
+      final Properties properties = new Properties();
+      properties.setProperty("druid.server.http.defaultQueryTimeout", invalid);
+      Assertions.assertThrows(RuntimeException.class, () -> fromProperties(properties), invalid);
+    }
+
+    final Properties properties = new Properties();
+    properties.setProperty("druid.server.http.maxQueryTimeout", "0");
+    Assertions.assertThrows(RuntimeException.class, () -> fromProperties(properties));
+  }
+
+  private static ServerConfig fromProperties(Properties properties)
+  {
+    final JsonConfigurator configurator = new JsonConfigurator(
+        OBJECT_MAPPER,
+        Validation.buildDefaultValidatorFactory().getValidator()
+    );
+    return configurator.configurate(properties, "druid.server.http", ServerConfig.class);
   }
 
   @Test

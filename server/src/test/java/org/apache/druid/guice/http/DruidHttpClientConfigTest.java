@@ -26,6 +26,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Properties;
 
@@ -76,6 +78,76 @@ public class DruidHttpClientConfigTest
     Assertions.assertThrows(RuntimeException.class, () -> configure(properties));
   }
 
+  @Test
+  public void testDurationDefaultsPreserveExistingValues()
+  {
+    final DruidHttpClientConfig config = configure(new Properties());
+    Assertions.assertEquals(900_000L, config.getReadTimeout().getMillis());
+    Assertions.assertEquals(240_000L, config.getUnusedConnectionTimeout().getMillis());
+    Assertions.assertEquals(10_000L, config.getConnectTimeout().getMillis());
+    Assertions.assertEquals(500L, config.getClientConnectTimeout());
+  }
+
+  @Test
+  public void testHumanReadableDurationProperties()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".readTimeout", "30s");
+    properties.setProperty(PROPERTY_BASE + ".unusedConnectionTimeout", "5s");
+    properties.setProperty(PROPERTY_BASE + ".connectTimeout", "2s");
+    properties.setProperty(PROPERTY_BASE + ".clientConnectTimeout", "250ms");
+
+    final DruidHttpClientConfig config = configure(properties);
+    Assertions.assertEquals(30_000L, config.getReadTimeout().getMillis());
+    Assertions.assertEquals(5_000L, config.getUnusedConnectionTimeout().getMillis());
+    Assertions.assertEquals(2_000L, config.getConnectTimeout().getMillis());
+    Assertions.assertEquals(250L, config.getClientConnectTimeout());
+  }
+
+  @Test
+  public void testLegacyDurationPropertiesRemainValid()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".readTimeout", "PT15M");
+    properties.setProperty(PROPERTY_BASE + ".unusedConnectionTimeout", "PT4M");
+    properties.setProperty(PROPERTY_BASE + ".connectTimeout", "PT10S");
+    properties.setProperty(PROPERTY_BASE + ".clientConnectTimeout", "500");
+
+    final DruidHttpClientConfig config = configure(properties);
+    Assertions.assertEquals(900_000L, config.getReadTimeout().getMillis());
+    Assertions.assertEquals(240_000L, config.getUnusedConnectionTimeout().getMillis());
+    Assertions.assertEquals(10_000L, config.getConnectTimeout().getMillis());
+    Assertions.assertEquals(500L, config.getClientConnectTimeout());
+  }
+
+  @Test
+  public void testClientConnectTimeoutRetainsFullLegacyLongRange()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".clientConnectTimeout", String.valueOf(Long.MAX_VALUE));
+    Assertions.assertEquals(Long.MAX_VALUE, configure(properties).getClientConnectTimeout());
+
+    properties.setProperty(PROPERTY_BASE + ".clientConnectTimeout", "PT1S");
+    Assertions.assertEquals(1_000L, configure(properties).getClientConnectTimeout());
+  }
+
+  @Test
+  public void testFractionalMillisecondsAreRoundedUp()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".clientConnectTimeout", "250us");
+    Assertions.assertEquals(1L, configure(properties).getClientConnectTimeout());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"-5s", "1.5h", "P1M", "9999999999d"})
+  public void testInvalidDurationPropertiesAreRejected(String input)
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".readTimeout", input);
+    Assertions.assertThrows(RuntimeException.class, () -> configure(properties), input);
+  }
+
   private static DruidHttpClientConfig configure(Properties properties)
   {
     final JsonConfigurator configurator = new JsonConfigurator(
@@ -86,5 +158,20 @@ public class DruidHttpClientConfigTest
         JsonConfigProvider.of(PROPERTY_BASE, DruidHttpClientConfig.class);
     provider.inject(properties, configurator);
     return provider.get();
+  }
+
+  @Test
+  public void testLegacyIsoWeekDurationProperties()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".readTimeout", "P2W");
+    properties.setProperty(PROPERTY_BASE + ".unusedConnectionTimeout", "P1W2D");
+    properties.setProperty(PROPERTY_BASE + ".connectTimeout", "P1WT3H");
+
+    final DruidHttpClientConfig config = configure(properties);
+
+    Assertions.assertEquals(1_209_600_000L, config.getReadTimeout().getMillis());
+    Assertions.assertEquals(777_600_000L, config.getUnusedConnectionTimeout().getMillis());
+    Assertions.assertEquals(615_600_000L, config.getConnectTimeout().getMillis());
   }
 }
