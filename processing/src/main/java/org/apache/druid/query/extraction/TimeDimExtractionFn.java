@@ -24,12 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.ibm.icu.text.SimpleDateFormat;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.Locale;
@@ -109,11 +108,11 @@ public class TimeDimExtractionFn extends DimExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    byte[] timeFormatBytes = StringUtils.toUtf8(timeFormat);
-    return ByteBuffer.allocate(1 + timeFormatBytes.length)
-                     .put(ExtractionCacheHelper.CACHE_TYPE_ID_TIME_DIM)
-                     .put(timeFormatBytes)
-                     .array();
+    return new CacheKeyBuilder(ExtractionCacheHelper.CACHE_TYPE_ID_TIME_DIM)
+        .appendString(timeFormat)
+        .appendString(resultFormat)
+        .appendBoolean(joda)
+        .build();
   }
 
   @Nullable

@@ -126,6 +126,26 @@ public class TimeDimExtractionFnTest
   }
 
   @Test
+  public void testCacheKey()
+  {
+    final TimeDimExtractionFn fn = new TimeDimExtractionFn("yyyy-MM-dd", "yyyy", false);
+
+    Assertions.assertArrayEquals(
+        fn.getCacheKey(),
+        new TimeDimExtractionFn("yyyy-MM-dd", "yyyy", false).getCacheKey()
+    );
+    Assertions.assertFalse(
+        Arrays.equals(fn.getCacheKey(), new TimeDimExtractionFn("yyyy-MM-dd", "MM", false).getCacheKey())
+    );
+    Assertions.assertFalse(
+        Arrays.equals(fn.getCacheKey(), new TimeDimExtractionFn("yyyy-MM-dd", "yyyy", true).getCacheKey())
+    );
+    Assertions.assertFalse(
+        Arrays.equals(fn.getCacheKey(), new TimeDimExtractionFn("yyyy-MM-ddyyyy", "", false).getCacheKey())
+    );
+  }
+
+  @Test
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
