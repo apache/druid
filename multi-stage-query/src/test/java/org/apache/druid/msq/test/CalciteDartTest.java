@@ -20,6 +20,8 @@
 package org.apache.druid.msq.test;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
@@ -28,6 +30,7 @@ import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
@@ -292,5 +295,44 @@ public class CalciteDartTest extends BaseCalciteQueryTest
             )
         )
         .run();
+  }
+
+  @Test
+  public void testRightJoinWithBroadcastHintIsRejected()
+  {
+    // The hint makes this a broadcast join even though the query defaults to sort-merge.
+    testQueryThrows(
+        "SELECT /*+ broadcast */ dim1, lookyloo.k\n"
+        + "FROM foo RIGHT JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k",
+        QueryContext.ofMap(
+            QueryContextParameters.DEBUG,
+            true,
+            QueryContextParameters.SQL_JOIN_ALGORITHM,
+            JoinAlgorithm.SORT_MERGE
+        ),
+        DruidException.class,
+        e -> Assertions.assertTrue(e.getMessage().contains("RIGHT JOIN is not supported by engine"), e.getMessage())
+    );
+  }
+
+  @Test
+  public void testRightJoinWithSortMergeHintUnderBroadcastContextIsRejected()
+  {
+    // The context check rejects this even though the join is hinted sort_merge.
+    testQueryThrows(
+        "SELECT /*+ sort_merge */ f1.dim1, f2.dim1\n"
+        + "FROM foo f1 RIGHT JOIN foo f2 ON f1.dim1 = f2.dim1",
+        QueryContext.ofMap(
+            QueryContextParameters.DEBUG,
+            true,
+            QueryContextParameters.SQL_JOIN_ALGORITHM,
+            JoinAlgorithm.BROADCAST
+        ),
+        DruidException.class,
+        e -> Assertions.assertTrue(
+            e.getMessage().contains("even with join hint[sort_merge]. Set sqlJoinAlgorithm[sortMerge]."),
+            e.getMessage()
+        )
+    );
   }
 }
