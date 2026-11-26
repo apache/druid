@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -251,9 +252,17 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
         );
       } else {
         final int partitionNum = Counters.getAndIncrementInt(partitionNumCountersPerInterval, intervalAndVersion.lhs);
+        // Normalize to UTC so that toString() is consistent with what Intervals.of() produces
+        // after JSON deserialization. Without this, a non-UTC segmentGranularity (e.g. timeZone: Europe/Warsaw)
+        // causes the parent to store "..._2026-04-08T00:00:00.000+02:00_..." while the subtask sends back
+        // "..._2026-04-07T22:00:00.000Z_..." as prevSegmentId, making indexOf() return -1.
+        final Interval utcInterval = Intervals.utc(
+            intervalAndVersion.lhs.getStartMillis(),
+            intervalAndVersion.lhs.getEndMillis()
+        );
         newSegmentId = new SegmentIdWithShardSpec(
             dataSource,
-            intervalAndVersion.lhs,
+            utcInterval,
             intervalAndVersion.rhs,
             new BuildingNumberedShardSpec(partitionNum)
         );
