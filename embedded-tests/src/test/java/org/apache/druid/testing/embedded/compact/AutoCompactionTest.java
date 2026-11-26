@@ -286,6 +286,15 @@ public class AutoCompactionTest extends CompactionTestBase
 
       verifyScanResult("added", "...");
       verifyScanResult("ingested_events", "3");
+      // The segment can be available before the Broker refreshes the SQL column type.
+      cluster.callApi().waitForResult(
+          () -> cluster.runSql(
+              "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS "
+              + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = '%s' AND COLUMN_NAME = 'sum_added'",
+              StringUtils.escapeSql(fullDatasourceName)
+          ),
+          type -> "FLOAT".equals(type) || "DOUBLE".equals(type)
+      ).withTimeoutMillis(60_000).go();
       verifyScanResult("sum_added", "93.0");
       verifyScanResult("COUNT(*)", "1");
       verifyDistinctCount("3,3");
