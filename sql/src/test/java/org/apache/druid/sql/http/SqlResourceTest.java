@@ -2469,13 +2469,13 @@ public class SqlResourceTest extends CalciteTestBase
     Mockito.when(ownQuery.getDataSource()).thenReturn(new TableDataSource(CalciteTests.DATASOURCE1));
     final AuthenticationResult regularUser =
         new AuthenticationResult("regularUser", "testAuthorizer", "testAuthenticator", null);
-    registry.register(ownQuery, regularUser);
+    registry.register(ownQuery, null, regularUser);
 
     final Query<?> otherQuery = Mockito.mock(Query.class);
     Mockito.when(otherQuery.getId()).thenReturn("query-2");
     Mockito.when(otherQuery.getType()).thenReturn("groupBy");
     Mockito.when(otherQuery.getDataSource()).thenReturn(new TableDataSource(CalciteTests.DATASOURCE1));
-    registry.register(otherQuery, CalciteTests.SUPER_USER_AUTH_RESULT);
+    registry.register(otherQuery, null, CalciteTests.SUPER_USER_AUTH_RESULT);
 
     final NativeSqlEngine nativeEngine =
         new NativeSqlEngine(null, JSON_MAPPER, (SqlStatementFactory) null, registry);

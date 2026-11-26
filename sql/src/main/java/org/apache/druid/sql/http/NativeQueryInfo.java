@@ -44,6 +44,10 @@ public class NativeQueryInfo implements QueryInfo
   private final String identity;
   @Nullable
   private final String authenticator;
+  @Nullable
+  private final String sql;
+  @Nullable
+  private final String nativeQuery;
   private final DateTime startTime;
 
   @JsonCreator
@@ -54,6 +58,8 @@ public class NativeQueryInfo implements QueryInfo
       @JsonProperty("datasources") final List<String> datasources,
       @JsonProperty("identity") @Nullable final String identity,
       @JsonProperty("authenticator") @Nullable final String authenticator,
+      @JsonProperty("sql") @Nullable final String sql,
+      @JsonProperty("nativeQuery") @Nullable final String nativeQuery,
       @JsonProperty("startTime") final DateTime startTime
   )
   {
@@ -63,6 +69,8 @@ public class NativeQueryInfo implements QueryInfo
     this.datasources = datasources;
     this.identity = identity;
     this.authenticator = authenticator;
+    this.sql = sql;
+    this.nativeQuery = nativeQuery;
     this.startTime = startTime;
   }
 
@@ -75,6 +83,8 @@ public class NativeQueryInfo implements QueryInfo
         entry.getDatasources(),
         entry.getIdentity(),
         entry.getAuthenticator(),
+        entry.getSql(),
+        entry.getNativeQuery(),
         entry.getStartTime()
     );
   }
@@ -85,7 +95,7 @@ public class NativeQueryInfo implements QueryInfo
    */
   public NativeQueryInfo withoutAuthenticationResult()
   {
-    return new NativeQueryInfo(queryId, sqlQueryId, queryType, datasources, null, null, startTime);
+    return new NativeQueryInfo(queryId, sqlQueryId, queryType, datasources, null, null, sql, nativeQuery, startTime);
   }
 
   @Override
@@ -171,6 +181,30 @@ public class NativeQueryInfo implements QueryInfo
   public String getAuthenticator()
   {
     return authenticator;
+  }
+
+  /**
+   * SQL text of the query, when the query came in through the SQL layer. Only included when the server is configured
+   * to capture running query text with {@code druid.server.http.enableRunningQueryText}.
+   */
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public String getSql()
+  {
+    return sql;
+  }
+
+  /**
+   * JSON-serialized native query. Only included when the server is configured to capture running query text with
+   * {@code druid.server.http.enableRunningQueryText}.
+   */
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public String getNativeQuery()
+  {
+    return nativeQuery;
   }
 
   /**

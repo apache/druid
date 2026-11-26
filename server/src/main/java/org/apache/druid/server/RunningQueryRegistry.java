@@ -19,9 +19,16 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.joda.time.DateTime;
 
@@ -42,16 +49,49 @@ import java.util.concurrent.ConcurrentHashMap;
 @LazySingleton
 public class RunningQueryRegistry
 {
+  private static final Logger log = new Logger(RunningQueryRegistry.class);
+
+  private final ServerConfig serverConfig;
+  private final ObjectMapper jsonMapper;
   private final Map<String, Entry> entries = new ConcurrentHashMap<>();
+
+  @Inject
+  public RunningQueryRegistry(final ServerConfig serverConfig, final @Json ObjectMapper jsonMapper)
+  {
+    this.serverConfig = serverConfig;
+    this.jsonMapper = jsonMapper;
+  }
+
+  @VisibleForTesting
+  public RunningQueryRegistry()
+  {
+    this(new ServerConfig(), new DefaultObjectMapper());
+  }
 
   /**
    * Registers a query that is about to start executing.
+   *
+   * @param query                query that is starting
+   * @param sqlText              SQL text of the query, when the query came in through the SQL layer
+   * @param authenticationResult authentication result for the user that submitted the query
    */
-  public void register(final Query<?> query, @Nullable final AuthenticationResult authenticationResult)
+  public void register(
+      final Query<?> query,
+      @Nullable final String sqlText,
+      @Nullable final AuthenticationResult authenticationResult
+  )
   {
     final String queryId = query.getId();
     if (queryId == null) {
       return;
+    }
+
+    String capturedSqlText = null;
+    String capturedNativeQuery = null;
+
+    if (serverConfig.isEnableRunningQueryText()) {
+      capturedSqlText = sqlText;
+      capturedNativeQuery = serializeQuery(query);
     }
 
     entries.put(
@@ -63,6 +103,8 @@ public class RunningQueryRegistry
             List.copyOf(query.getDataSource().getTableNames()),
             authenticationResult == null ? null : authenticationResult.getIdentity(),
             authenticationResult == null ? null : authenticationResult.getAuthenticatedBy(),
+            capturedSqlText,
+            capturedNativeQuery,
             DateTimes.nowUtc()
         )
     );
@@ -88,6 +130,18 @@ public class RunningQueryRegistry
     return retVal;
   }
 
+  @Nullable
+  private String serializeQuery(final Query<?> query)
+  {
+    try {
+      return jsonMapper.writeValueAsString(query);
+    }
+    catch (Exception e) {
+      log.warn(e, "Could not serialize query[%s] for the running query registry", query.getId());
+      return null;
+    }
+  }
+
   /**
    * Information about a single running query.
    */
@@ -102,6 +156,10 @@ public class RunningQueryRegistry
     private final String identity;
     @Nullable
     private final String authenticator;
+    @Nullable
+    private final String sql;
+    @Nullable
+    private final String nativeQuery;
     private final DateTime startTime;
 
     public Entry(
@@ -111,6 +169,8 @@ public class RunningQueryRegistry
         final List<String> datasources,
         @Nullable final String identity,
         @Nullable final String authenticator,
+        @Nullable final String sql,
+        @Nullable final String nativeQuery,
         final DateTime startTime
     )
     {
@@ -120,6 +180,8 @@ public class RunningQueryRegistry
       this.datasources = datasources;
       this.identity = identity;
       this.authenticator = authenticator;
+      this.sql = sql;
+      this.nativeQuery = nativeQuery;
       this.startTime = startTime;
     }
 
@@ -158,6 +220,25 @@ public class RunningQueryRegistry
     public String getAuthenticator()
     {
       return authenticator;
+    }
+
+    /**
+     * SQL text of this query, when the query came in through the SQL layer. Null unless
+     * {@link ServerConfig#isEnableRunningQueryText()} is enabled.
+     */
+    @Nullable
+    public String getSql()
+    {
+      return sql;
+    }
+
+    /**
+     * JSON-serialized native query. Null unless {@link ServerConfig#isEnableRunningQueryText()} is enabled.
+     */
+    @Nullable
+    public String getNativeQuery()
+    {
+      return nativeQuery;
     }
 
     public DateTime getStartTime()

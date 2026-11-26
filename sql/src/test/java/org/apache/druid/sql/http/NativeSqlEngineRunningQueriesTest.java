@@ -69,9 +69,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -109,9 +109,12 @@ public class NativeSqlEngineRunningQueriesTest
   @Test
   public void testQueryIsVisibleWhileRunning() throws Exception
   {
-    final RunningQueryRegistry registry = new RunningQueryRegistry();
+    final RunningQueryRegistry registry = new RunningQueryRegistry(
+        new DefaultObjectMapper().readValue("{\"enableRunningQueryText\":true}", ServerConfig.class),
+        CalciteTests.getJsonMapper()
+    );
     final AtomicReference<NativeSqlEngine> engineRef = new AtomicReference<>();
-    final AtomicInteger runningQueriesSeenDuringExecution = new AtomicInteger(-1);
+    final AtomicReference<NativeQueryInfo> runningQuerySeenDuringExecution = new AtomicReference<>();
 
     // Wraps the real test walker, so that we can observe the API from within query execution.
     final QuerySegmentWalker observingWalker = new QuerySegmentWalker()
@@ -138,7 +141,7 @@ public class NativeSqlEngineRunningQueriesTest
           @Override
           public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
           {
-            runningQueriesSeenDuringExecution.set(
+            final List<QueryInfo> runningQueries =
                 engineRef.get()
                          .getQueries(
                              false,
@@ -146,9 +149,8 @@ public class NativeSqlEngineRunningQueriesTest
                              CalciteTests.SUPER_USER_AUTH_RESULT,
                              AuthorizationResult.ALLOW_NO_RESTRICTION
                          )
-                         .getQueries()
-                         .size()
-            );
+                         .getQueries();
+            runningQuerySeenDuringExecution.set((NativeQueryInfo) runningQueries.get(0));
             return runner.run(queryPlus, responseContext);
           }
         };
@@ -247,8 +249,11 @@ public class NativeSqlEngineRunningQueriesTest
 
     Assertions.assertEquals(200, response.getStatus());
 
-    // While the native query was executing, the API reported exactly one running query.
-    Assertions.assertEquals(1, runningQueriesSeenDuringExecution.get());
+    // While the native query was executing, the API reported it, along with the SQL text and the native query.
+    final NativeQueryInfo runningQuery = runningQuerySeenDuringExecution.get();
+    Assertions.assertNotNull(runningQuery);
+    Assertions.assertEquals("SELECT COUNT(*) AS c FROM druid.foo", runningQuery.getSql());
+    Assertions.assertNotNull(runningQuery.getNativeQuery());
 
     // Once the query completed, it is no longer reported.
     Assertions.assertTrue(

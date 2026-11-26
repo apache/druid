@@ -41,7 +41,7 @@ import java.util.List;
 public class NativeSqlEngineTest
 {
   private static final AuthenticationResult USER =
-      new AuthenticationResult("evan", "basicAuthorizer", "basic", null);
+      new AuthenticationResult("user", "basicAuthorizer", "basic", null);
   private static final AuthenticationResult OTHER_USER =
       new AuthenticationResult("other", "basicAuthorizer", "basic", null);
 
@@ -58,7 +58,7 @@ public class NativeSqlEngineTest
   @Test
   public void testGetQueriesReturnsRunningQueries() throws Exception
   {
-    registry.register(createQuery("query-1", "timeseries", "sql-1", "foo"), USER);
+    registry.register(createQuery("query-1", "timeseries", "sql-1", "foo"), null, USER);
 
     final GetQueriesResponse response =
         engine.getQueries(false, false, USER, AuthorizationResult.ALLOW_NO_RESTRICTION);
@@ -75,15 +75,15 @@ public class NativeSqlEngineTest
     Assertions.assertEquals("sql-1", nativeQueryInfo.getSqlQueryId());
     Assertions.assertEquals("timeseries", nativeQueryInfo.getQueryType());
     Assertions.assertEquals(List.of("foo"), nativeQueryInfo.getDatasources());
-    Assertions.assertEquals("evan", nativeQueryInfo.getIdentity());
+    Assertions.assertEquals("user", nativeQueryInfo.getIdentity());
     Assertions.assertEquals("basic", nativeQueryInfo.getAuthenticator());
   }
 
   @Test
   public void testGetQueriesFiltersByIdentityWithoutStateRead()
   {
-    registry.register(createQuery("query-1", "timeseries", null, "foo"), USER);
-    registry.register(createQuery("query-2", "timeseries", null, "bar"), OTHER_USER);
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), null, USER);
+    registry.register(createQuery("query-2", "timeseries", null, "bar"), null, OTHER_USER);
 
     final GetQueriesResponse ownQueries = engine.getQueries(false, false, USER, AuthorizationResult.DENY);
     Assertions.assertEquals(1, ownQueries.getQueries().size());
@@ -97,11 +97,11 @@ public class NativeSqlEngineTest
   @Test
   public void testGetQueriesDoesNotMatchIdentityFromDifferentAuthenticator()
   {
-    registry.register(createQuery("query-1", "timeseries", null, "foo"), USER);
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), null, USER);
 
     // Same identity string, but a different authenticator: the query must not be visible.
     final AuthenticationResult otherAuthenticator =
-        new AuthenticationResult("evan", "basicAuthorizer", "ldap", null);
+        new AuthenticationResult("user", "basicAuthorizer", "ldap", null);
     final GetQueriesResponse response = engine.getQueries(false, false, otherAuthenticator, AuthorizationResult.DENY);
 
     Assertions.assertTrue(response.getQueries().isEmpty());
@@ -110,7 +110,7 @@ public class NativeSqlEngineTest
   @Test
   public void testGetQueriesHidesQueriesWithoutIdentity()
   {
-    registry.register(createQuery("query-1", "timeseries", null, "foo"), null);
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), null, null);
 
     final GetQueriesResponse response = engine.getQueries(false, false, USER, AuthorizationResult.DENY);
     Assertions.assertTrue(response.getQueries().isEmpty());
@@ -119,7 +119,7 @@ public class NativeSqlEngineTest
   @Test
   public void testGetQueriesWithoutStateReadHidesIdentity()
   {
-    registry.register(createQuery("query-1", "timeseries", null, "foo"), USER);
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), null, USER);
 
     final NativeQueryInfo ownQuery = (NativeQueryInfo) engine.getQueries(false, false, USER, AuthorizationResult.DENY)
                                                              .getQueries()
@@ -131,18 +131,18 @@ public class NativeSqlEngineTest
         (NativeQueryInfo) engine.getQueries(false, false, USER, AuthorizationResult.ALLOW_NO_RESTRICTION)
                                 .getQueries()
                                 .get(0);
-    Assertions.assertEquals("evan", allQuery.getIdentity());
+    Assertions.assertEquals("user", allQuery.getIdentity());
     Assertions.assertEquals("basic", allQuery.getAuthenticator());
   }
 
   @Test
   public void testGetQueriesWithoutIdentityOrAuthenticatorIsEmpty()
   {
-    registry.register(createQuery("query-1", "timeseries", null, "foo"), USER);
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), null, USER);
 
     // Requests without an authenticated identity or authenticator see no queries.
     Assertions.assertTrue(
-        engine.getQueries(false, false, new AuthenticationResult("evan", "basicAuthorizer", null, null),
+        engine.getQueries(false, false, new AuthenticationResult("user", "basicAuthorizer", null, null),
                           AuthorizationResult.DENY)
               .getQueries()
               .isEmpty()
@@ -158,7 +158,7 @@ public class NativeSqlEngineTest
   @Test
   public void testGetQueriesReturnsEmptyAfterUnregister()
   {
-    registry.register(createQuery("query-1", "timeseries", null, "foo"), USER);
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), null, USER);
     registry.unregister("query-1");
 
     final GetQueriesResponse response =
@@ -170,7 +170,7 @@ public class NativeSqlEngineTest
   @Test
   public void testGetQueriesSerialization() throws Exception
   {
-    registry.register(createQuery("query-1", "timeseries", "sql-1", "foo"), USER);
+    registry.register(createQuery("query-1", "timeseries", "sql-1", "foo"), null, USER);
 
     final ObjectMapper mapper = new DefaultObjectMapper();
     new SqlModule().getJacksonModules().forEach(mapper::registerModule);

@@ -241,6 +241,9 @@ public class ServerConfig
   private int maxRequestHeaderSize = 8 * 1024;
 
   @JsonProperty
+  private boolean enableRunningQueryText = false;
+
+  @JsonProperty
   @NotNull
   private Period gracefulShutdownTimeout = Period.seconds(30);
 
@@ -317,6 +320,15 @@ public class ServerConfig
   public boolean isEnableRequestLimit()
   {
     return enableRequestLimit;
+  }
+
+  /**
+   * Whether to capture the text of running queries, so that it can be returned by the "list running queries" APIs.
+   * This is disabled by default, since the query text can include sensitive information.
+   */
+  public boolean isEnableRunningQueryText()
+  {
+    return enableRunningQueryText;
   }
 
   public Period getMaxIdleTime()

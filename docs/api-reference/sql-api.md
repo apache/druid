@@ -452,6 +452,10 @@ servers to build a complete list. The native engine always returns queries that 
 * `includeComplete`: If present, includes completed queries in the response. The number of completed queries returned is
 determined by engine-specific retention settings. The native engine does not retain completed queries.
 
+For the native engine, `sql` and `nativeQuery` are only included when
+`druid.server.http.enableRunningQueryText` is enabled. Query text can include sensitive information, so this setting is
+disabled by default.
+
 #### Sample request
 
 ```shell
@@ -475,6 +479,8 @@ cancel API for SQL queries.
       "datasources": ["wikipedia"],
       "identity": "user",
       "authenticator": "basic",
+      "sql": "SELECT COUNT(*) AS c FROM wikipedia",
+      "nativeQuery": "{\"queryType\":\"timeseries\",...}",
       "startTime": "2026-11-26T06:11:46.887Z",
       "state": "RUNNING"
     }

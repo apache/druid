@@ -109,6 +109,13 @@ public class QueryLifecycle
 
   @MonotonicNonNull
   private Query<?> baseQuery;
+
+  /**
+   * SQL text of this query, when it came in through the SQL layer. Null for native queries.
+   */
+  @Nullable
+  private String sqlText;
+
   /**
    * Context keys as received, i.e. the candidate set for {@link AuthConfig#contextKeysToAuthorize}.
    */
@@ -177,6 +184,22 @@ public class QueryLifecycle
       @Nullable final Set<String> clientProvidedQueryContextKeys
   )
   {
+    return runSimple(query, authenticationResult, authorizationResult, clientProvidedQueryContextKeys, null);
+  }
+
+  /**
+   * As {@link #runSimple(Query, AuthenticationResult, AuthorizationResult, Set)}, but also takes the SQL text of the
+   * query, for the running query registry. See {@link RunningQueryRegistry}.
+   */
+  public <T> QueryResponse<T> runSimple(
+      final Query<T> query,
+      final AuthenticationResult authenticationResult,
+      final AuthorizationResult authorizationResult,
+      @Nullable final Set<String> clientProvidedQueryContextKeys,
+      @Nullable final String sqlText
+  )
+  {
+    this.sqlText = sqlText;
     initialize(query, clientProvidedQueryContextKeys);
 
     final Sequence<T> results;
@@ -420,7 +443,7 @@ public class QueryLifecycle
   {
     transition(State.AUTHORIZED, State.EXECUTING);
 
-    runningQueryRegistry.register(baseQuery, authenticationResult);
+    runningQueryRegistry.register(baseQuery, sqlText, authenticationResult);
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 

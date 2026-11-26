@@ -425,6 +425,8 @@ contains the following fields:
 |`sqlQueryId`|`sqlQueryId` of the SQL query that this native query belongs to, when the query came in through the SQL layer. This is the ID to use with the cancel API, `DELETE /druid/v2/sql/{sqlQueryId}`.|
 |`queryType`|Native query type, such as `timeseries`, `topN`, or `groupBy`.|
 |`datasources`|Names of the datasources queried by this native query.|
+|`sql`|SQL text of the query, when the query came in through the SQL layer. Only included when `druid.server.http.enableRunningQueryText` is enabled.|
+|`nativeQuery`|JSON-serialized native query. Only included when `druid.server.http.enableRunningQueryText` is enabled.|
 |`identity`|Identity of the user that submitted the query. Only included when the user has READ permission on the `STATE` resource.|
 |`authenticator`|Authenticator that authenticated `identity`. Only included when the user has READ permission on the `STATE` resource.|
 |`startTime`|Time at which the query started executing on this Broker.|

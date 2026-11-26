@@ -207,7 +207,8 @@ public class NativeQueryMaker implements QueryMaker
         authenticationResult,
         authorizationResult,
         // The user-set keys, as distinct from the defaults SQL merged into the context.
-        plannerContext.authContextKeys()
+        plannerContext.authContextKeys(),
+        plannerContext.getSql()
     );
 
     return mapResultSequence(

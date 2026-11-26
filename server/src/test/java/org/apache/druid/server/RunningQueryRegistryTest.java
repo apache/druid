@@ -19,8 +19,12 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +36,7 @@ import java.util.List;
 public class RunningQueryRegistryTest
 {
   private static final AuthenticationResult AUTHENTICATION_RESULT =
-      new AuthenticationResult("evan", "basicAuthorizer", "basic", null);
+      new AuthenticationResult("user", "basicAuthorizer", "basic", null);
 
   private RunningQueryRegistry registry;
 
@@ -45,7 +49,7 @@ public class RunningQueryRegistryTest
   @Test
   public void testRegisterAndGetAll()
   {
-    registry.register(createQuery("query-1", "timeseries", "sql-1", "foo"), AUTHENTICATION_RESULT);
+    registry.register(createQuery("query-1", "timeseries", "sql-1", "foo"), null, AUTHENTICATION_RESULT);
 
     final List<RunningQueryRegistry.Entry> entries = registry.getAll();
     Assertions.assertEquals(1, entries.size());
@@ -55,7 +59,7 @@ public class RunningQueryRegistryTest
     Assertions.assertEquals("sql-1", entry.getSqlQueryId());
     Assertions.assertEquals("timeseries", entry.getQueryType());
     Assertions.assertEquals(List.of("foo"), entry.getDatasources());
-    Assertions.assertEquals("evan", entry.getIdentity());
+    Assertions.assertEquals("user", entry.getIdentity());
     Assertions.assertEquals("basic", entry.getAuthenticator());
     Assertions.assertNotNull(entry.getStartTime());
   }
@@ -63,7 +67,7 @@ public class RunningQueryRegistryTest
   @Test
   public void testRegisterWithoutSqlQueryId()
   {
-    registry.register(createQuery("query-1", "groupBy", null, "foo"), AUTHENTICATION_RESULT);
+    registry.register(createQuery("query-1", "groupBy", null, "foo"), null, AUTHENTICATION_RESULT);
 
     Assertions.assertNull(registry.getAll().get(0).getSqlQueryId());
   }
@@ -71,7 +75,7 @@ public class RunningQueryRegistryTest
   @Test
   public void testRegisterWithoutAuthenticationResult()
   {
-    registry.register(createQuery("query-1", "timeseries", null, "foo"), null);
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), null, null);
 
     final RunningQueryRegistry.Entry entry = registry.getAll().get(0);
     Assertions.assertNull(entry.getIdentity());
@@ -81,7 +85,7 @@ public class RunningQueryRegistryTest
   @Test
   public void testUnregister()
   {
-    registry.register(createQuery("query-1", "timeseries", null, "foo"), AUTHENTICATION_RESULT);
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), null, AUTHENTICATION_RESULT);
     Assertions.assertEquals(1, registry.getAll().size());
 
     registry.unregister("query-1");
@@ -96,8 +100,8 @@ public class RunningQueryRegistryTest
   @Test
   public void testGetAllIsSortedByStartTime()
   {
-    registry.register(createQuery("query-2", "timeseries", null, "bar"), null);
-    registry.register(createQuery("query-1", "timeseries", null, "foo"), null);
+    registry.register(createQuery("query-2", "timeseries", null, "bar"), null, null);
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), null, null);
 
     final List<RunningQueryRegistry.Entry> entries = registry.getAll();
     Assertions.assertEquals(2, entries.size());
@@ -108,8 +112,8 @@ public class RunningQueryRegistryTest
   public void testRegisterReplacesExistingEntry()
   {
     final Query<?> query = createQuery("query-1", "timeseries", null, "foo");
-    registry.register(query, null);
-    registry.register(query, null);
+    registry.register(query, null, null);
+    registry.register(query, null, null);
 
     Assertions.assertEquals(1, registry.getAll().size());
   }
@@ -120,19 +124,68 @@ public class RunningQueryRegistryTest
     final Query<?> query = Mockito.mock(Query.class);
     Mockito.when(query.getId()).thenReturn(null);
 
-    registry.register(query, AUTHENTICATION_RESULT);
+    registry.register(query, null, AUTHENTICATION_RESULT);
     Assertions.assertTrue(registry.getAll().isEmpty());
   }
 
   @Test
   public void testUnregisterNullOrUnknownQueryIdIsNoOp()
   {
-    registry.register(createQuery("query-1", "timeseries", null, "foo"), AUTHENTICATION_RESULT);
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), null, AUTHENTICATION_RESULT);
 
     registry.unregister(null);
     registry.unregister("unknown");
 
     Assertions.assertEquals(1, registry.getAll().size());
+  }
+
+  @Test
+  public void testQueryTextIsNotCapturedByDefault() throws Exception
+  {
+    registry.register(createQuery("query-1", "timeseries", null, "foo"), "SELECT * FROM foo", AUTHENTICATION_RESULT);
+
+    final RunningQueryRegistry.Entry entry = registry.getAll().get(0);
+    Assertions.assertNull(entry.getSql());
+    Assertions.assertNull(entry.getNativeQuery());
+  }
+
+  @Test
+  public void testQueryTextIsCapturedWhenEnabled() throws Exception
+  {
+    final ObjectMapper jsonMapper = Mockito.mock(ObjectMapper.class);
+    Mockito.when(jsonMapper.writeValueAsString(Mockito.any())).thenReturn("{\"queryType\":\"timeseries\"}");
+
+    final RunningQueryRegistry registryWithText = new RunningQueryRegistry(createServerConfig(true), jsonMapper);
+    registryWithText.register(
+        createQuery("query-1", "timeseries", null, "foo"),
+        "SELECT * FROM foo",
+        AUTHENTICATION_RESULT
+    );
+
+    final RunningQueryRegistry.Entry entry = registryWithText.getAll().get(0);
+    Assertions.assertEquals("SELECT * FROM foo", entry.getSql());
+    Assertions.assertEquals("{\"queryType\":\"timeseries\"}", entry.getNativeQuery());
+  }
+
+  @Test
+  public void testQueryTextIsStillCapturedWhenNativeQuerySerializationFails() throws Exception
+  {
+    final ObjectMapper jsonMapper = Mockito.mock(ObjectMapper.class);
+    Mockito.when(jsonMapper.writeValueAsString(Mockito.any()))
+           .thenThrow(new JsonProcessingException("fail")
+           {
+           });
+
+    final RunningQueryRegistry registryWithText = new RunningQueryRegistry(createServerConfig(true), jsonMapper);
+    registryWithText.register(
+        createQuery("query-1", "timeseries", null, "foo"),
+        "SELECT * FROM foo",
+        AUTHENTICATION_RESULT
+    );
+
+    final RunningQueryRegistry.Entry entry = registryWithText.getAll().get(0);
+    Assertions.assertEquals("SELECT * FROM foo", entry.getSql());
+    Assertions.assertNull(entry.getNativeQuery());
   }
 
   private static Query<?> createQuery(
@@ -148,5 +201,13 @@ public class RunningQueryRegistryTest
     Mockito.when(query.getSqlQueryId()).thenReturn(sqlQueryId);
     Mockito.when(query.getDataSource()).thenReturn(new TableDataSource(datasource));
     return query;
+  }
+
+  private static ServerConfig createServerConfig(final boolean enableRunningQueryText) throws Exception
+  {
+    return new DefaultObjectMapper().readValue(
+        "{\"enableRunningQueryText\":" + enableRunningQueryText + "}",
+        ServerConfig.class
+    );
   }
 }
