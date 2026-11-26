@@ -387,6 +387,7 @@ public abstract class TaskBuilder<
     private String dataSource;
     private Interval interval;
     private DimensionsSpec dimensionsSpec;
+    private AggregatorFactory[] metricsSpec;
     private Granularity segmentGranularity;
     private ClientCompactionTaskGranularitySpec granularitySpec;
     private CompactionIOConfig ioConfig;
@@ -411,6 +412,12 @@ public abstract class TaskBuilder<
                 .map(StringDimensionSchema::new)
                 .collect(Collectors.toList())
       );
+      return this;
+    }
+
+    public Compact metricsSpec(AggregatorFactory... metricsSpec)
+    {
+      this.metricsSpec = metricsSpec;
       return this;
     }
 
@@ -445,7 +452,7 @@ public abstract class TaskBuilder<
           dimensionsSpec,
           null,
           null,
-          null,
+          metricsSpec,
           segmentGranularity,
           granularitySpec,
           null,
