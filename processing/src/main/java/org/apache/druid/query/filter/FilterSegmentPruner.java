@@ -28,10 +28,12 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.partition.ShardSpec;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -146,6 +148,13 @@ public class FilterSegmentPruner implements SegmentPruner
       }
     }
     return true;
+  }
+
+  @Override
+  public EnumSet<SegmentDetail> getRequiredSegmentDetails()
+  {
+    // Shard specs are always present; cluster groups are optional and read by possibleInClusterGroups.
+    return EnumSet.of(SegmentDetail.CLUSTER_GROUPS);
   }
 
   @Override

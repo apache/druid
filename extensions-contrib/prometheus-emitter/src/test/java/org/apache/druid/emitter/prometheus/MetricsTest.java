@@ -159,6 +159,7 @@ public class MetricsTest
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_7", null, null, null, true, true, null, null, null, null);
     Metrics metrics = new Metrics(config);
     for (String metric : new String[]{
+        "task/status/persistFailed/count",
         "task/success/count",
         "task/failed/count",
         "task/running/count",
