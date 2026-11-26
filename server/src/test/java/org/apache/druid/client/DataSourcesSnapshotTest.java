@@ -28,6 +28,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -121,5 +123,29 @@ public class DataSourcesSnapshotTest
 
     Assertions.assertNull(updated.getDataSource(DS2));
     Assertions.assertNotNull(updated.getDataSource(DS1));
+  }
+
+  @Test
+  public void testGetIdsOfSegmentsOvershadowingUsedSegments()
+  {
+    // Two days of version v1. A compaction replaced only the first day with version v2.
+    final List<DataSegment> oldSegments = CreateDataSegments.ofDatasource(DS1)
+                                                            .forIntervals(2, Granularities.DAY)
+                                                            .startingAt("2024-01-01")
+                                                            .withVersion("v1")
+                                                            .eachOfSizeInMb(500);
+    final DataSegment newSegment = CreateDataSegments.ofDatasource(DS1)
+                                                     .forIntervals(1, Granularities.DAY)
+                                                     .startingAt("2024-01-01")
+                                                     .withVersion("v2")
+                                                     .eachOfSizeInMb(500)
+                                                     .get(0);
+
+    final Set<DataSegment> usedSegments = new HashSet<>(oldSegments);
+    usedSegments.add(newSegment);
+    final DataSourcesSnapshot snapshot = DataSourcesSnapshot.fromUsedSegments(Map.of(DS1, usedSegments), SNAPSHOT_TIME);
+
+    Assertions.assertEquals(Set.of(newSegment.getId()), snapshot.getIdsOfSegmentsOvershadowingUsedSegments());
+    Assertions.assertEquals(Set.of(), baseSnapshot().getIdsOfSegmentsOvershadowingUsedSegments());
   }
 }

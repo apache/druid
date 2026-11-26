@@ -20,6 +20,8 @@
 package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.duty.DutyGroupStatus;
@@ -35,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class CoordinatorResourceTest
 {
@@ -104,6 +107,19 @@ public class CoordinatorResourceTest
         response.getEntity()
     );
     Assertions.assertEquals(200, response.getStatus());
+  }
+
+  @Test
+  public void testGetLoadStatusFullPassesIgnorePendingHandoffAndCompaction()
+  {
+    final Map<String, Object2LongMap<String>> underReplicated = Map.of("tier1", new Object2LongOpenHashMap<>());
+    EasyMock.expect(mock.getTierToDatasourceToUnderReplicatedCount(false, true)).andReturn(underReplicated).once();
+    EasyMock.expect(mock.getTierToDatasourceToUnderReplicatedCount(true, false)).andReturn(underReplicated).once();
+    EasyMock.replay(mock);
+
+    final CoordinatorResource resource = new CoordinatorResource(mock);
+    Assertions.assertEquals(underReplicated, resource.getLoadStatus(null, "", null, "").getEntity());
+    Assertions.assertEquals(underReplicated, resource.getLoadStatus(null, "", "", null).getEntity());
   }
 
   @Test

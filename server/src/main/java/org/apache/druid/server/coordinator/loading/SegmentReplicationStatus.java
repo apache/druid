@@ -29,6 +29,7 @@ import org.apache.druid.timeline.SegmentId;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * An immutable object that contains information about the under-replicated
@@ -89,7 +90,9 @@ public class SegmentReplicationStatus
 
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicated(
       Iterable<DataSegment> usedSegments,
-      boolean ignoreMissingServers
+      boolean ignoreMissingServers,
+      boolean ignorePendingHandoffAndCompaction,
+      Set<SegmentId> overshadowingSegmentIds
   )
   {
     final Map<String, Object2LongMap<String>> tierToUnderReplicated = new HashMap<>();
@@ -97,6 +100,11 @@ public class SegmentReplicationStatus
     for (DataSegment segment : usedSegments) {
       final Map<String, SegmentReplicaCount> tierToReplicaCount = replicaCountsInTier.get(segment.getId());
       if (tierToReplicaCount == null) {
+        continue;
+      }
+      if (ignorePendingHandoffAndCompaction
+          && (totalReplicaCounts.get(segment.getId()).loadedOnRealtime() > 0
+              || overshadowingSegmentIds.contains(segment.getId()))) {
         continue;
       }
 

@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.loading;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Verifies that {@link SegmentReplicationStatus#computeSegmentStats} produces results
@@ -81,7 +83,7 @@ public class SegmentReplicationStatusTest
       final Object2IntMap<String> expectedUnavailable = computeExpectedUnavailable(status, segments);
       final Object2IntMap<String> expectedDeepStorageOnly = computeExpectedDeepStorageOnly(status, segments);
       final Map<String, Object2LongMap<String>> expectedUnderReplicated =
-          status.getTierToDatasourceToUnderReplicated(segments, ignoreMissingServers);
+          status.getTierToDatasourceToUnderReplicated(segments, ignoreMissingServers, false, Set.of());
 
       Assertions.assertEquals(expectedUnavailable, snapshot.getDatasourceToUnavailableCount());
       Assertions.assertEquals(expectedDeepStorageOnly, snapshot.getDatasourceToDeepStorageOnlyCount());
@@ -139,6 +141,56 @@ public class SegmentReplicationStatusTest
 
     Assertions.assertEquals(1, status.getReplicaCountsInCluster(segments.get(0).getId()).totalLoaded());
     Assertions.assertNull(status.getReplicaCountsInCluster(segments.get(1).getId()));
+  }
+
+  @Test
+  public void testIgnorePendingHandoffAndCompaction()
+  {
+    final SegmentId segmentId = segments.get(0).getId();
+
+    // No replica, for example a new batch segment or a segment that lost its replicas: counted.
+    assertUnderReplicated(countOf(2, 2, 0), Set.of(), 2, 2);
+    // Partially loaded: counted.
+    assertUnderReplicated(countOf(2, 2, 1), Set.of(), 1, 1);
+
+    // A broker serves the segment: counted.
+    final SegmentReplicaCount onBroker = countOf(2, 2, 0);
+    onBroker.incrementLoadedOnNonHistoricalServer();
+    assertUnderReplicated(onBroker, Set.of(), 1, 1);
+
+    // A realtime task serves the segment (handoff is not complete): skipped.
+    final SegmentReplicaCount onRealtime = countOf(2, 2, 0);
+    onRealtime.incrementLoadedOnRealtimeServer();
+    assertUnderReplicated(onRealtime, Set.of(), 1, 0);
+
+    // The segment overshadows a used segment, for example after a compaction: skipped.
+    assertUnderReplicated(countOf(2, 2, 1), Set.of(segmentId), 1, 0);
+  }
+
+  private void assertUnderReplicated(
+      SegmentReplicaCount count,
+      Set<SegmentId> overshadowingSegmentIds,
+      long expectedWithoutFlag,
+      long expectedWithFlag
+  )
+  {
+    final DataSegment segment = segments.get(0);
+    final SegmentReplicationStatus status =
+        new SegmentReplicationStatus(Map.of(segment.getId(), Map.of(TIER_1, count)));
+    for (boolean ignorePendingHandoffAndCompaction : new boolean[]{false, true}) {
+      final Object2LongMap<String> datasourceToCount = status
+          .getTierToDatasourceToUnderReplicated(
+              List.of(segment),
+              false,
+              ignorePendingHandoffAndCompaction,
+              overshadowingSegmentIds
+          )
+          .getOrDefault(TIER_1, new Object2LongOpenHashMap<>());
+      Assertions.assertEquals(
+          ignorePendingHandoffAndCompaction ? expectedWithFlag : expectedWithoutFlag,
+          datasourceToCount.getLong(segment.getDataSource())
+      );
+    }
   }
 
   private static SegmentReplicaCount countOf(int required, int requiredAndLoadable, int loaded)

@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.CollectionUtils;
@@ -222,6 +223,24 @@ public class DataSourcesSnapshot
   public ImmutableSet<DataSegment> getOvershadowedSegments()
   {
     return overshadowedSegments;
+  }
+
+  /**
+   * Returns the IDs of the used segments that overshadow at least one used segment.
+   */
+  public Set<SegmentId> getIdsOfSegmentsOvershadowingUsedSegments()
+  {
+    final Set<SegmentId> overshadowingIds = new HashSet<>();
+    for (DataSegment overshadowed : overshadowedSegments) {
+      final Set<DataSegment> candidates =
+          getAllUsedNonOvershadowedSegments(overshadowed.getDataSource(), overshadowed.getInterval());
+      for (DataSegment candidate : candidates) {
+        if (candidate.overshadows(overshadowed)) {
+          overshadowingIds.add(candidate.getId());
+        }
+      }
+    }
+    return overshadowingIds;
   }
 
   /**

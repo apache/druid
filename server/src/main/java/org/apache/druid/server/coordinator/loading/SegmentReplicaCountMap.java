@@ -92,7 +92,7 @@ public class SegmentReplicaCountMap
       final ImmutableDruidServer server = realtime.getServer();
       for (DataSegment segment : server.iterateAllSegments()) {
         computeIfAbsent(segment.getId(), server.getTier())
-            .incrementLoadedOnNonHistoricalServer();
+            .incrementLoadedOnRealtimeServer();
       }
     });
   }

@@ -30,6 +30,7 @@ public class SegmentReplicaCount
 
   private int loaded;
   private int loadedNonHistorical;
+  private int loadedOnRealtime;
   private int loadedWithPartialProfile;
 
   private int loading;
@@ -67,6 +68,12 @@ public class SegmentReplicaCount
   void incrementLoadedOnNonHistoricalServer()
   {
     ++loadedNonHistorical;
+  }
+
+  void incrementLoadedOnRealtimeServer()
+  {
+    ++loadedNonHistorical;
+    ++loadedOnRealtime;
   }
 
   /**
@@ -154,6 +161,14 @@ public class SegmentReplicaCount
   }
 
   /**
+   * Number of replicas loaded on realtime servers.
+   */
+  int loadedOnRealtime()
+  {
+    return loadedOnRealtime;
+  }
+
+  /**
    * Number of replicas loaded on all servers. This includes replicas that are
    * currently being dropped.
    */
@@ -220,6 +235,7 @@ public class SegmentReplicaCount
 
     this.loaded += other.loaded;
     this.loadedNonHistorical += other.loadedNonHistorical;
+    this.loadedOnRealtime += other.loadedOnRealtime;
     this.loadedWithPartialProfile += other.loadedWithPartialProfile;
 
     this.loading += other.loading;
