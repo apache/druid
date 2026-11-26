@@ -972,6 +972,168 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testHourlyExplicitOriginAlignment()
+  {
+    for (final String zone : new String[]{
+        "UTC", "Asia/Kuala_Lumpur", "Asia/Singapore", "Asia/Kathmandu", "Australia/Lord_Howe", "America/Los_Angeles"
+    }) {
+      for (final String originString : new String[]{
+          "1969-12-31T16:30:00Z", "1970-01-01T00:00:00Z", "1970-01-01T00:30:00Z"
+      }) {
+        final DateTime origin = DateTimes.of(originString);
+        for (final int hours : new int[]{1, 2, 3}) {
+          final PeriodGranularity granularity = new PeriodGranularity(
+              Period.hours(hours),
+              origin,
+              DateTimes.inferTzFromString(zone)
+          );
+          final long duration = Hours.hours(hours).toStandardDuration().getMillis();
+          for (final long timestamp : new long[]{
+              origin.getMillis() - duration - 1,
+              origin.getMillis() - 1,
+              origin.getMillis(),
+              origin.getMillis() + 1,
+              DateTimes.of("2026-04-04T15:00:00Z").getMillis(),
+              DateTimes.of("2026-10-03T15:30:00.001Z").getMillis(),
+              DateTimes.of("2026-11-19T16:00:00Z").getMillis(),
+              DateTimes.of("2026-11-19T16:10:00Z").getMillis(),
+              DateTimes.of("2026-11-19T16:29:59.999Z").getMillis(),
+              DateTimes.of("2026-11-19T16:30:00Z").getMillis(),
+              DateTimes.of("2026-11-19T16:30:00.001Z").getMillis()
+          }) {
+            final long expectedStart = origin.getMillis()
+                                       + Math.floorDiv(timestamp - origin.getMillis(), duration) * duration;
+            final long actualStart = granularity.bucketStart(timestamp);
+            final long actualEnd = granularity.bucketEnd(DateTimes.utc(timestamp)).getMillis();
+            final String message = StringUtils.format(
+                "Granularity [%s], timestamp [%s]",
+                granularity,
+                DateTimes.utc(timestamp)
+            );
+            Assertions.assertEquals(expectedStart, actualStart, message);
+            Assertions.assertEquals(actualStart, granularity.bucketStart(actualStart), message);
+            Assertions.assertTrue(actualStart <= timestamp && timestamp < actualEnd, message);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testHourlyExplicitNegativeOriginSegmentInterval()
+  {
+    final PeriodGranularity granularity = new PeriodGranularity(
+        Period.hours(1),
+        DateTimes.of("1969-12-31T16:30:00Z"),
+        DateTimes.inferTzFromString("Asia/Kuala_Lumpur")
+    );
+    final DateTime minTime = DateTimes.of("2026-11-19T16:05:00Z");
+    final DateTime maxTime = DateTimes.of("2026-11-19T16:20:00Z");
+    // Cursor construction uses the same bounds. The bucket end must not precede the segment's rows.
+    final Interval interval = new Interval(minTime, granularity.bucketEnd(maxTime));
+    Assertions.assertEquals(DateTimes.of("2026-11-19T16:30:00Z"), interval.getEnd());
+    Assertions.assertTrue(interval.contains(minTime));
+    Assertions.assertTrue(interval.contains(maxTime));
+  }
+
+  @Test
+  public void testHourlyImplicitOriginAlignment()
+  {
+    for (final String zone : new String[]{
+        "UTC", "Asia/Kuala_Lumpur", "Asia/Singapore", "Asia/Kathmandu", "Asia/Dhaka",
+        "Australia/Lord_Howe", "America/Los_Angeles"
+    }) {
+      final DateTimeZone timeZone = DateTimes.inferTzFromString(zone);
+      final DateTime defaultOrigin = new DateTime(1970, 1, 1, 0, 0, timeZone);
+      for (final int hours : new int[]{2, 3, 6, 12, 24, 25}) {
+        final PeriodGranularity granularity = new PeriodGranularity(Period.hours(hours), null, timeZone);
+        final long duration = Hours.hours(hours).toStandardDuration().getMillis();
+        for (final DateTime timestamp : new DateTime[]{
+            defaultOrigin.minus(1),
+            defaultOrigin,
+            defaultOrigin.plus(1),
+            DateTimes.of("2011-03-15T20:10:00+05:45"),
+            DateTimes.of("2011-03-15T20:15:00+05:45"),
+            DateTimes.of("2011-03-15T20:15:00.001+05:45"),
+            DateTimes.of("2026-04-04T14:59:59.999Z"),
+            DateTimes.of("2026-04-04T15:00:00Z"),
+            DateTimes.of("2026-10-03T15:29:59.999Z"),
+            DateTimes.of("2026-10-03T15:30:00Z"),
+            DateTimes.of("2026-10-03T15:30:00.001Z"),
+            DateTimes.of("2026-11-19T20:10:00+05:45")
+        }) {
+          final long input = timestamp.getMillis();
+          final long start = granularity.bucketStart(input);
+          final long end = granularity.bucketEnd(timestamp).getMillis();
+          final String message = StringUtils.format("Granularity [%s], timestamp [%s]", granularity, timestamp);
+          Assertions.assertEquals(start, granularity.bucketStart(start), message);
+          Assertions.assertTrue(start <= input && input < end, message);
+          Assertions.assertTrue(granularity.bucketStart(input + 1) >= start, message);
+          Assertions.assertEquals(start, granularity.bucketStart(end - 1), message);
+          Assertions.assertEquals(end, granularity.bucketStart(end), message);
+          Assertions.assertEquals(end, granularity.increment(granularity.bucketStart(timestamp)).getMillis(), message);
+          // Iteration must use the same boundaries as direct bucketing, including at offset transitions.
+          final Iterator<Interval> buckets = granularity.getIterable(Intervals.utc(start, end + duration)).iterator();
+          Assertions.assertEquals(new Interval(start, end, timeZone), buckets.next(), message);
+          Assertions.assertEquals(end, buckets.next().getStartMillis(), message);
+          if (input != start) {
+            // Incrementing an arbitrary timestamp must retain the existing period-addition behavior.
+            Assertions.assertEquals(timestamp.plusHours(hours).getMillis(), granularity.increment(input), message);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testHourlyImplicitOriginKathmanduBoundaries()
+  {
+    final DateTimeZone timeZone = DateTimes.inferTzFromString("Asia/Kathmandu");
+    final PeriodGranularity implicit = new PeriodGranularity(Period.hours(2), null, timeZone);
+    final PeriodGranularity explicit = new PeriodGranularity(
+        Period.hours(2),
+        new DateTime(1970, 1, 1, 0, 0, timeZone),
+        timeZone
+    );
+    final DateTime start = new DateTime("2011-03-15T20:00:00+05:45", timeZone);
+    for (final DateTime timestamp : new DateTime[]{
+        start,
+        start.plusMinutes(10),
+        start.plusMinutes(15),
+        start.plusMinutes(15).plus(1),
+        start.plusHours(2).minus(1)
+    }) {
+      Assertions.assertEquals(start, implicit.bucketStart(timestamp));
+      Assertions.assertEquals(start.plusHours(2), implicit.bucketEnd(timestamp));
+    }
+    Assertions.assertEquals(start.plusHours(2), implicit.bucketStart(start.plusHours(2)));
+    // Explicit origins intentionally keep their :15 alignment; only the implicit origin uses local clock hours.
+    Assertions.assertEquals(start.plusMinutes(15), explicit.bucketStart(start.plusMinutes(30)));
+  }
+
+  @Test
+  public void testHourlyImplicitOriginOffsetTransitions()
+  {
+    final DateTimeZone timeZone = DateTimes.inferTzFromString("Australia/Lord_Howe");
+    final PeriodGranularity granularity = new PeriodGranularity(Period.hours(2), null, timeZone);
+    // The rounded boundaries straddle a 30-minute offset change, so these buckets have 90 and 150 minutes.
+    for (final String[] sample : new String[][]{
+        {"2026-04-04T15:00:00Z", "2026-04-04T14:00:00Z", "2026-04-04T15:30:00Z"},
+        {"2026-10-03T15:30:00.001Z", "2026-10-03T13:30:00Z", "2026-10-03T16:00:00Z"}
+    }) {
+      final DateTime timestamp = DateTimes.of(sample[0]);
+      final long start = DateTimes.of(sample[1]).getMillis();
+      final long end = DateTimes.of(sample[2]).getMillis();
+      Assertions.assertEquals(start, granularity.bucketStart(timestamp).getMillis());
+      Assertions.assertEquals(end, granularity.bucketEnd(timestamp).getMillis());
+      Assertions.assertEquals(start, granularity.bucketStart(start));
+      Assertions.assertEquals(start, granularity.bucketStart(end - 1));
+      Assertions.assertEquals(end, granularity.bucketStart(end));
+      Assertions.assertEquals(end, granularity.increment(start));
+    }
+  }
+
+  @Test
   public void testTruncateKathmandu()
   {
     final DateTimeZone tz = DateTimeZone.forTimeZone(TimeZone.getTimeZone("Asia/Kathmandu"));
