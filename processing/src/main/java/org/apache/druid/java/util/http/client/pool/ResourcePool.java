@@ -43,6 +43,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -55,12 +56,25 @@ import java.util.concurrent.atomic.AtomicLong;
  * {@link ResourceFactory#isGood} rejects it. With eagerInitialization a key starts out full, otherwise empty.
  *
  * {@link ResourcePoolConfig#getPoolImplementation()} selects which {@link Implementation} does the pooling.
+ *
+ * A key with no resources on loan that has been neither taken from nor returned to for
+ * {@link #KEY_ABANDONMENT_TIMEOUT_MULTIPLIER} times {@link ResourcePoolConfig#getUnusedConnectionTimeoutMillis()} is
+ * evicted and closed, so that destinations which are no longer used (e.g. finished indexer tasks) do not keep their
+ * resources cached forever. Eviction is checked opportunistically from {@link #take} and {@link #drainStats()}, at
+ * most once per sweep interval, which is enough to bound the pool's size since it only grows through {@link #take}.
+ * A key is never evicted while any of its resources are on loan.
  */
 public class ResourcePool<K, V> implements Closeable
 {
   private static final Logger log = new Logger(ResourcePool.class);
+  // How many multiples of unusedConnectionTimeoutMillis a key must go unused for before it is considered abandoned
+  private static final long KEY_ABANDONMENT_TIMEOUT_MULTIPLIER = 10;
+  private static final long DEFAULT_UNUSED_CONNECTION_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(1);
   private final LoadingCache<K, PooledResources<V>> pool;
   private final AtomicBoolean closed = new AtomicBoolean(false);
+  private final long abandonmentTimeoutNanos;
+  private final long sweepIntervalNanos;
+  private final AtomicLong nextSweepNanos = new AtomicLong();
 
   public ResourcePool(final ResourceFactory<K, V> factory, final ResourcePoolConfig config,
                       final boolean eagerInitialization)
@@ -75,6 +89,44 @@ public class ResourcePool<K, V> implements Closeable
           }
         }
     );
+    final long unusedTimeoutMillis = config.getUnusedConnectionTimeoutMillis() > 0
+                                     ? config.getUnusedConnectionTimeoutMillis()
+                                     : DEFAULT_UNUSED_CONNECTION_TIMEOUT_MILLIS;
+    this.sweepIntervalNanos = TimeUnit.MILLISECONDS.toNanos(unusedTimeoutMillis);
+    this.abandonmentTimeoutNanos = sweepIntervalNanos > Long.MAX_VALUE / KEY_ABANDONMENT_TIMEOUT_MULTIPLIER
+                                   ? Long.MAX_VALUE
+                                   : sweepIntervalNanos * KEY_ABANDONMENT_TIMEOUT_MULTIPLIER;
+    this.nextSweepNanos.set(System.nanoTime() + sweepIntervalNanos);
+  }
+
+  /**
+   * Evicts and closes every key that has no resources on loan and has seen no activity for
+   * {@link #abandonmentTimeoutNanos}, at most once per {@link #sweepIntervalNanos}. Closing a holder is safe even
+   * if a taker races with it: {@link PooledResources#get()} then returns null and {@link #take} retries, and
+   * anything lent out is closed when it is given back.
+   */
+  private void reapAbandonedKeys()
+  {
+    final long now = System.nanoTime();
+    final long next = nextSweepNanos.get();
+    // Compared by subtraction, as nanoTime() values may be negative or wrap.
+    if (now - next < 0 || !nextSweepNanos.compareAndSet(next, now + sweepIntervalNanos)) {
+      return;
+    }
+    try {
+      for (Map.Entry<K, PooledResources<V>> e : pool.asMap().entrySet()) {
+        final PooledResources<V> holder = e.getValue();
+        if (now - holder.lastActivityNanos >= abandonmentTimeoutNanos
+            && holder.getUsedCount() == 0
+            && pool.asMap().remove(e.getKey(), holder)) {
+          holder.close();
+        }
+      }
+    }
+    catch (Throwable t) {
+      // Housekeeping must never fail the caller's take() or drainStats().
+      log.warn(t, "Failed to evict abandoned keys");
+    }
   }
 
   /**
@@ -83,6 +135,7 @@ public class ResourcePool<K, V> implements Closeable
    */
   public Map<K, Stats> drainStats()
   {
+    reapAbandonedKeys();
     final Map<K, Stats> stats = new HashMap<>();
     for (Map.Entry<K, PooledResources<V>> e : pool.asMap().entrySet()) {
       stats.put(e.getKey(), e.getValue().drainStats());
@@ -101,18 +154,29 @@ public class ResourcePool<K, V> implements Closeable
       return null;
     }
 
-    final PooledResources<V> holder;
-    try {
-      holder = pool.get(key);
-    }
-    catch (ExecutionException e) {
-      throw new RuntimeException(e);
-    }
-    final V value = holder.get();
+    reapAbandonedKeys();
+
+    // A holder evicted by reapAbandonedKeys() right after being fetched here answers get() with null even though the
+    // pool is open, so retry with a fresh holder. A null from an interrupted wait is not retried: the interrupt flag
+    // is restored in that case, so checking it without clearing it avoids spinning.
+    PooledResources<V> holder;
+    V value;
+    do {
+      try {
+        holder = pool.get(key);
+      }
+      catch (ExecutionException e) {
+        throw new RuntimeException(e);
+      }
+      holder.lastActivityNanos = System.nanoTime();
+      value = holder.get();
+    } while (value == null && !closed.get() && !Thread.currentThread().isInterrupted());
     if (value == null) {
       return null;
     }
-    holder.counters.taken.incrementAndGet();
+    final PooledResources<V> finalHolder = holder;
+    final V finalValue = value;
+    finalHolder.counters.taken.incrementAndGet();
 
     return new ResourceContainer<>()
     {
@@ -122,7 +186,7 @@ public class ResourcePool<K, V> implements Closeable
       public V get()
       {
         Preconditions.checkState(!returned.get(), "Resource for key[%s] has been returned, cannot get().", key);
-        return value;
+        return finalValue;
       }
 
       @Override
@@ -131,8 +195,9 @@ public class ResourcePool<K, V> implements Closeable
         if (returned.getAndSet(true)) {
           log.warn("Resource at key[%s] was returned multiple times?", key);
         } else {
-          holder.counters.returned.incrementAndGet();
-          holder.giveBack(value);
+          finalHolder.counters.returned.incrementAndGet();
+          finalHolder.lastActivityNanos = System.nanoTime();
+          finalHolder.giveBack(finalValue);
         }
       }
 
@@ -143,7 +208,7 @@ public class ResourcePool<K, V> implements Closeable
           log.warn(
               StringUtils.format(
                   "Resource[%s] at key[%s] was not returned before Container was finalized, potential resource leak.",
-                  value,
+                  finalValue,
                   key
               )
           );
@@ -371,6 +436,11 @@ public class ResourcePool<K, V> implements Closeable
   private abstract static class PooledResources<V> implements Closeable
   {
     final Counters counters = new Counters();
+
+    /**
+     * When this was created, last taken from, or last given back to, for {@link #reapAbandonedKeys()}.
+     */
+    volatile long lastActivityNanos = System.nanoTime();
 
     /**
      * Takes a resource, blocking until one is free. Null if closed or interrupted.
@@ -661,6 +731,8 @@ public class ResourcePool<K, V> implements Closeable
       if (!acquirePermit()) {
         return null;
       }
+      // Counted as used from the permit on, so a slow createResource() doesn't look unused to reapAbandonedKeys().
+      lentResources.incrementAndGet();
 
       boolean lent = false;
       try {
@@ -669,11 +741,11 @@ public class ResourcePool<K, V> implements Closeable
           resource = createResource();
         }
         lent = true;
-        lentResources.incrementAndGet();
         return resource;
       }
       finally {
         if (!lent) {
+          lentResources.decrementAndGet();
           permits.release();
         }
       }
