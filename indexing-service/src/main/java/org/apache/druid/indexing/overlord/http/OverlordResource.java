@@ -26,6 +26,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
@@ -47,9 +48,11 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionHolder;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DruidOverlord;
+import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
+import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
@@ -57,6 +60,8 @@ import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.http.security.TaskResourceFilter;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.overlord.supervisor.WorkerHandoffResult;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -726,6 +731,70 @@ public class OverlordResource
   public Response disableWorker(@PathParam("host") final String host)
   {
     return changeWorkerStatus(host, WorkerTaskRunner.ActionType.DISABLE);
+  }
+
+  /**
+   * Queue early handoff for streaming tasks running on one Middle Manager.
+   * {@code host} is the worker identity registered with the Overlord ({@code hostname:port}),
+   * the same value used by {@link #enableWorker} and {@link #disableWorker}.
+   * This is a best-effort API; 202 means notices were queued, not that handoff finished.
+   * {@link WorkerHandoffResponse#skipped()} lists seekable-stream tasks that were not queued.
+   */
+  @POST
+  @Path("/worker/{host}/handoff")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response handoffWorkerTasks(
+      @PathParam("host") final String host
+  )
+  {
+    return asLeaderWith(
+        taskMaster.getTaskRunner(),
+        taskRunner -> {
+          if (!(taskRunner instanceof WorkerTaskRunner)) {
+            return Response.serverError()
+                           .entity(ImmutableMap.of(
+                               "error",
+                               StringUtils.format(
+                                   "Task runner type[%s] does not support worker handoff",
+                                   taskRunner.getClass().getName()
+                               )
+                           ))
+                           .build();
+          }
+
+          final Optional<ImmutableWorkerInfo> workerInfo = Iterables.tryFind(
+              ((WorkerTaskRunner) taskRunner).getWorkers(),
+              entry -> entry.getWorker().getHost().equals(host)
+          );
+          if (!workerInfo.isPresent()) {
+            return Response.status(Status.NOT_FOUND)
+                           .entity(ImmutableMap.of(
+                               "error",
+                               StringUtils.format("Worker[%s] does not exist", host)
+                           ))
+                           .build();
+          }
+
+          final Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
+          final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+          if (!supervisorManager.isPresent() || !taskQueue.isPresent()) {
+            return Response.status(Status.SERVICE_UNAVAILABLE).build();
+          }
+
+          final WorkerHandoffResult result = supervisorManager.get().submitHandoffNotices(
+              workerInfo.get().getRunningTasks(),
+              taskQueue.get()::getActiveTask
+          );
+          return Response.status(Status.ACCEPTED)
+                         .entity(new WorkerHandoffResponse(
+                             host,
+                             result.taskGroups(),
+                             result.skipped()
+                         ))
+                         .build();
+        }
+    );
   }
 
   private Response changeWorkerStatus(String host, WorkerTaskRunner.ActionType action)
