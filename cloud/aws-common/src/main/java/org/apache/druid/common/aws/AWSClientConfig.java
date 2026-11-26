@@ -55,8 +55,7 @@ public class AWSClientConfig
       @Override
       RetryStrategy createStrategy()
       {
-        // Pass true to ensure we get the new standard AWS SDKv2 retry behavior and not legacy behavior.
-        return AwsRetryStrategy.standardRetryStrategy(true);
+        return AwsRetryStrategy.standardRetryStrategy();
       }
     },
     ADAPTIVE {
@@ -66,7 +65,7 @@ public class AWSClientConfig
         // Standard plus a client-side rate limiter, which unlike standard can delay or block the initial request,
         // not just retries. The limiter belongs to one client instance and covers every request that client makes,
         // so throttling on one key prefix also slows requests to prefixes that are not being throttled.
-        return AwsRetryStrategy.adaptiveRetryStrategy(true);
+        return AwsRetryStrategy.adaptiveRetryStrategy();
       }
     },
     LEGACY {
