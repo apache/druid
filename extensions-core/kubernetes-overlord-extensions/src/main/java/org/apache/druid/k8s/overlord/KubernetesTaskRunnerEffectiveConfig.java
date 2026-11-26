@@ -49,6 +49,12 @@ public class KubernetesTaskRunnerEffectiveConfig implements KubernetesTaskRunner
     this.dynamicConfigSupplier = dynamicConfigSupplier;
   }
 
+  @Nullable
+  public KubernetesTaskRunnerDynamicConfig getDynamicConfig()
+  {
+    return dynamicConfigSupplier == null ? null : dynamicConfigSupplier.get();
+  }
+
   @Override
   public String getNamespace()
   {
@@ -217,4 +223,3 @@ public class KubernetesTaskRunnerEffectiveConfig implements KubernetesTaskRunner
     return dynamicConfigSupplier.get().getPodTemplateSelectStrategy();
   }
 }
-

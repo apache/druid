@@ -27,6 +27,7 @@ import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerEffectiveConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
@@ -43,7 +44,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Resource that manages Kubernetes-specific execution configurations for running tasks.
@@ -57,16 +57,18 @@ public class KubernetesTaskExecutionConfigResource
   private static final Logger log = new Logger(KubernetesTaskExecutionConfigResource.class);
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
-  private AtomicReference<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = null;
+  private final KubernetesTaskRunnerEffectiveConfig effectiveConfig;
 
   @Inject
   public KubernetesTaskExecutionConfigResource(
       final JacksonConfigManager configManager,
-      final AuditManager auditManager
+      final AuditManager auditManager,
+      final KubernetesTaskRunnerEffectiveConfig effectiveConfig
   )
   {
     this.configManager = configManager;
     this.auditManager = auditManager;
+    this.effectiveConfig = effectiveConfig;
   }
 
   /**
@@ -84,12 +86,13 @@ public class KubernetesTaskExecutionConfigResource
       @Context final HttpServletRequest req
   )
   {
-    KubernetesTaskRunnerDynamicConfig currentConfig = getDynamicConfig();
+    final KubernetesTaskRunnerDynamicConfig persistedDynamicConfig = effectiveConfig.getDynamicConfig();
     KubernetesTaskRunnerDynamicConfig mergedConfig = dynamicConfig;
 
-    if (currentConfig != null) {
-      mergedConfig = currentConfig.merge(dynamicConfig);
+    if (persistedDynamicConfig != null) {
+      mergedConfig = persistedDynamicConfig.merge(dynamicConfig);
     }
+
     final ConfigManager.SetResult setResult = configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
         mergedConfig,
@@ -154,14 +157,14 @@ public class KubernetesTaskExecutionConfigResource
   @ResourceFilters(ConfigResourceFilter.class)
   public Response getExecutionConfig()
   {
-    return Response.ok(getDynamicConfig()).build();
+    return Response.ok(getEffectiveConfig()).build();
   }
 
-  private KubernetesTaskRunnerDynamicConfig getDynamicConfig()
+  private KubernetesTaskRunnerDynamicConfig getEffectiveConfig()
   {
-    if (dynamicConfigRef == null) {
-      dynamicConfigRef = configManager.watch(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, KubernetesTaskRunnerDynamicConfig.class);
-    }
-    return dynamicConfigRef.get();
+    return new DefaultKubernetesTaskRunnerDynamicConfig(
+        effectiveConfig.getPodTemplateSelectStrategy(),
+        effectiveConfig.getCapacity()
+    );
   }
 }
