@@ -90,7 +90,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -832,11 +831,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
           hasOnlyHistoricalSegments = false;
           break;
         }
-        hasher.putString(p.getServer().getSegment().getId().toString(), StandardCharsets.UTF_8);
+        p.getServer().putSegmentIdDigest(hasher);
         // it is important to add the "query interval" as part ETag calculation
         // to have result level cache work correctly for queries with different
         // intervals covering the same set of segments
-        hasher.putString(p.rhs.getInterval().toString(), StandardCharsets.UTF_8);
+        final Interval queryInterval = p.rhs.getInterval();
+        hasher.putLong(queryInterval.getStartMillis()).putLong(queryInterval.getEndMillis());
       }
 
       if (!hasOnlyHistoricalSegments) {

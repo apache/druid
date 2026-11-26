@@ -3049,7 +3049,7 @@ public class CachingClusteredClientTest
     final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    Assertions.assertEquals("RsQmZHYstvXNeGf86z3pgpk+Wsg=", responseContext.getEntityTag());
+    Assertions.assertEquals("iCLlRCI5PQba4zM5WVDeAXWQBaY=", responseContext.getEntityTag());
   }
 
   @Test
