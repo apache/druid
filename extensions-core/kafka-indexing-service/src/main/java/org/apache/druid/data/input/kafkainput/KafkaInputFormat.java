@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.kafkainput;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.Configs;
@@ -63,6 +64,8 @@ public class KafkaInputFormat implements InputFormat
   private final String topicColumnName;
   private final String partitionColumnName;
   private final String offsetColumnName;
+  @Nullable
+  private final String keyColumnPrefix;
 
   public KafkaInputFormat(
       @JsonProperty("headerFormat") @Nullable KafkaHeaderFormat headerFormat,
@@ -73,7 +76,8 @@ public class KafkaInputFormat implements InputFormat
       @JsonProperty("timestampColumnName") @Nullable String timestampColumnName,
       @JsonProperty("topicColumnName") @Nullable String topicColumnName,
       @JsonProperty("partitionColumnName") @Nullable String partitionColumnName,
-      @JsonProperty("offsetColumnName") @Nullable String offsetColumnName
+      @JsonProperty("offsetColumnName") @Nullable String offsetColumnName,
+      @JsonProperty("keyColumnPrefix") @Nullable String keyColumnPrefix
   )
   {
     this.headerFormat = headerFormat;
@@ -85,6 +89,7 @@ public class KafkaInputFormat implements InputFormat
     this.topicColumnName = topicColumnName != null ? topicColumnName : DEFAULT_TOPIC_COLUMN_NAME;
     this.partitionColumnName = Configs.valueOrDefault(partitionColumnName, DEFAULT_PARTITION_COLUMN_NAME);
     this.offsetColumnName = Configs.valueOrDefault(offsetColumnName, DEFAULT_OFFSET_COLUMN_NAME);
+    this.keyColumnPrefix = keyColumnPrefix;
   }
 
   @Override
@@ -121,7 +126,8 @@ public class KafkaInputFormat implements InputFormat
                 (record.getRecord().key() == null) ?
                     null :
                     JsonInputFormat.withLineSplittable(keyFormat, false).createReader(
-                        // for keys, discover all fields; in KafkaInputReader we will pick the first one.
+                        // for keys, discover all fields; KafkaInputReader either keeps only the first one (as
+                        // keyColumnName) or, if keyColumnPrefix is set, keeps all of them.
                         new InputRowSchema(
                             dummyTimestampSpec,
                             DimensionsSpec.builder().useSchemaDiscovery(true).build(),
@@ -139,7 +145,8 @@ public class KafkaInputFormat implements InputFormat
         timestampColumnName,
         topicColumnName,
         partitionColumnName,
-        offsetColumnName
+        offsetColumnName,
+        keyColumnPrefix
     );
   }
 
@@ -205,6 +212,19 @@ public class KafkaInputFormat implements InputFormat
     return offsetColumnName;
   }
 
+  /**
+   * Prefix for columns created from the fields of the Kafka key. If null (the default), only the first field of the
+   * parsed key is ingested, into {@link #getKeyColumnName()}. If set, every field of the parsed key is ingested as a
+   * column named {@code keyColumnPrefix + fieldName}.
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getKeyColumnPrefix()
+  {
+    return keyColumnPrefix;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -223,7 +243,8 @@ public class KafkaInputFormat implements InputFormat
            && Objects.equals(timestampColumnName, that.timestampColumnName)
            && Objects.equals(topicColumnName, that.topicColumnName)
            && Objects.equals(partitionColumnName, that.partitionColumnName)
-           && Objects.equals(offsetColumnName, that.offsetColumnName);
+           && Objects.equals(offsetColumnName, that.offsetColumnName)
+           && Objects.equals(keyColumnPrefix, that.keyColumnPrefix);
   }
 
   @Override
@@ -238,7 +259,8 @@ public class KafkaInputFormat implements InputFormat
         timestampColumnName,
         topicColumnName,
         partitionColumnName,
-        offsetColumnName
+        offsetColumnName,
+        keyColumnPrefix
     );
   }
 }

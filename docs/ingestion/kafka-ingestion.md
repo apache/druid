@@ -495,7 +495,7 @@ You configure it as follows:
    - `UTF-16LE`: Sixteen-bit UCS Transformation Format, little-endian byte order.
 - `headerColumnPrefix`: Supply a prefix to the Kafka headers to avoid any conflicts with columns from the payload. The default is `kafka.header.`.
   Considering the header from the example, Druid maps the headers to the following columns: `kafka.header.env`, `kafka.header.zone`.
-- `keyFormat`: Supply an input format to parse the key. Only the first value is used.
+- `keyFormat`: Supply an input format to parse the key. By default, only the first value is used. To keep every field of a structured key, set `keyColumnPrefix`.
   If, as in the example, your key values are simple strings, then you can use the `tsv` format to parse them.
   ```json
   {
@@ -506,6 +506,15 @@ You configure it as follows:
   ```
   Note that for `tsv`,`csv`, and `regex` formats, you need to provide a `columns` array to make a valid input format. Only the first one is used, and its name will be ignored in favor of `keyColumnName`.
 - `keyColumnName`: Supply the name for the Kafka key column to avoid conflicts with columns from the payload. The default is `kafka.key`.
+- `keyColumnPrefix`: Supply a prefix to ingest every field of the parsed key as its own column, instead of only the first one. This is useful for structured keys, such as JSON or Avro keys with several fields. Not set by default.
+  For example, with the following settings, a key of `{"tenant": "acme", "userId": 42}` is ingested as `kafka.key.tenant` and `kafka.key.userId`:
+  ```json
+  {
+    "keyFormat": { "type": "json" },
+    "keyColumnPrefix": "kafka.key."
+  }
+  ```
+  When `keyColumnPrefix` is set, `keyColumnName` is not used. Header columns take precedence over key columns with the same name, and payload columns take precedence over both. You can use a prefixed key column, such as `kafka.key.ts`, as the `timestampSpec` column.
 
 The following input format uses default values for `timestampColumnName`, `topicColumnName`, `headerColumnPrefix`, and `keyColumnName`:
 
