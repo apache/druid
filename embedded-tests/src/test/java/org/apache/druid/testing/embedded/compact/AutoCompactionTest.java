@@ -545,7 +545,11 @@ public class AutoCompactionTest extends CompactionTestBase
                       null,
                       IndexSpec.getDefault().getEffectiveSpec()
                   )
-              ).setBitmapEncoding(null).build()
+              ).setBitmapEncoding(null)
+               .setDictionaryEncodedColumnCompression(null)
+               .setLongColumnCompression(null)
+               .setDoubleColumnCompression(null)
+               .build()
           )
       );
       verifySegmentsCompactedDimensionSchema(expectedDimensionSchemas);

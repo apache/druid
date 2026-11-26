@@ -32,6 +32,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
@@ -52,13 +53,33 @@ public class FloatColumnSerializerV2 implements GenericColumnSerializer<Object>
       BitmapSerdeFactory bitmapSerdeFactory
   )
   {
+    return create(
+        columnName,
+        segmentWriteOutMedium,
+        filenameBase,
+        compression,
+        bitmapSerdeFactory,
+        null
+    );
+  }
+
+  public static FloatColumnSerializerV2 create(
+      String columnName,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String filenameBase,
+      CompressionStrategy compression,
+      BitmapSerdeFactory bitmapSerdeFactory,
+      @Nullable Integer compressionLevel
+  )
+  {
     return new FloatColumnSerializerV2(
         columnName,
         segmentWriteOutMedium,
         filenameBase,
         IndexIO.BYTE_ORDER,
         compression,
-        bitmapSerdeFactory
+        bitmapSerdeFactory,
+        compressionLevel
     );
   }
 
@@ -67,6 +88,8 @@ public class FloatColumnSerializerV2 implements GenericColumnSerializer<Object>
   private final String filenameBase;
   private final ByteOrder byteOrder;
   private final CompressionStrategy compression;
+  @Nullable
+  private final Integer compressionLevel;
   private final BitmapSerdeFactory bitmapSerdeFactory;
 
   private ColumnarFloatsSerializer writer;
@@ -80,7 +103,8 @@ public class FloatColumnSerializerV2 implements GenericColumnSerializer<Object>
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression,
-      BitmapSerdeFactory bitmapSerdeFactory
+      BitmapSerdeFactory bitmapSerdeFactory,
+      @Nullable Integer compressionLevel
   )
   {
     this.columnName = columnName;
@@ -88,6 +112,7 @@ public class FloatColumnSerializerV2 implements GenericColumnSerializer<Object>
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;
     this.compression = compression;
+    this.compressionLevel = compressionLevel;
     this.bitmapSerdeFactory = bitmapSerdeFactory;
   }
 
@@ -100,7 +125,8 @@ public class FloatColumnSerializerV2 implements GenericColumnSerializer<Object>
         StringUtils.format("%s.float_column", filenameBase),
         byteOrder,
         compression,
-        segmentWriteOutMedium.getCloser()
+        segmentWriteOutMedium.getCloser(),
+        compressionLevel
     );
     writer.open();
     nullValueBitmapWriter = new ByteBufferWriter<>(

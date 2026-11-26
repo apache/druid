@@ -55,6 +55,19 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
       final Closer closer
   )
   {
+    return create(columnName, segmentWriteOutMedium, filenameBase, maxValue, compression, null, closer);
+  }
+
+  public static CompressedVSizeColumnarIntsSerializer create(
+      final String columnName,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
+      final String filenameBase,
+      final int maxValue,
+      final CompressionStrategy compression,
+      @Nullable final Integer compressionLevel,
+      final Closer closer
+  )
+  {
     return new CompressedVSizeColumnarIntsSerializer(
         columnName,
         segmentWriteOutMedium,
@@ -63,6 +76,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
         CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForValue(maxValue),
         IndexIO.BYTE_ORDER,
         compression,
+        compressionLevel,
         GenericIndexedWriter.MAX_FILE_SIZE,
         closer
     );
@@ -94,6 +108,33 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
   {
     this(
         columnName,
+        segmentWriteOutMedium,
+        filenameBase,
+        maxValue,
+        chunkFactor,
+        byteOrder,
+        compression,
+        null,
+        fileSizeLimit,
+        closer
+    );
+  }
+
+  CompressedVSizeColumnarIntsSerializer(
+      final String columnName,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
+      final String filenameBase,
+      final int maxValue,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      final CompressionStrategy compression,
+      @Nullable final Integer compressionLevel,
+      final int fileSizeLimit,
+      final Closer closer
+  )
+  {
+    this(
+        columnName,
         maxValue,
         chunkFactor,
         byteOrder,
@@ -102,6 +143,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
             segmentWriteOutMedium,
             filenameBase,
             compression,
+            compressionLevel,
             sizePer(maxValue, chunkFactor),
             fileSizeLimit,
             closer

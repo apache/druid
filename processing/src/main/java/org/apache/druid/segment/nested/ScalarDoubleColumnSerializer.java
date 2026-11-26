@@ -96,7 +96,8 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
         StringUtils.format("%s.double_column", name),
         ByteOrder.nativeOrder(),
         columnFormatSpec.getDoubleColumnCompression(),
-        segmentWriteOutMedium.getCloser()
+        segmentWriteOutMedium.getCloser(),
+        columnFormatSpec.getInheritedDoubleCompressionLevel()
     );
     doublesSerializer.open();
   }

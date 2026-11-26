@@ -1434,6 +1434,20 @@ Additional Peon configs include:
 |`druid.indexer.task.tmpStorageBytesPerTask`|Maximum number of bytes per task to be used to store temporary files on disk. This config is generally intended for internal usage. Attempts to set it are very likely to be overwritten by the TaskRunner that executes the task, so be sure of what you expect to happen before directly adjusting this configuration parameter. The config is documented here primarily to provide an understanding of what it means if/when someone sees that it has been set. A value of -1 disables this limit.  |-1|
 |`druid.indexer.server.maxChatRequests`|Maximum number of concurrent requests served by a task's chat handler. Set to 0 to disable limiting.|0|
 |`druid.indexing.formats.maxStringLength`|Maximum number of characters to store per string dimension value. Longer values are truncated during ingestion. Does not apply to multi-value string dimensions. Can be overridden per-dimension using `maxStringLength` in the [dimension object](../ingestion/ingestion-spec.md#dimension-objects). Value must be >= 0.|`null` (no truncation)|
+|`druid.indexing.formats.indexSpec.*`|Cluster-wide defaults for segment column format settings, using the same fields as the [ingestion `indexSpec`](../ingestion/ingestion-spec.md#indexspec). The optional `dimensionCompressionLevel`, `metricCompressionLevel`, and `complexMetricCompressionLevel` require the corresponding codec in the same configuration object. For LZ4, level `0` selects fast compression, and `1`-`17` select high compression; for Zstd, level `0` selects the library default, and `1`-`22` are explicit levels. Nested raw-value settings are under `autoColumnFormatSpec.objectStorageCompression` and `autoColumnFormatSpec.objectStorageCompressionLevel`.|Unset levels retain existing codec behavior (LZ4 HC-9, Zstd 22)|
+
+Configure the same `druid.indexing.formats.indexSpec.*` defaults in `common.runtime.properties` on services participating in indexing and compaction coordination. For example:
+
+```properties
+druid.indexing.formats.indexSpec.dimensionCompression=lz4
+druid.indexing.formats.indexSpec.dimensionCompressionLevel=0
+druid.indexing.formats.indexSpec.metricCompression=zstd
+druid.indexing.formats.indexSpec.metricCompressionLevel=3
+druid.indexing.formats.indexSpec.autoColumnFormatSpec.objectStorageCompression=zstd
+druid.indexing.formats.indexSpec.autoColumnFormatSpec.objectStorageCompressionLevel=3
+```
+
+Druid resolves unset `indexSpec` fields against the cluster defaults, then its built-in defaults. A default compression level is inherited only when the effective codec matches the default codec. An explicit codec override never inherits a level intended for another codec. Each service reads its own runtime properties; keep the settings consistent across services. An Overlord can persist its defaults into a submitted task specification, while still-null fields are resolved by the task when segments are written. Existing segments are not modified. The segment format does not change, and omitting the new fields preserves legacy compression behavior.
 
 If the Peon is running in remote mode, there must be an Overlord up and running. Peons in remote mode can set the following configurations:
 

@@ -65,6 +65,31 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
   {
     this(
         columnName,
+        segmentWriteOutMedium,
+        filenameBase,
+        chunkFactor,
+        byteOrder,
+        compression,
+        null,
+        fileSizeLimit,
+        closer
+    );
+  }
+
+  CompressedColumnarIntsSerializer(
+      final String columnName,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
+      final String filenameBase,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      final CompressionStrategy compression,
+      @Nullable final Integer compressionLevel,
+      final int fileSizeLimit,
+      final Closer closer
+  )
+  {
+    this(
+        columnName,
         chunkFactor,
         byteOrder,
         compression,
@@ -72,6 +97,7 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
             segmentWriteOutMedium,
             filenameBase,
             compression,
+            compressionLevel,
             chunkFactor * Integer.BYTES,
             fileSizeLimit,
             closer

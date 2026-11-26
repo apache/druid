@@ -93,10 +93,31 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       final Closer closer
   )
   {
+    return ofCompressedByteBuffers(
+        segmentWriteOutMedium,
+        filenameBase,
+        compressionStrategy,
+        null,
+        bufferSize,
+        fileSizeLimit,
+        closer
+    );
+  }
+
+  public static GenericIndexedWriter<ByteBuffer> ofCompressedByteBuffers(
+      final SegmentWriteOutMedium segmentWriteOutMedium,
+      final String filenameBase,
+      final CompressionStrategy compressionStrategy,
+      @Nullable final Integer compressionLevel,
+      final int bufferSize,
+      final int fileSizeLimit,
+      final Closer closer
+  )
+  {
     GenericIndexedWriter<ByteBuffer> writer = new GenericIndexedWriter<>(
         segmentWriteOutMedium,
         filenameBase,
-        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, closer),
+        compressedByteBuffersWriteObjectStrategy(compressionStrategy, compressionLevel, bufferSize, closer),
         fileSizeLimit
     );
     writer.objectsSorted = false;
@@ -109,9 +130,19 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       final Closer closer
   )
   {
+    return compressedByteBuffersWriteObjectStrategy(compressionStrategy, null, bufferSize, closer);
+  }
+
+  public static ObjectStrategy<ByteBuffer> compressedByteBuffersWriteObjectStrategy(
+      final CompressionStrategy compressionStrategy,
+      @Nullable final Integer compressionLevel,
+      final int bufferSize,
+      final Closer closer
+  )
+  {
     return new ObjectStrategy<>()
     {
-      private final CompressionStrategy.Compressor compressor = compressionStrategy.getCompressor();
+      private final CompressionStrategy.Compressor compressor = compressionStrategy.getCompressor(compressionLevel);
       private final ByteBuffer compressedDataBuffer = compressor.allocateOutBuffer(bufferSize, closer);
 
       @Override

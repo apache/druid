@@ -26,6 +26,7 @@ import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
@@ -41,6 +42,8 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
   private final String blobsFile;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final CompressionStrategy compression;
+  @Nullable
+  private final Integer compressionLevel;
 
   private int numValues;
   private long currentOffset;
@@ -54,11 +57,22 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
       final CompressionStrategy compression
   )
   {
+    this(filenameBase, segmentWriteOutMedium, compression, null);
+  }
+
+  public CompressedVariableSizedBlobColumnSerializer(
+      final String filenameBase,
+      final SegmentWriteOutMedium segmentWriteOutMedium,
+      final CompressionStrategy compression,
+      @Nullable final Integer compressionLevel
+  )
+  {
     this.filenameBase = filenameBase;
     this.offsetsFile = getCompressedOffsetsFileName(filenameBase);
     this.blobsFile = getCompressedBlobsFileName(filenameBase);
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.compression = compression;
+    this.compressionLevel = compressionLevel;
     this.numValues = 0;
   }
 
@@ -69,6 +83,7 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
     offsetsSerializer = new CompressedLongsSerializer(
         segmentWriteOutMedium,
         compression,
+        compressionLevel,
         segmentWriteOutMedium.getCloser()
     );
     offsetsSerializer.open();
@@ -76,6 +91,7 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
     valuesSerializer = new CompressedBlockSerializer(
         segmentWriteOutMedium,
         compression,
+        compressionLevel,
         CompressedPools.BUFFER_SIZE,
         segmentWriteOutMedium.getCloser()
     );

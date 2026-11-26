@@ -64,6 +64,31 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
       Closer closer
   )
   {
+    this(
+        columnName,
+        segmentWriteOutMedium,
+        filenameBase,
+        byteOrder,
+        writer,
+        compression,
+        fileSizeLimit,
+        closer,
+        null
+    );
+  }
+
+  BlockLayoutColumnarLongsSerializer(
+      String columnName,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String filenameBase,
+      ByteOrder byteOrder,
+      CompressionFactory.LongEncodingWriter writer,
+      CompressionStrategy compression,
+      int fileSizeLimit,
+      Closer closer,
+      @Nullable Integer compressionLevel
+  )
+  {
     this.columnName = columnName;
     this.sizePer = writer.getBlockSize(CompressedPools.BUFFER_SIZE);
     int bufferSize = writer.getNumBytes(sizePer);
@@ -71,13 +96,14 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
         segmentWriteOutMedium,
         filenameBase,
         compression,
+        compressionLevel,
         bufferSize,
         fileSizeLimit,
         closer
     );
     this.writer = writer;
     this.compression = compression;
-    CompressionStrategy.Compressor compressor = compression.getCompressor();
+    CompressionStrategy.Compressor compressor = compression.getCompressor(compressionLevel);
     endBuffer = compressor.allocateInBuffer(writer.getNumBytes(sizePer), closer).order(byteOrder);
     writer.setBuffer(endBuffer);
     numInsertedForNextFlush = sizePer;

@@ -356,6 +356,29 @@ public class CompressionFactory
       Closer closer
   )
   {
+    return getLongSerializer(
+        columnName,
+        segmentWriteOutMedium,
+        filenameBase,
+        order,
+        encodingStrategy,
+        compressionStrategy,
+        closer,
+        null
+    );
+  }
+
+  public static ColumnarLongsSerializer getLongSerializer(
+      String columnName,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String filenameBase,
+      ByteOrder order,
+      LongEncodingStrategy encodingStrategy,
+      CompressionStrategy compressionStrategy,
+      Closer closer,
+      @Nullable Integer compressionLevel
+  )
+  {
     if (encodingStrategy == LongEncodingStrategy.AUTO) {
       return new IntermediateColumnarLongsSerializer(
           columnName,
@@ -363,7 +386,8 @@ public class CompressionFactory
           filenameBase,
           order,
           compressionStrategy,
-          closer
+          closer,
+          compressionLevel
       );
     } else if (encodingStrategy == LongEncodingStrategy.LONGS) {
       if (compressionStrategy == CompressionStrategy.NONE) {
@@ -381,7 +405,8 @@ public class CompressionFactory
             new LongsLongEncodingWriter(order),
             compressionStrategy,
             GenericIndexedWriter.MAX_FILE_SIZE,
-            closer
+            closer,
+            compressionLevel
         );
       }
     } else {
@@ -428,6 +453,27 @@ public class CompressionFactory
       Closer closer
   )
   {
+    return getFloatSerializer(
+        columnName,
+        segmentWriteOutMedium,
+        filenameBase,
+        order,
+        compressionStrategy,
+        closer,
+        null
+    );
+  }
+
+  public static ColumnarFloatsSerializer getFloatSerializer(
+      String columnName,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String filenameBase,
+      ByteOrder order,
+      CompressionStrategy compressionStrategy,
+      Closer closer,
+      @Nullable Integer compressionLevel
+  )
+  {
     if (compressionStrategy == CompressionStrategy.NONE) {
       return new EntireLayoutColumnarFloatsSerializer(columnName, segmentWriteOutMedium, order);
     } else {
@@ -438,7 +484,8 @@ public class CompressionFactory
           order,
           compressionStrategy,
           GenericIndexedWriter.MAX_FILE_SIZE,
-          closer
+          closer,
+          compressionLevel
       );
     }
   }
@@ -487,6 +534,27 @@ public class CompressionFactory
       Closer closer
   )
   {
+    return getDoubleSerializer(
+        columnName,
+        segmentWriteOutMedium,
+        filenameBase,
+        byteOrder,
+        compression,
+        closer,
+        null
+    );
+  }
+
+  public static ColumnarDoublesSerializer getDoubleSerializer(
+      String columnName,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String filenameBase,
+      ByteOrder byteOrder,
+      CompressionStrategy compression,
+      Closer closer,
+      @Nullable Integer compressionLevel
+  )
+  {
     if (compression == CompressionStrategy.NONE) {
       return new EntireLayoutColumnarDoublesSerializer(columnName, segmentWriteOutMedium, byteOrder);
     } else {
@@ -497,7 +565,8 @@ public class CompressionFactory
           byteOrder,
           compression,
           GenericIndexedWriter.MAX_FILE_SIZE,
-          closer
+          closer,
+          compressionLevel
       );
     }
   }

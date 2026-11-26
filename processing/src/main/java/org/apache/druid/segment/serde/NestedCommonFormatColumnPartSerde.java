@@ -505,22 +505,12 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         @Nullable NestedCommonFormatColumnFormatSpec spec
     )
     {
-      if (spec == null) {
-        return null;
-      }
-      return new FormatSpec(
-          spec.getObjectFieldsDictionaryEncoding(),
-          spec.getObjectStorageEncoding(),
-          spec.getObjectStorageCompression(),
-          spec.getStringDictionaryEncoding(),
-          spec.getDictionaryEncodedColumnCompression(),
-          spec.getLongColumnEncoding(),
-          spec.getLongColumnCompression(),
-          spec.getDoubleColumnCompression(),
-          spec.getBitmapEncoding(),
-          spec.getLongFieldBitmapIndexType(),
-          spec.getDoubleFieldBitmapIndexType()
-      );
+      return spec == null ? null : new FormatSpec(spec);
+    }
+
+    private FormatSpec(NestedCommonFormatColumnFormatSpec spec)
+    {
+      super(spec);
     }
 
     @JsonCreator
@@ -528,6 +518,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         @JsonProperty("objectFieldsDictionaryEncoding")@Nullable StringEncodingStrategy objectFieldsDictionaryEncoding,
         @JsonProperty("objectStorageEncoding")@Nullable ObjectStorageEncoding objectStorageEncoding,
         @JsonProperty("objectStorageCompression")@Nullable CompressionStrategy objectStorageCompression,
+        @JsonProperty("objectStorageCompressionLevel") @Nullable Integer objectStorageCompressionLevel,
         @JsonProperty("stringDictionaryEncoding")@Nullable StringEncodingStrategy stringDictionaryEncoding,
         @JsonProperty("dictionaryEncodedColumnCompression")@Nullable CompressionStrategy dictionaryEncodedColumnCompression,
         @JsonProperty("longColumnEncoding")@Nullable CompressionFactory.LongEncodingStrategy longColumnEncoding,
@@ -542,6 +533,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           objectFieldsDictionaryEncoding,
           objectStorageEncoding,
           objectStorageCompression,
+          objectStorageCompressionLevel,
           stringDictionaryEncoding,
           dictionaryEncodedColumnCompression,
           longColumnEncoding,

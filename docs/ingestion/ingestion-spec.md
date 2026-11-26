@@ -509,6 +509,36 @@ For information on defining an `indexSpec` in a query context, see [SQL-based in
 |longEncoding|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|
 |complexMetricCompression|Compression format for complex type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`. Options other than `uncompressed` are not compatible with Druid versions older than 31, and only applies to complex metrics which do not have specialized column formats.|`uncompressed`|
 |jsonCompression|Compression format to use for nested column raw data. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
+|dimensionCompressionLevel|Optional compression level for `dimensionCompression`. Requires the compression codec to be set in the same `indexSpec`. For `lz4`, `0` selects fast compression and `1`-`17` select high-compression levels. For `zstd`, `0` selects the codec default and `1`-`22` select explicit levels. Other compression codecs ignore this setting.|Unset (legacy codec behavior)|
+|metricCompressionLevel|Optional compression level for `metricCompression`, including numeric column data and the time column. Uses the same ranges and codec requirement as `dimensionCompressionLevel`.|Unset (legacy codec behavior)|
+|complexMetricCompressionLevel|Optional compression level for `complexMetricCompression`, when the complex metric uses Druid's generic compressed serializer. Uses the same ranges and codec requirement as `dimensionCompressionLevel`.|Unset (legacy codec behavior)|
+|autoColumnFormatSpec|Optional per-AUTO-column format defaults, including `objectStorageCompression` and `objectStorageCompressionLevel` for raw JSON/AUTO value storage. `objectStorageCompressionLevel` requires `objectStorageCompression` in the same nested spec. Inherited nested dictionary IDs use the dimension codec/level; nested numeric values use the metric codec/level, unless a per-column codec overrides them.|Default AUTO-column format|
+
+Compression levels are optional and do not change how segments are read. Omitting a level preserves the previous compression settings and the existing segment format. A nested column with its own compression codec uses that codec's default level rather than inheriting a level for a different codec. If dictionary-ID storage falls back to LZ4 because dimension compression is disabled, the fallback uses LZ4's default compression level.
+
+For example, an ingestion spec can set explicit levels inside `tuningConfig.indexSpec`:
+
+```json
+{
+  "tuningConfig": {
+    "indexSpec": {
+      "dimensionCompression": "lz4",
+      "dimensionCompressionLevel": 5,
+      "metricCompression": "zstd",
+      "metricCompressionLevel": 6,
+      "complexMetricCompression": "zstd",
+      "complexMetricCompressionLevel": 4,
+      "autoColumnFormatSpec": {
+        "objectStorageCompression": "zstd",
+        "objectStorageCompressionLevel": 3
+      }
+    }
+  }
+}
+```
+
+Cluster-wide defaults can be configured through the `druid.indexing.formats.indexSpec.*` properties, for example `druid.indexing.formats.indexSpec.metricCompression=zstd` and `druid.indexing.formats.indexSpec.metricCompressionLevel=6`. Per-ingestion `indexSpec` settings take precedence when specified.
+
 
 #### Front coding
 

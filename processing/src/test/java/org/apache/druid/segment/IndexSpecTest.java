@@ -84,6 +84,91 @@ public class IndexSpecTest
   }
 
   @Test
+  public void testCompressionLevelsRoundTrip() throws Exception
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    final String json = "{\"dimensionCompression\":\"lz4\",\"dimensionCompressionLevel\":0,"
+                        + "\"metricCompression\":\"zstd\",\"metricCompressionLevel\":3}";
+    final IndexSpec spec = mapper.readValue(json, IndexSpec.class);
+
+    Assertions.assertEquals(Integer.valueOf(0), spec.getDimensionCompressionLevel());
+    Assertions.assertEquals(Integer.valueOf(3), spec.getMetricCompressionLevel());
+    Assertions.assertEquals(spec, mapper.readValue(mapper.writeValueAsBytes(spec), IndexSpec.class));
+    Assertions.assertEquals(Integer.valueOf(0), spec.getEffectiveSpec().getDimensionCompressionLevel());
+    Assertions.assertEquals(Integer.valueOf(3), spec.getEffectiveSpec().getMetricCompressionLevel());
+  }
+
+  @Test
+  public void testCompressionLevelValidation()
+  {
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> IndexSpec.builder().withDimensionCompressionLevel(1).build()
+    );
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> IndexSpec.builder().withDimensionCompression(CompressionStrategy.LZ4)
+                       .withDimensionCompressionLevel(18).build()
+    );
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> IndexSpec.builder().withMetricCompression(CompressionStrategy.ZSTD)
+                       .withMetricCompressionLevel(-1).build()
+    );
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> IndexSpec.builder().withMetricCompression(CompressionStrategy.ZSTD)
+                       .withMetricCompressionLevel(23).build()
+    );
+  }
+
+  @Test
+  public void testIgnoredCompressionLevelIsRemovedFromEffectiveSpec() throws Exception
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    final IndexSpec spec = IndexSpec.builder()
+                                    .withMetricCompression(CompressionStrategy.UNCOMPRESSED)
+                                    .withMetricCompressionLevel(77)
+                                    .build();
+    final IndexSpec effectiveSpec = spec.getEffectiveSpec();
+
+    Assertions.assertNull(effectiveSpec.getMetricCompressionLevel());
+    Assertions.assertFalse(mapper.writeValueAsString(effectiveSpec).contains("metricCompressionLevel"));
+  }
+
+  @Test
+  public void testUnsetCompressionLevelsDoNotChangeJson() throws Exception
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    final String json = mapper.writeValueAsString(IndexSpec.builder().build());
+    Assertions.assertFalse(json.contains("dimensionCompressionLevel"));
+    Assertions.assertFalse(json.contains("metricCompressionLevel"));
+    Assertions.assertFalse(json.contains("complexMetricCompressionLevel"));
+  }
+
+  @Test
+  public void testToStringOmitsUnsetLevelsAndDisplaysConfiguredLevels()
+  {
+    final String unset = IndexSpec.builder().build().toString();
+    Assertions.assertFalse(unset.contains("dimensionCompressionLevel="));
+    Assertions.assertFalse(unset.contains("metricCompressionLevel="));
+    Assertions.assertFalse(unset.contains("complexMetricCompressionLevel="));
+
+    final String configured = IndexSpec.builder()
+                                       .withDimensionCompression(CompressionStrategy.LZ4)
+                                       .withDimensionCompressionLevel(0)
+                                       .withMetricCompression(CompressionStrategy.ZSTD)
+                                       .withMetricCompressionLevel(3)
+                                       .withComplexMetricCompression(CompressionStrategy.ZSTD)
+                                       .withComplexMetricCompressionLevel(5)
+                                       .build()
+                                       .toString();
+    Assertions.assertTrue(configured.contains("dimensionCompressionLevel=0"));
+    Assertions.assertTrue(configured.contains("metricCompressionLevel=3"));
+    Assertions.assertTrue(configured.contains("complexMetricCompressionLevel=5"));
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(IndexSpec.class)

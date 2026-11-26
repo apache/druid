@@ -2735,3 +2735,16 @@ INT64
 druid-tsfile-extensions
 TsFile
 
+
+- ../docs/configuration/index.md
+Zstd
+HC-9
+HC
+
+- ../docs/ingestion/ingestion-spec.md
+dimensionCompressionLevel
+metricCompressionLevel
+complexMetricCompressionLevel
+autoColumnFormatSpec
+codecs
+serializer
