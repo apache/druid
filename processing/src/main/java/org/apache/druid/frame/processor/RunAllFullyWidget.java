@@ -375,6 +375,7 @@ public class RunAllFullyWidget<T, ResultType>
           bouncerTicketQueue = null;
         }
 
+        cleanupNextProcessor();
         processorManager.close();
       }
       catch (Throwable e) {
@@ -399,6 +400,40 @@ public class RunAllFullyWidget<T, ResultType>
           finishedFuture.setException(t);
         }
       }
+    }
+
+    /**
+     * Called by {@link #cleanup()} to cleans up the processor from {@link #nextProcessorFuture}, if any, since
+     * at this point it will never be launched. The future may resolve after this method returns, in which case
+     * cleanup happens then.
+     */
+    @GuardedBy("runAllFullyLock")
+    private void cleanupNextProcessor()
+    {
+      Futures.addCallback(
+          nextProcessorFuture,
+          new FutureCallback<>()
+          {
+            @Override
+            public void onSuccess(final Optional<ProcessorAndCallback<T>> maybeNextProcessor)
+            {
+              if (maybeNextProcessor.isPresent()) {
+                final FrameProcessor<T> processor = maybeNextProcessor.get().processor();
+                CloseableUtils.closeAndSuppressExceptions(
+                    processor::cleanup,
+                    e -> log.warn(e, "Failed to clean up processor[%s] that was never launched", processor)
+                );
+              }
+            }
+
+            @Override
+            public void onFailure(final Throwable t)
+            {
+              // Nothing to do.
+            }
+          },
+          Execs.directExecutor()
+      );
     }
   }
 }
