@@ -24,6 +24,7 @@ import com.google.common.collect.Iterators;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -126,7 +127,7 @@ public class LookupJoinMatcher implements JoinMatcher
   private final LookupExtractor extractor;
   private final JoinConditionAnalysis condition;
   private final List<Supplier<String>> keySuppliers;
-  private final ColumnSelectorFactory selectorFactory = new LookupColumnSelectorFactory(currentEntry::get);
+  private final ColumnSelectorFactory selectorFactory;
 
   // matchedKeys and matchingRemainder are used to implement matchRemainder().
   private boolean matchingRemainder = false;
@@ -137,10 +138,12 @@ public class LookupJoinMatcher implements JoinMatcher
       ColumnSelectorFactory leftSelectorFactory,
       JoinConditionAnalysis condition,
       @Nullable List<Expr> keyExprs,
-      boolean remainderNeeded
+      boolean remainderNeeded,
+      final Closer closer
   )
   {
     this.extractor = extractor;
+    this.selectorFactory = new LookupColumnSelectorFactory(currentEntry::get, closer);
     this.matchedKeys = remainderNeeded && !condition.isAlwaysTrue() && !condition.isAlwaysFalse()
                        ? new HashSet<>()
                        : null;
@@ -181,7 +184,8 @@ public class LookupJoinMatcher implements JoinMatcher
       LookupExtractor extractor,
       ColumnSelectorFactory leftSelectorFactory,
       JoinConditionAnalysis condition,
-      boolean remainderNeeded
+      boolean remainderNeeded,
+      final Closer closer
   )
   {
     final List<Expr> keyExprs;
@@ -200,7 +204,7 @@ public class LookupJoinMatcher implements JoinMatcher
       keyExprs = condition.getEquiConditions().stream().map(Equality::getLeftExpr).collect(Collectors.toList());
     }
 
-    return new LookupJoinMatcher(extractor, leftSelectorFactory, condition, keyExprs, remainderNeeded);
+    return new LookupJoinMatcher(extractor, leftSelectorFactory, condition, keyExprs, remainderNeeded, closer);
   }
 
   @Override

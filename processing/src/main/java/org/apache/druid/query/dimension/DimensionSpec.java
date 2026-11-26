@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
@@ -57,6 +58,32 @@ public interface DimensionSpec extends Cacheable
   @Deprecated
   @Nullable
   ExtractionFn getExtractionFn();
+
+  /**
+   * Returns an extraction function and registers any resources acquired for it with {@code closer}
+   * The closer must outlive all uses of the returned function
+   */
+  @Nullable
+  default ExtractionFn getExtractionFn(final Closer closer)
+  {
+    return getExtractionFn();
+  }
+
+  /**
+   * Returns an {@link ExtractionFn} to be used only for inspecting extraction metadata, such as
+   * {@link ExtractionFn#preservesOrdering()} and {@link ExtractionFn#getExtractionType()}, during capability and
+   * cardinality analysis. The returned function must not be applied to values.
+   *
+   * Implementations backed by retained resources (for example cached lookups) must not acquire or hold those
+   * resources here. Capability checks call this and discard the result without a close hook, so a retained reference
+   * would be released only by the cleaner/GC and could block resource reclamation. The default returns
+   * {@link #getExtractionFn()} since most implementations hold no retained backing resource.
+   */
+  @Nullable
+  default ExtractionFn getExtractionFnForMetadata()
+  {
+    return getExtractionFn();
+  }
 
   /**
    * Decorate a {@link DimensionSelector}, allowing custom transformation of underlying behavior (e.g. performing

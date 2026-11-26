@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -27,9 +29,15 @@ import java.util.function.Function;
  * possible.
  * <p>
  * The {@link Segment} returned by this method, if present, must always be closed by the caller.
+ * <p>
+ * A {@link SegmentMapFunction} may hold resources acquired when it was created, such as lookup snapshots pinned for
+ * the duration of a join (see {@link org.apache.druid.query.lookup.RetainedLookupExtractor}). The owner of a
+ * {@link SegmentMapFunction} obtained from {@link org.apache.druid.query.DataSource#createSegmentMapFunction} must
+ * {@link #close()} it after all mapped segments have been closed. Implementations created from lambdas hold no
+ * resources and inherit the no-op default. Implementations that hold resources must make {@link #close()} idempotent.
  */
 @FunctionalInterface
-public interface SegmentMapFunction extends Function<Optional<Segment>, Optional<Segment>>
+public interface SegmentMapFunction extends Function<Optional<Segment>, Optional<Segment>>, Closeable
 {
   /**
    * The identity function - returns the same segment
@@ -37,11 +45,35 @@ public interface SegmentMapFunction extends Function<Optional<Segment>, Optional
   SegmentMapFunction IDENTITY = segment -> segment;
 
   /**
+   * Releases any resources retained by this function. Must only be called after all segments mapped by this function
+   * have been closed. The default implementation is a no-op.
+   */
+  @Override
+  default void close() throws IOException
+  {
+  }
+
+  /**
    * Returns a {@link SegmentMapFunction} which first applies this {@link SegmentMapFunction} and then applies
-   * the supplied transformation function to the resulting {@link Segment}, if present.
+   * the supplied transformation function to the resulting {@link Segment}, if present. Closing the returned function
+   * closes this one.
    */
   default SegmentMapFunction thenMap(Function<Segment, Segment> mapFn)
   {
-    return segmentReference -> apply(segmentReference).map(mapFn);
+    final SegmentMapFunction delegate = this;
+    return new SegmentMapFunction()
+    {
+      @Override
+      public Optional<Segment> apply(Optional<Segment> segmentReference)
+      {
+        return delegate.apply(segmentReference).map(mapFn);
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        delegate.close();
+      }
+    };
   }
 }
