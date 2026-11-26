@@ -49,8 +49,11 @@ A segment is considered fully loaded when:
 
 `GET /druid/coordinator/v1/loadstatus?full&ignoreUnloadedSegments`
 
-Returns the same result as `loadstatus?full`, but skips each segment that no Historical in any tier has loaded.
-Replicas on Brokers and realtime tasks do not count as loaded. A segment that is loaded in one tier still counts in the other tiers.
+Returns the same result as `loadstatus?full`, but skips these segments:
+- Segments that a realtime task serves. The handoff of these segments to Historicals is not complete.
+- Segments that overshadow other used segments, for example the output of a compaction. The Coordinator has not yet marked the overshadowed segments as unused, so queries still use them.
+
+All other segments count as usual, including new segments from batch ingestion and segments that lost their replicas.
 
 `GET /druid/coordinator/v1/loadqueue`
 

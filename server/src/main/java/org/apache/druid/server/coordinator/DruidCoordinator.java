@@ -438,10 +438,14 @@ public class DruidCoordinator
     if (segmentReplicationStatus == null) {
       return Collections.emptyMap();
     } else {
+      final Set<SegmentId> overshadowingSegmentIds = ignorePendingFirstLoad
+          ? metadataManager.segments().getRecentDataSourcesSnapshot().getIdsOfSegmentsOvershadowingUsedSegments()
+          : Set.of();
       return segmentReplicationStatus.getTierToDatasourceToUnderReplicated(
           dataSegments,
           !computeUsingClusterView,
-          ignorePendingFirstLoad
+          ignorePendingFirstLoad,
+          overshadowingSegmentIds
       );
     }
   }
