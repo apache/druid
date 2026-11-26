@@ -67,7 +67,7 @@ public interface BasicAuthorizerResourceHandler
 
   Response setRolePermissions(String authorizerName, String roleName, List<ResourceAction> permissions);
 
-  Response getRolePermissions(String authorizerName, String roleName);
+  Response getRolePermissions(String authorizerName, String roleName, boolean simplifyPermissions);
 
   Response getCachedUserMaps(String authorizerName);
 

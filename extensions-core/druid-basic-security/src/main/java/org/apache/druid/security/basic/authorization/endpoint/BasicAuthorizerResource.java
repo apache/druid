@@ -20,6 +20,7 @@
 package org.apache.druid.security.basic.authorization.endpoint;
 
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
@@ -30,6 +31,7 @@ import org.apache.druid.security.basic.BasicSecurityResourceFilter;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.servlet.http.HttpServletRequest;
@@ -525,7 +527,7 @@ public class BasicAuthorizerResource
    * @param roleName    Name of role
    * @param permissions Permissions to set
    *
-   * @return OK response. 400 error if role doesn't exist.
+   * @return OK response. 400 error if role doesn't exist or any permission entry is malformed.
    */
   @POST
   @Path("/db/{authorizerName}/roles/{roleName}/permissions")
@@ -541,6 +543,11 @@ public class BasicAuthorizerResource
   {
     authValidator.validateAuthorizerName(authorizerName);
 
+    final Response validationResponse = validatePermissions(permissions);
+    if (validationResponse != null) {
+      return validationResponse;
+    }
+
     final Response response = resourceHandler.setRolePermissions(authorizerName, roleName, permissions);
     performAuditIfSuccess(authorizerName, req, response, "Set permissions[%s] for role[%s]", permissions, roleName);
 
@@ -550,8 +557,15 @@ public class BasicAuthorizerResource
   /**
    * Get the permissions of a role.
    *
-   * @param req         HTTP request
-   * @param roleName    Name of role
+   * <p>By default, the response wraps each permission in a {@code BasicAuthorizerPermission} object that includes
+   * the compiled regex pattern. That wrapped format is deprecated and is not accepted by the POST counterpart on this
+   * path. Clients should pass {@code ?simplifyPermissions=true} to receive the flat {@code List<ResourceAction>}
+   * format that matches the POST request body. The wrapped default will be removed in a later release.
+   *
+   * @param req                 HTTP request
+   * @param roleName            Name of role
+   * @param simplifyPermissions When non-null, return the flat {@code List<ResourceAction>} format instead of the
+   *                            deprecated wrapped format.
    *
    * @return OK response. 400 error if role doesn't exist.
    */
@@ -563,11 +577,54 @@ public class BasicAuthorizerResource
   public Response getRolePermissions(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
-      @PathParam("roleName") String roleName
+      @PathParam("roleName") String roleName,
+      @QueryParam("simplifyPermissions") String simplifyPermissions
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.getRolePermissions(authorizerName, roleName);
+    return resourceHandler.getRolePermissions(authorizerName, roleName, simplifyPermissions != null);
+  }
+
+  /**
+   * Returns a 400 response if any permission entry is missing a required field (resource, resource type,
+   * resource name, or action), naming the index of the first offending entry. Returns null when every entry
+   * is well-formed. A null permissions list is accepted and treated as "clear all permissions" by the handler.
+   */
+  private static Response validatePermissions(final List<ResourceAction> permissions)
+  {
+    if (permissions == null) {
+      return null;
+    }
+    for (int i = 0; i < permissions.size(); i++) {
+      final String error = findValidationError(permissions.get(i), i);
+      if (error != null) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity(ImmutableMap.of("error", error))
+                       .build();
+      }
+    }
+    return null;
+  }
+
+  private static String findValidationError(final ResourceAction entry, final int index)
+  {
+    if (entry == null) {
+      return StringUtils.format("Permission at index [%d] is null.", index);
+    }
+    final Resource resource = entry.getResource();
+    if (resource == null) {
+      return StringUtils.format("Permission at index [%d] is missing a resource.", index);
+    }
+    if (resource.getType() == null) {
+      return StringUtils.format("Permission at index [%d] is missing a resource type.", index);
+    }
+    if (resource.getName() == null) {
+      return StringUtils.format("Permission at index [%d] is missing a resource name.", index);
+    }
+    if (entry.getAction() == null) {
+      return StringUtils.format("Permission at index [%d] is missing an action.", index);
+    }
+    return null;
   }
 
   /**
