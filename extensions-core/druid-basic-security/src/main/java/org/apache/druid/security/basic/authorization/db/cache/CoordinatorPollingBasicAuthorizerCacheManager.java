@@ -136,6 +136,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
               LOG.debug("Scheduled userMap cache poll is done");
             }
             catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
               LOG.noStackTrace().info(e, "Interrupted while polling Coordinator for cachedUserMaps.");
             }
             catch (Throwable t) {
@@ -165,6 +166,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
               LOG.debug("Scheduled groupMappingMap cache poll is done");
             }
             catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
               LOG.noStackTrace().info(e, "Interrupted while polling Coordinator for cachedGroupMappingMaps.");
             }
             catch (Throwable t) {
@@ -338,6 +340,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       );
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       LOG.noStackTrace().info(e, "Interrupted while fetching user and role map for authorizer[%s].", prefix);
       return null;
     }
@@ -371,6 +374,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       );
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       LOG.noStackTrace().info(e, "Interrupted while fetching group and role map for authorizer[%s].", prefix);
       return null;
     }

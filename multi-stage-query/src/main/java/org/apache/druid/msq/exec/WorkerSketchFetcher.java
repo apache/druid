@@ -142,6 +142,7 @@ public class WorkerSketchFetcher implements AutoCloseable
       workerManager.waitForWorkers(ImmutableSet.of(worker));
     }
     catch (InterruptedException interruptedException) {
+      Thread.currentThread().interrupt();
       isError.compareAndSet(null, interruptedException);
       executorService.shutdownNow();
       return;

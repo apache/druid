@@ -665,6 +665,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
           .collect(Collectors.toList());
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       log.warn(e, "Interrupted while polling");
       return Collections.emptyList();
     }
