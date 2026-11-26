@@ -73,13 +73,20 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
       String workerTaskId,
       StageId stageId,
       long timeChunk,
-      SketchEncoding sketchEncoding
+      SketchEncoding sketchEncoding,
+      int spaceReductionFactor
   )
   {
     return wrap(
         workerTaskId,
         client,
-        c -> c.fetchClusterByStatisticsSnapshotForTimeChunk(workerTaskId, stageId, timeChunk, sketchEncoding)
+        c -> c.fetchClusterByStatisticsSnapshotForTimeChunk(
+            workerTaskId,
+            stageId,
+            timeChunk,
+            sketchEncoding,
+            spaceReductionFactor
+        )
     );
   }
 

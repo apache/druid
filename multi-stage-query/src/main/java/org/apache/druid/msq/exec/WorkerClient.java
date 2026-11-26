@@ -55,12 +55,17 @@ public interface WorkerClient extends Closeable
   /**
    * Fetches a {@link ClusterByStatisticsSnapshot} which contains only the sketch of the specified timeChunk.
    * This is intended to be used by the {@link WorkerSketchFetcher} under SEQUENTIAL or AUTO modes.
+   *
+   * @param spaceReductionFactor asks the worker to drop the keys a collector at this factor would drop before sending
+   *                             the snapshot, if it holds more keys than that. 0 sends the snapshot as it is. Workers
+   *                             that predate this parameter ignore it and send the whole snapshot.
    */
   ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerId,
       StageId stageId,
       long timeChunk,
-      SketchEncoding sketchEncoding
+      SketchEncoding sketchEncoding,
+      int spaceReductionFactor
   );
 
   /**

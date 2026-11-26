@@ -244,6 +244,10 @@ public class WorkerSketchFetcher implements AutoCloseable
       throw new ISE("All worker partial key information not received for stage[%d]", stageId.getStageNumber());
     }
 
+    // Every snapshot is merged into a collector that ends at least at the highest factor any worker reported. Ask
+    // workers to drop the keys it would drop anyway, instead of sending them.
+    final int spaceReductionFactor = completeKeyStatisticsInformation.getSpaceReductionFactorForFetch();
+
     final Set<String> noBoundaries = new HashSet<>(tasks);
     completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().forEach((timeChunk, wks) -> {
 
@@ -258,7 +262,8 @@ public class WorkerSketchFetcher implements AutoCloseable
                     taskId,
                     new StageId(stageId.getQueryId(), stageId.getStageNumber()),
                     timeChunk,
-                    sketchEncoding
+                    sketchEncoding,
+                    spaceReductionFactor
                 ),
                 taskId,
                 (kernel, snapshot) -> kernel.mergeClusterByStatisticsCollectorForTimeChunk(

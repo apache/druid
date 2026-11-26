@@ -96,7 +96,7 @@ public class WorkerChatHandlerTest
     WorkerChatHandler chatHandler = new WorkerChatHandler(worker, authorizerMapper, DATASOURCE);
     Assertions.assertEquals(
         ClusterByStatisticsSnapshot.empty(),
-        chatHandler.httpFetchKeyStatisticsWithSnapshot(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), 1, null, req)
+        chatHandler.httpFetchKeyStatisticsWithSnapshot(TEST_STAGE.getQueryId(), TEST_STAGE.getStageNumber(), 1, null, 0, req)
                    .getEntity()
     );
   }
@@ -107,7 +107,7 @@ public class WorkerChatHandlerTest
     WorkerChatHandler chatHandler = new WorkerChatHandler(worker, authorizerMapper, DATASOURCE);
     Assertions.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
-        chatHandler.httpFetchKeyStatisticsWithSnapshot("123", 2, 1, null, req)
+        chatHandler.httpFetchKeyStatisticsWithSnapshot("123", 2, 1, null, 0, req)
                    .getStatus()
     );
   }
@@ -145,7 +145,11 @@ public class WorkerChatHandlerTest
     }
 
     @Override
-    public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
+    public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(
+        StageId stageId,
+        long timeChunk,
+        int spaceReductionFactor
+    )
     {
       if (TEST_STAGE.equals(stageId)) {
         return ClusterByStatisticsSnapshot.empty();

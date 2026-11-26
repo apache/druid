@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
@@ -36,16 +37,29 @@ public class PartialKeyStatisticsInformation
 
   private final double bytesRetained;
 
+  private final int spaceReductionFactor;
+
+  /**
+   * @param spaceReductionFactor highest {@link KeyCollectorSnapshot#spaceReductionFactorOrZero()} of the worker's
+   *                             snapshot. Omitted by workers that predate it, which read as 0.
+   */
   @JsonCreator
   public PartialKeyStatisticsInformation(
       @JsonProperty("timeSegments") Set<Long> timeSegments,
       @JsonProperty("multipleValues") boolean hasMultipleValues,
-      @JsonProperty("bytesRetained") double bytesRetained
+      @JsonProperty("bytesRetained") double bytesRetained,
+      @JsonProperty("spaceReductionFactor") int spaceReductionFactor
   )
   {
     this.timeSegments = timeSegments;
     this.multipleValues = hasMultipleValues;
     this.bytesRetained = bytesRetained;
+    this.spaceReductionFactor = spaceReductionFactor;
+  }
+
+  public PartialKeyStatisticsInformation(Set<Long> timeSegments, boolean hasMultipleValues, double bytesRetained)
+  {
+    this(timeSegments, hasMultipleValues, bytesRetained, 0);
   }
 
   @JsonProperty("timeSegments")
@@ -66,6 +80,13 @@ public class PartialKeyStatisticsInformation
     return bytesRetained;
   }
 
+  @JsonProperty("spaceReductionFactor")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public int getSpaceReductionFactor()
+  {
+    return spaceReductionFactor;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -78,13 +99,14 @@ public class PartialKeyStatisticsInformation
     PartialKeyStatisticsInformation that = (PartialKeyStatisticsInformation) o;
     return multipleValues == that.multipleValues
            && Double.compare(bytesRetained, that.bytesRetained) == 0
+           && spaceReductionFactor == that.spaceReductionFactor
            && Objects.equals(timeSegments, that.timeSegments);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(timeSegments, multipleValues, bytesRetained);
+    return Objects.hash(timeSegments, multipleValues, bytesRetained, spaceReductionFactor);
   }
 
   @Override
@@ -94,6 +116,7 @@ public class PartialKeyStatisticsInformation
            "timeSegments=" + timeSegments +
            ", multipleValues=" + multipleValues +
            ", bytesRetained=" + bytesRetained +
+           ", spaceReductionFactor=" + spaceReductionFactor +
            '}';
   }
 }

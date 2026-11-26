@@ -43,6 +43,7 @@ import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -284,6 +285,7 @@ public class WorkerResource
       @PathParam("stageNumber") final int stageNumber,
       @PathParam("timeChunk") final long timeChunk,
       @QueryParam("sketchEncoding") @Nullable final SketchEncoding sketchEncoding,
+      @QueryParam("spaceReductionFactor") @DefaultValue("0") final int spaceReductionFactor,
       @Context final HttpServletRequest req
   )
   {
@@ -291,7 +293,7 @@ public class WorkerResource
     ClusterByStatisticsSnapshot snapshotForTimeChunk;
     StageId stageId = new StageId(queryId, stageNumber);
     try {
-      snapshotForTimeChunk = worker.fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk);
+      snapshotForTimeChunk = worker.fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk, spaceReductionFactor);
       if (SketchEncoding.OCTET_STREAM.equals(sketchEncoding)) {
         return Response.status(Response.Status.ACCEPTED)
                        .type(MediaType.APPLICATION_OCTET_STREAM)

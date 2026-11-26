@@ -44,10 +44,14 @@ import java.util.concurrent.TimeUnit;
 
 import static org.easymock.EasyMock.mock;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class WorkerSketchFetcherTest
 {
@@ -131,7 +135,7 @@ public class WorkerSketchFetcherTest
     doAnswer(invocation -> {
       ClusterByStatisticsSnapshot snapshot = mock(ClusterByStatisticsSnapshot.class);
       return Futures.immediateFuture(snapshot);
-    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyLong(), any());
+    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyLong(), any(), anyInt());
 
     target.sequentialTimeChunkMerging(
         (kernelConsumer) -> {
@@ -146,6 +150,37 @@ public class WorkerSketchFetcherTest
 
     Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS));
 
+  }
+
+  @Test
+  public void test_submitFetcherTask_sequentialFetch_asksWorkersToDownsample() throws InterruptedException
+  {
+    doReturn(true).when(completeKeyStatisticsInformation).isComplete();
+    doReturn(5).when(completeKeyStatisticsInformation).getSpaceReductionFactorForFetch();
+    final CountDownLatch latch = new CountDownLatch(2);
+
+    target = spy(new WorkerSketchFetcher(workerClient, workerManager, true, SketchEncoding.OCTET_STREAM));
+
+    doAnswer(invocation -> Futures.immediateFuture(mock(ClusterByStatisticsSnapshot.class)))
+        .when(workerClient)
+        .fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyLong(), any(), anyInt());
+
+    target.sequentialTimeChunkMerging(
+        (kernelConsumer) -> {
+          kernelConsumer.accept(kernel);
+          latch.countDown();
+        },
+        completeKeyStatisticsInformation,
+        stageDefinition.getId(),
+        ImmutableSet.copyOf(TASK_IDS),
+        ((queryKernel, integer, msqFault) -> {})
+    );
+
+    Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS));
+
+    // Workers 1 and 2 have the time chunk.
+    verify(workerClient, times(2))
+        .fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), eq(123L), any(), eq(5));
   }
 
   @Test
@@ -351,7 +386,7 @@ public class WorkerSketchFetcherTest
         return Futures.immediateFailedFuture(new Exception("Task fetch failed :" + invocation.getArgument(0)));
       }
       return Futures.immediateFuture(snapshot);
-    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyLong(), any());
+    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyLong(), any(), anyInt());
   }
 
   private void workersWithFailedFetchParallel(Set<String> failedTasks)
