@@ -21,14 +21,19 @@ package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.IntervalDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 public class FiltrationTest extends CalciteTestBase
 {
@@ -61,5 +66,19 @@ public class FiltrationTest extends CalciteTestBase
         ),
         filtration.getDimFilter()
     );
+  }
+
+  @Test
+  public void testComplexEqualitiesRemainOr()
+  {
+    TypeStrategies.registerComplex(ColumnType.NESTED_DATA.getComplexTypeName(), TypeStrategies.NESTED);
+    final RowSignature signature = RowSignature.builder().add("json", ColumnType.NESTED_DATA).build();
+    final OrDimFilter filter = new OrDimFilter(
+        ImmutableList.of(
+            new EqualityFilter("json", ColumnType.NESTED_DATA, Map.of("x", 1L), null),
+            new EqualityFilter("json", ColumnType.NESTED_DATA, Map.of("x", 2L), null)
+        )
+    );
+    Assertions.assertEquals(filter, Filtration.create(filter).optimize(signature).getDimFilter());
   }
 }

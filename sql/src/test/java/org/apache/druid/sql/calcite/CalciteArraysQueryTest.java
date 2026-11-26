@@ -916,6 +916,56 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayOverlapFilterWithSingleElementOr()
+  {
+    testQuery(
+        "SELECT dim3 FROM druid.numfoo "
+        + "WHERE ARRAY_OVERLAP(dim3, ARRAY['a']) OR ARRAY_OVERLAP(dim3, ARRAY['c']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(in("dim3", ImmutableList.of("a", "c")))
+                .columns("dim3")
+                .columnTypes(ColumnType.STRING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayEqualityOrFilter()
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.arrays "
+        + "WHERE arrayString = ARRAY['a','b'] OR arrayString = ARRAY['d','e']",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.ARRAYS_DATASOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      or(
+                          equality("arrayString", ImmutableList.of("a", "b"), ColumnType.STRING_ARRAY),
+                          equality("arrayString", ImmutableList.of("d", "e"), ColumnType.STRING_ARRAY)
+                      )
+                  )
+                  .aggregators(new CountAggregatorFactory("a0"))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{6L})
+    );
+  }
+
+  @Test
   public void testArrayOverlapFilterStringArrayColumn()
   {
     testQuery(
