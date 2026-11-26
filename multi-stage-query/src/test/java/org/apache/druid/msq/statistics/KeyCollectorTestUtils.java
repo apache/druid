@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 public class KeyCollectorTestUtils
 {
@@ -88,6 +89,9 @@ public class KeyCollectorTestUtils
       threeEqualSizedCollectors.get(i % threeEqualSizedCollectors.size()).add(key.lhs, key.rhs);
     }
 
+    final List<TSnapshot> threeEqualSizedSnapshots =
+        threeEqualSizedCollectors.stream().map(keyCollectorFactory::toSnapshot).collect(Collectors.toList());
+
     // Regular add
     threeEqualSizedCollectors.get(0).addAll(threeEqualSizedCollectors.get(1));
 
@@ -97,6 +101,11 @@ public class KeyCollectorTestUtils
     );
 
     testFn.accept("three merged collectors, equal sizes", threeEqualSizedCollectors.get(0));
+
+    testFn.accept(
+        "three snapshots added to an empty collector, equal sizes",
+        addSnapshots(keyCollectorFactory, threeEqualSizedSnapshots)
+    );
 
     // Split randomized load into three collectors of different sizes, followed by merge.
     final List<TCollector> threeDifferentlySizedCollectors = new ArrayList<>();
@@ -131,6 +140,9 @@ public class KeyCollectorTestUtils
     threeDifferentlySizedCollectors.get(1).downSample();
     threeDifferentlySizedCollectors.get(2).downSample();
 
+    final List<TSnapshot> threeDifferentlySizedSnapshots =
+        threeDifferentlySizedCollectors.stream().map(keyCollectorFactory::toSnapshot).collect(Collectors.toList());
+
     threeDifferentlySizedCollectors.get(0).addAll(threeDifferentlySizedCollectors.get(1)); // Big into small
     threeDifferentlySizedCollectors.get(2).addAll(threeDifferentlySizedCollectors.get(0)); // Small into big
 
@@ -138,6 +150,27 @@ public class KeyCollectorTestUtils
         "three merged collectors, different sizes, with downsampling",
         threeDifferentlySizedCollectors.get(2)
     );
+
+    testFn.accept(
+        "three snapshots added to an empty collector, different sizes, with downsampling",
+        addSnapshots(keyCollectorFactory, threeDifferentlySizedSnapshots)
+    );
+  }
+
+  /**
+   * Adds snapshots to a new collector with {@link KeyCollectorFactory#addSnapshot}, as the controller merges the
+   * snapshots it gets from workers.
+   */
+  static <TCollector extends KeyCollector<TCollector>, TSnapshot extends KeyCollectorSnapshot> TCollector addSnapshots(
+      final KeyCollectorFactory<TCollector, TSnapshot> keyCollectorFactory,
+      final List<TSnapshot> snapshots
+  )
+  {
+    final TCollector collector = keyCollectorFactory.newKeyCollector();
+    for (final TSnapshot snapshot : snapshots) {
+      keyCollectorFactory.addSnapshot(collector, snapshot);
+    }
+    return collector;
   }
 
   static void verifyCollector(

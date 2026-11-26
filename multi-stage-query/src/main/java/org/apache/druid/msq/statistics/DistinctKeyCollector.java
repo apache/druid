@@ -21,11 +21,11 @@ package org.apache.druid.msq.statistics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongRBTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2LongSortedMap;
 import it.unimi.dsi.fastutil.objects.ObjectBidirectionalIterator;
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.key.RowKey;
@@ -96,10 +96,11 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
     this.maxBytes = INITIAL_MAX_BYTES;
     this.spaceReductionFactor = spaceReductionFactor;
     this.totalWeightUnadjusted = 0;
+    this.retainedBytes = 0;
 
-    final LongIterator weightIterator = retainedKeys.values().iterator();
-    while (weightIterator.hasNext()) {
-      totalWeightUnadjusted += weightIterator.nextLong();
+    for (final Object2LongMap.Entry<RowKey> entry : retainedKeys.object2LongEntrySet()) {
+      totalWeightUnadjusted += entry.getLongValue();
+      retainedBytes += entry.getKey().estimatedObjectSizeBytes();
     }
   }
 
@@ -149,10 +150,36 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
       this.retainedKeys.putAll(other.retainedKeys);
       this.maxBytes = other.maxBytes;
       this.totalWeightUnadjusted = other.totalWeightUnadjusted;
+      this.retainedBytes = other.retainedBytes;
     } else {
       for (final Object2LongMap.Entry<RowKey> otherEntry : other.retainedKeys.object2LongEntrySet()) {
         add(otherEntry.getKey(), otherEntry.getLongValue());
       }
+    }
+  }
+
+  /**
+   * Adds the keys in a snapshot without building a collector from it first. Gives the same result as
+   * {@link #addAll(DistinctKeyCollector)} with a collector built by {@link DistinctKeyCollectorFactory#fromSnapshot},
+   * except when this collector is empty and the snapshot's keys reach its byte limit. Then this method downsamples
+   * right away, while addAll leaves that to a later {@link #add}.
+   */
+  void addAll(final DistinctKeySnapshot snapshot)
+  {
+    while (!retainedKeys.isEmpty() && spaceReductionFactor < snapshot.getSpaceReductionFactor()) {
+      increaseSpaceReductionFactorIfPossible();
+    }
+
+    if (retainedKeys.isEmpty()) {
+      spaceReductionFactor = snapshot.getSpaceReductionFactor();
+    }
+
+    // If this collector was empty, add() keeps every key, as addAll(DistinctKeyCollector) does when it copies the
+    // other collector's keys: each key in a snapshot is either its smallest key or selected at its
+    // spaceReductionFactor. Snapshots list their keys in sorted order, the order addAll(DistinctKeyCollector) reads
+    // them from the other collector's sorted map.
+    for (final SerializablePair<RowKey, Long> entry : snapshot.getKeys()) {
+      add(entry.lhs, entry.rhs);
     }
   }
 

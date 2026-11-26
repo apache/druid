@@ -35,4 +35,14 @@ public interface KeyCollectorFactory<TCollector extends KeyCollector<TCollector>
    * Deserializes a {@link KeyCollectorSnapshot} to a {@link KeyCollector}
    */
   TCollector fromSnapshot(TSnapshot snapshot);
+
+  /**
+   * Adds the keys in a {@link KeyCollectorSnapshot} to a {@link KeyCollector}. The default implementation calls
+   * {@code collector.addAll(fromSnapshot(snapshot))}. Implementations may override it to merge the snapshot without
+   * building a collector from it first.
+   */
+  default void addSnapshot(TCollector collector, TSnapshot snapshot)
+  {
+    collector.addAll(fromSnapshot(snapshot));
+  }
 }

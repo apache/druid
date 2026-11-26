@@ -180,13 +180,13 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   {
     // Add all key collectors from the other collector.
     for (ClusterByStatisticsSnapshot.Bucket otherBucket : snapshot.getBuckets().values()) {
-      //noinspection rawtypes, unchecked
-      final KeyCollector<?> otherKeyCollector =
-          ((KeyCollectorFactory) keyCollectorFactory).fromSnapshot(otherBucket.getKeyCollectorSnapshot());
       final BucketHolder bucketHolder = getOrCreateBucketHolder(otherBucket.getBucketKey());
 
       //noinspection rawtypes, unchecked
-      ((KeyCollector) bucketHolder.keyCollector).addAll(otherKeyCollector);
+      ((KeyCollectorFactory) keyCollectorFactory).addSnapshot(
+          bucketHolder.keyCollector,
+          otherBucket.getKeyCollectorSnapshot()
+      );
 
       totalRetainedBytes += bucketHolder.updateRetainedBytes();
       if (totalRetainedBytes > maxRetainedBytes) {
