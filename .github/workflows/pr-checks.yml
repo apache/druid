@@ -23,6 +23,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  pull-requests: read
+
 jobs:
   conventional-commits:
     if: github.repository == 'apache/druid' && github.event.pull_request.base.ref == 'master'
