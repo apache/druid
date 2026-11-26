@@ -19,8 +19,6 @@
 
 package org.apache.druid.server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
@@ -152,40 +150,13 @@ public class RunningQueryRegistryTest
   @Test
   public void testQueryTextIsCapturedWhenEnabled() throws Exception
   {
-    final ObjectMapper jsonMapper = Mockito.mock(ObjectMapper.class);
-    Mockito.when(jsonMapper.writeValueAsString(Mockito.any())).thenReturn("{\"queryType\":\"timeseries\"}");
-
-    final RunningQueryRegistry registryWithText = new RunningQueryRegistry(createServerConfig(true), jsonMapper);
-    registryWithText.register(
-        createQuery("query-1", "timeseries", null, "foo"),
-        "SELECT * FROM foo",
-        AUTHENTICATION_RESULT
-    );
+    final Query<?> query = createQuery("query-1", "timeseries", null, "foo");
+    final RunningQueryRegistry registryWithText = new RunningQueryRegistry(createServerConfig(true));
+    registryWithText.register(query, "SELECT * FROM foo", AUTHENTICATION_RESULT);
 
     final RunningQueryRegistry.Entry entry = registryWithText.getAll().get(0);
     Assertions.assertEquals("SELECT * FROM foo", entry.getSql());
-    Assertions.assertEquals("{\"queryType\":\"timeseries\"}", entry.getNativeQuery());
-  }
-
-  @Test
-  public void testQueryTextIsStillCapturedWhenNativeQuerySerializationFails() throws Exception
-  {
-    final ObjectMapper jsonMapper = Mockito.mock(ObjectMapper.class);
-    Mockito.when(jsonMapper.writeValueAsString(Mockito.any()))
-           .thenThrow(new JsonProcessingException("fail")
-           {
-           });
-
-    final RunningQueryRegistry registryWithText = new RunningQueryRegistry(createServerConfig(true), jsonMapper);
-    registryWithText.register(
-        createQuery("query-1", "timeseries", null, "foo"),
-        "SELECT * FROM foo",
-        AUTHENTICATION_RESULT
-    );
-
-    final RunningQueryRegistry.Entry entry = registryWithText.getAll().get(0);
-    Assertions.assertEquals("SELECT * FROM foo", entry.getSql());
-    Assertions.assertNull(entry.getNativeQuery());
+    Assertions.assertSame(query, entry.getNativeQuery());
   }
 
   private static Query<?> createQuery(

@@ -30,6 +30,7 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -44,6 +45,7 @@ import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.NativeQueryInfo;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -133,7 +135,7 @@ public class NativeSqlEngine implements SqlEngine
     final List<NativeQueryInfo> queries = new ArrayList<>();
 
     for (final RunningQueryRegistry.Entry entry : runningQueryRegistry.getAll()) {
-      queries.add(NativeQueryInfo.fromEntry(entry));
+      queries.add(NativeQueryInfo.fromEntry(entry, serializeQuery(entry.getNativeQuery())));
     }
 
     if (stateReadAuthorization.allowAccessWithNoRestriction()) {
@@ -147,6 +149,26 @@ public class NativeSqlEngine implements SqlEngine
                  .map(NativeQueryInfo::withoutAuthenticationResult)
                  .collect(Collectors.toList())
       );
+    }
+  }
+
+  /**
+   * Serializes the given native query, for the running queries API. Returns null when there is no query, or when the
+   * query cannot be serialized.
+   */
+  @Nullable
+  private String serializeQuery(@Nullable final Query<?> query)
+  {
+    if (query == null) {
+      return null;
+    }
+
+    try {
+      return jsonMapper.writeValueAsString(query);
+    }
+    catch (Exception e) {
+      LOG.warn(e, "Could not serialize query[%s] for the running queries API", query.getId());
+      return null;
     }
   }
 

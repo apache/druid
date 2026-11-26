@@ -19,14 +19,10 @@
 
 package org.apache.druid.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -49,23 +45,19 @@ import java.util.concurrent.ConcurrentHashMap;
 @LazySingleton
 public class RunningQueryRegistry
 {
-  private static final Logger log = new Logger(RunningQueryRegistry.class);
-
   private final ServerConfig serverConfig;
-  private final ObjectMapper jsonMapper;
   private final Map<String, Entry> entries = new ConcurrentHashMap<>();
 
   @Inject
-  public RunningQueryRegistry(final ServerConfig serverConfig, final @Json ObjectMapper jsonMapper)
+  public RunningQueryRegistry(final ServerConfig serverConfig)
   {
     this.serverConfig = serverConfig;
-    this.jsonMapper = jsonMapper;
   }
 
   @VisibleForTesting
   public RunningQueryRegistry()
   {
-    this(new ServerConfig(), new DefaultObjectMapper());
+    this(new ServerConfig());
   }
 
   /**
@@ -87,11 +79,11 @@ public class RunningQueryRegistry
     }
 
     String capturedSqlText = null;
-    String capturedNativeQuery = null;
+    Query<?> capturedNativeQuery = null;
 
     if (serverConfig.isEnableRunningQueryText()) {
       capturedSqlText = sqlText;
-      capturedNativeQuery = serializeQuery(query);
+      capturedNativeQuery = query;
     }
 
     entries.put(
@@ -130,18 +122,6 @@ public class RunningQueryRegistry
     return retVal;
   }
 
-  @Nullable
-  private String serializeQuery(final Query<?> query)
-  {
-    try {
-      return jsonMapper.writeValueAsString(query);
-    }
-    catch (Exception e) {
-      log.warn(e, "Could not serialize query[%s] for the running query registry", query.getId());
-      return null;
-    }
-  }
-
   /**
    * Information about a single running query.
    */
@@ -159,7 +139,7 @@ public class RunningQueryRegistry
     @Nullable
     private final String sql;
     @Nullable
-    private final String nativeQuery;
+    private final Query<?> nativeQuery;
     private final DateTime startTime;
 
     public Entry(
@@ -170,7 +150,7 @@ public class RunningQueryRegistry
         @Nullable final String identity,
         @Nullable final String authenticator,
         @Nullable final String sql,
-        @Nullable final String nativeQuery,
+        @Nullable final Query<?> nativeQuery,
         final DateTime startTime
     )
     {
@@ -233,10 +213,10 @@ public class RunningQueryRegistry
     }
 
     /**
-     * JSON-serialized native query. Null unless {@link ServerConfig#isEnableRunningQueryText()} is enabled.
+     * Native query that is running. Null unless {@link ServerConfig#isEnableRunningQueryText()} is enabled.
      */
     @Nullable
-    public String getNativeQuery()
+    public Query<?> getNativeQuery()
     {
       return nativeQuery;
     }

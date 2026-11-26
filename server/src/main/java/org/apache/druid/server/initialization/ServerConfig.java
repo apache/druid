@@ -121,7 +121,8 @@ public class ServerConfig
         uriCompliance,
         enforceStrictSNIHostChecking,
         true,
-        DEFAULT_HEADER_CACHE_SIZE
+        DEFAULT_HEADER_CACHE_SIZE,
+        false
     );
   }
 
@@ -151,7 +152,8 @@ public class ServerConfig
       @Nullable UriCompliance uriCompliance,
       boolean enforceStrictSNIHostChecking,
       boolean enableQueryRequestsQueuing,
-      int headerCacheSize
+      int headerCacheSize,
+      boolean enableRunningQueryText
   )
   {
     this.numThreads = numThreads;
@@ -180,6 +182,7 @@ public class ServerConfig
     this.enforceStrictSNIHostChecking = enforceStrictSNIHostChecking;
     this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
     this.headerCacheSize = headerCacheSize;
+    this.enableRunningQueryText = enableRunningQueryText;
   }
 
   public ServerConfig()
@@ -428,7 +431,8 @@ public class ServerConfig
         uriCompliance,
         enforceStrictSNIHostChecking,
         enableQueryRequestsQueuing,
-        headerCacheSize
+        headerCacheSize,
+        enableRunningQueryText
     );
   }
 
@@ -533,7 +537,8 @@ public class ServerConfig
            enableQueryRequestsQueuing == that.enableQueryRequestsQueuing &&
            Objects.equals(uriCompliance, that.uriCompliance) &&
            enforceStrictSNIHostChecking == that.enforceStrictSNIHostChecking &&
-           headerCacheSize == that.headerCacheSize;
+           headerCacheSize == that.headerCacheSize &&
+           enableRunningQueryText == that.enableRunningQueryText;
   }
 
   @Override
@@ -565,7 +570,8 @@ public class ServerConfig
         enableQueryRequestsQueuing,
         uriCompliance,
         enforceStrictSNIHostChecking,
-        headerCacheSize
+        headerCacheSize,
+        enableRunningQueryText
     );
   }
 
@@ -599,6 +605,7 @@ public class ServerConfig
            ", uriCompliance=" + uriCompliance +
            ", enforceStrictSNIHostChecking=" + enforceStrictSNIHostChecking +
            ", headerCacheSize=" + headerCacheSize +
+           ", enableRunningQueryText=" + enableRunningQueryText +
            '}';
   }
 

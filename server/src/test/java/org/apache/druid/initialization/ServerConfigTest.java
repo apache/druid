@@ -75,7 +75,8 @@ public class ServerConfigTest
         UriCompliance.RFC3986,
         false,
         true,
-        512
+        512,
+        true
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
@@ -93,6 +94,7 @@ public class ServerConfigTest
     Assertions.assertEquals(UriCompliance.RFC3986, modifiedConfig2.getUriCompliance());
     Assertions.assertFalse(modifiedConfig2.isEnforceStrictSNIHostChecking());
     Assertions.assertEquals(512, modifiedConfig2.getHeaderCacheSize());
+    Assertions.assertTrue(modifiedConfig2.isEnableRunningQueryText());
   }
 
   @Test

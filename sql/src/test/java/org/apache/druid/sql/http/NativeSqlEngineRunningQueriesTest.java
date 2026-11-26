@@ -110,8 +110,7 @@ public class NativeSqlEngineRunningQueriesTest
   public void testQueryIsVisibleWhileRunning() throws Exception
   {
     final RunningQueryRegistry registry = new RunningQueryRegistry(
-        new DefaultObjectMapper().readValue("{\"enableRunningQueryText\":true}", ServerConfig.class),
-        CalciteTests.getJsonMapper()
+        new DefaultObjectMapper().readValue("{\"enableRunningQueryText\":true}", ServerConfig.class)
     );
     final AtomicReference<NativeSqlEngine> engineRef = new AtomicReference<>();
     final AtomicReference<NativeQueryInfo> runningQuerySeenDuringExecution = new AtomicReference<>();

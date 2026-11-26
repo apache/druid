@@ -74,7 +74,10 @@ public class NativeQueryInfo implements QueryInfo
     this.startTime = startTime;
   }
 
-  public static NativeQueryInfo fromEntry(final RunningQueryRegistry.Entry entry)
+  public static NativeQueryInfo fromEntry(
+      final RunningQueryRegistry.Entry entry,
+      @Nullable final String nativeQuery
+  )
   {
     return new NativeQueryInfo(
         entry.getQueryId(),
@@ -84,7 +87,7 @@ public class NativeQueryInfo implements QueryInfo
         entry.getIdentity(),
         entry.getAuthenticator(),
         entry.getSql(),
-        entry.getNativeQuery(),
+        nativeQuery,
         entry.getStartTime()
     );
   }

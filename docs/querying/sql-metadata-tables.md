@@ -432,8 +432,8 @@ contains the following fields:
 |`startTime`|Time at which the query started executing on this Broker.|
 
 The native engine runs a single native query per SQL statement, so a SQL query that uses the native engine appears as a
-single row. Native queries that were submitted directly to `/druid/v2/` also appear in the table, and have no
-`sqlQueryId`.
+single row. Native queries that were submitted directly to `/druid/v2/`, and queries that the server runs internally,
+also appear in the table, and have no `sqlQueryId`.
 
 For example, to retrieve all native engine queries that are currently running:
 

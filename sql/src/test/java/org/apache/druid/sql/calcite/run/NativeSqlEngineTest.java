@@ -19,11 +19,13 @@
 
 package org.apache.druid.sql.calcite.run;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.server.RunningQueryRegistry;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -156,6 +158,63 @@ public class NativeSqlEngineTest
   }
 
   @Test
+  public void testGetQueriesSerializesNativeQueryWhenEnabled() throws Exception
+  {
+    final ObjectMapper jsonMapper = Mockito.mock(ObjectMapper.class);
+    Mockito.when(jsonMapper.writeValueAsString(Mockito.any())).thenReturn("{\"queryType\":\"timeseries\"}");
+
+    final RunningQueryRegistry registryWithText = new RunningQueryRegistry(createServerConfig(true));
+    final NativeSqlEngine engineWithText =
+        new NativeSqlEngine(null, jsonMapper, (SqlStatementFactory) null, registryWithText);
+
+    registryWithText.register(
+        createQuery("query-1", "timeseries", null, "foo"),
+        "SELECT * FROM foo",
+        USER
+    );
+
+    final NativeQueryInfo queryInfo = (NativeQueryInfo) engineWithText.getQueries(
+        false,
+        false,
+        USER,
+        AuthorizationResult.ALLOW_NO_RESTRICTION
+    ).getQueries().get(0);
+
+    Assertions.assertEquals("SELECT * FROM foo", queryInfo.getSql());
+    Assertions.assertEquals("{\"queryType\":\"timeseries\"}", queryInfo.getNativeQuery());
+  }
+
+  @Test
+  public void testGetQueriesOmitsNativeQueryWhenSerializationFails() throws Exception
+  {
+    final ObjectMapper jsonMapper = Mockito.mock(ObjectMapper.class);
+    Mockito.when(jsonMapper.writeValueAsString(Mockito.any()))
+           .thenThrow(new JsonProcessingException("fail")
+           {
+           });
+
+    final RunningQueryRegistry registryWithText = new RunningQueryRegistry(createServerConfig(true));
+    final NativeSqlEngine engineWithText =
+        new NativeSqlEngine(null, jsonMapper, (SqlStatementFactory) null, registryWithText);
+
+    registryWithText.register(
+        createQuery("query-1", "timeseries", null, "foo"),
+        "SELECT * FROM foo",
+        USER
+    );
+
+    final NativeQueryInfo queryInfo = (NativeQueryInfo) engineWithText.getQueries(
+        false,
+        false,
+        USER,
+        AuthorizationResult.ALLOW_NO_RESTRICTION
+    ).getQueries().get(0);
+
+    Assertions.assertEquals("SELECT * FROM foo", queryInfo.getSql());
+    Assertions.assertNull(queryInfo.getNativeQuery());
+  }
+
+  @Test
   public void testGetQueriesReturnsEmptyAfterUnregister()
   {
     registry.register(createQuery("query-1", "timeseries", null, "foo"), null, USER);
@@ -199,5 +258,13 @@ public class NativeSqlEngineTest
     Mockito.when(query.getSqlQueryId()).thenReturn(sqlQueryId);
     Mockito.when(query.getDataSource()).thenReturn(new TableDataSource(datasource));
     return query;
+  }
+
+  private static ServerConfig createServerConfig(final boolean enableRunningQueryText) throws Exception
+  {
+    return new DefaultObjectMapper().readValue(
+        "{\"enableRunningQueryText\":" + enableRunningQueryText + "}",
+        ServerConfig.class
+    );
   }
 }

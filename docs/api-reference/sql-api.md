@@ -437,7 +437,8 @@ engine and the Dart engine support this API.
 
 For the native engine, the list contains the queries that are running on the server that receives the request. The
 native engine runs a single native query per SQL statement, so each SQL query appears as a single entry. The list also
-includes native queries that were submitted directly to the native query endpoint, `/druid/v2/`.
+includes native queries that were submitted directly to the native query endpoint, `/druid/v2/`, and queries that the
+server runs internally, such as segment metadata queries.
 
 Users with READ permission on the `STATE` resource see all running queries. Other users see only their own queries.
 

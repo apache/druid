@@ -31,7 +31,6 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -64,6 +63,7 @@ import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -89,7 +89,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 
 @LazySingleton
 public class QueryLifecycleTest
@@ -167,10 +166,9 @@ public class QueryLifecycleTest
 
     injector = Guice.createInjector(
         BoundFieldModule.of(this),
-        new JacksonModule(),
         binder -> {
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-          binder.bind(Properties.class).toInstance(new Properties());
+          binder.bind(ServerConfig.class).toInstance(new ServerConfig());
         }
     );
   }
