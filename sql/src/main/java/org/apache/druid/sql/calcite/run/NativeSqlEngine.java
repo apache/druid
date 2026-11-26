@@ -43,13 +43,13 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.NativeQueryInfo;
-import org.apache.druid.sql.http.QueryInfo;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 @LazySingleton
 public class NativeSqlEngine implements SqlEngine
@@ -130,20 +130,24 @@ public class NativeSqlEngine implements SqlEngine
       final AuthorizationResult stateReadAuthorization
   )
   {
-    final boolean canViewAllQueries = stateReadAuthorization.allowAccessWithNoRestriction();
-    final List<QueryInfo> queries = new ArrayList<>();
+    final List<NativeQueryInfo> queries = new ArrayList<>();
 
     for (final RunningQueryRegistry.Entry entry : runningQueryRegistry.getAll()) {
-      final NativeQueryInfo queryInfo = NativeQueryInfo.fromEntry(entry);
-
-      if (canViewAllQueries) {
-        queries.add(queryInfo);
-      } else if (isOwnQuery(authenticationResult, entry)) {
-        queries.add(queryInfo.withoutAuthenticationResult());
-      }
+      queries.add(NativeQueryInfo.fromEntry(entry));
     }
 
-    return new GetQueriesResponse(queries);
+    if (stateReadAuthorization.allowAccessWithNoRestriction()) {
+      // User can READ STATE, so they can see all running queries, as well as authentication details.
+      return new GetQueriesResponse(List.copyOf(queries));
+    } else {
+      // User cannot READ STATE, so they can see only their own queries, without authentication details.
+      return new GetQueriesResponse(
+          queries.stream()
+                 .filter(queryInfo -> isOwnQuery(authenticationResult, queryInfo))
+                 .map(NativeQueryInfo::withoutAuthenticationResult)
+                 .collect(Collectors.toList())
+      );
+    }
   }
 
   /**
@@ -152,13 +156,13 @@ public class NativeSqlEngine implements SqlEngine
    */
   private static boolean isOwnQuery(
       final AuthenticationResult authenticationResult,
-      final RunningQueryRegistry.Entry entry
+      final NativeQueryInfo queryInfo
   )
   {
     return authenticationResult.getAuthenticatedBy() != null
            && authenticationResult.getIdentity() != null
-           && Objects.equals(authenticationResult.getAuthenticatedBy(), entry.getAuthenticator())
-           && Objects.equals(authenticationResult.getIdentity(), entry.getIdentity());
+           && Objects.equals(authenticationResult.getAuthenticatedBy(), queryInfo.getAuthenticator())
+           && Objects.equals(authenticationResult.getIdentity(), queryInfo.getIdentity());
   }
 
   @Override
