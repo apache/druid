@@ -121,7 +121,8 @@ public class ServerConfig
         uriCompliance,
         enforceStrictSNIHostChecking,
         true,
-        DEFAULT_HEADER_CACHE_SIZE
+        DEFAULT_HEADER_CACHE_SIZE,
+        false
     );
   }
 
@@ -151,7 +152,8 @@ public class ServerConfig
       @Nullable UriCompliance uriCompliance,
       boolean enforceStrictSNIHostChecking,
       boolean enableQueryRequestsQueuing,
-      int headerCacheSize
+      int headerCacheSize,
+      boolean enableRunningQueryText
   )
   {
     this.numThreads = numThreads;
@@ -180,6 +182,7 @@ public class ServerConfig
     this.enforceStrictSNIHostChecking = enforceStrictSNIHostChecking;
     this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
     this.headerCacheSize = headerCacheSize;
+    this.enableRunningQueryText = enableRunningQueryText;
   }
 
   public ServerConfig()
@@ -239,6 +242,9 @@ public class ServerConfig
 
   @JsonProperty
   private int maxRequestHeaderSize = 8 * 1024;
+
+  @JsonProperty
+  private boolean enableRunningQueryText = false;
 
   @JsonProperty
   @NotNull
@@ -317,6 +323,15 @@ public class ServerConfig
   public boolean isEnableRequestLimit()
   {
     return enableRequestLimit;
+  }
+
+  /**
+   * Whether to capture the text of running queries, so that it can be returned by the "list running queries" APIs.
+   * This is disabled by default, since the query text can include sensitive information.
+   */
+  public boolean isEnableRunningQueryText()
+  {
+    return enableRunningQueryText;
   }
 
   public Period getMaxIdleTime()
@@ -416,7 +431,8 @@ public class ServerConfig
         uriCompliance,
         enforceStrictSNIHostChecking,
         enableQueryRequestsQueuing,
-        headerCacheSize
+        headerCacheSize,
+        enableRunningQueryText
     );
   }
 
@@ -521,7 +537,8 @@ public class ServerConfig
            enableQueryRequestsQueuing == that.enableQueryRequestsQueuing &&
            Objects.equals(uriCompliance, that.uriCompliance) &&
            enforceStrictSNIHostChecking == that.enforceStrictSNIHostChecking &&
-           headerCacheSize == that.headerCacheSize;
+           headerCacheSize == that.headerCacheSize &&
+           enableRunningQueryText == that.enableRunningQueryText;
   }
 
   @Override
@@ -553,7 +570,8 @@ public class ServerConfig
         enableQueryRequestsQueuing,
         uriCompliance,
         enforceStrictSNIHostChecking,
-        headerCacheSize
+        headerCacheSize,
+        enableRunningQueryText
     );
   }
 
@@ -587,6 +605,7 @@ public class ServerConfig
            ", uriCompliance=" + uriCompliance +
            ", enforceStrictSNIHostChecking=" + enforceStrictSNIHostChecking +
            ", headerCacheSize=" + headerCacheSize +
+           ", enableRunningQueryText=" + enableRunningQueryText +
            '}';
   }
 

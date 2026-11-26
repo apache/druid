@@ -61,6 +61,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.QueryContextConfig;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
@@ -71,6 +72,7 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.ResponseContextConfig;
+import org.apache.druid.server.RunningQueryRegistry;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -110,6 +112,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -2452,6 +2455,55 @@ public class SqlResourceTest extends CalciteTestBase
         Assertions.assertEquals(explicitSqlQueryId, actualSqlQueryId);
       }
     }
+  }
+
+  @Test
+  public void testListRunningQueries()
+  {
+    final RunningQueryRegistry registry = new RunningQueryRegistry();
+
+    final Query<?> ownQuery = Mockito.mock(Query.class);
+    Mockito.when(ownQuery.getId()).thenReturn("query-1");
+    Mockito.when(ownQuery.getType()).thenReturn("timeseries");
+    Mockito.when(ownQuery.getSqlQueryId()).thenReturn("sql-1");
+    Mockito.when(ownQuery.getDataSource()).thenReturn(new TableDataSource(CalciteTests.DATASOURCE1));
+    final AuthenticationResult regularUser =
+        new AuthenticationResult("regularUser", "testAuthorizer", "testAuthenticator", null);
+    registry.register(ownQuery, null, regularUser);
+
+    final Query<?> otherQuery = Mockito.mock(Query.class);
+    Mockito.when(otherQuery.getId()).thenReturn("query-2");
+    Mockito.when(otherQuery.getType()).thenReturn("groupBy");
+    Mockito.when(otherQuery.getDataSource()).thenReturn(new TableDataSource(CalciteTests.DATASOURCE1));
+    registry.register(otherQuery, null, CalciteTests.SUPER_USER_AUTH_RESULT);
+
+    final NativeSqlEngine nativeEngine =
+        new NativeSqlEngine(null, JSON_MAPPER, (SqlStatementFactory) null, registry);
+    final SqlResource nativeResource = new SqlResource(
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(nativeEngine)),
+        new SqlResourceQueryResultPusherFactory(
+            JSON_MAPPER,
+            new ServerConfig(),
+            TEST_RESPONSE_CONTEXT_CONFIG,
+            DUMMY_DRUID_NODE
+        ),
+        DefaultQueryConfig.NIL,
+        new ServerConfig(),
+        QueryFrameworkUtils.TEST_QUERY_CONTEXT_CONFIG
+    );
+
+    // Users with STATE READ permission see all running queries.
+    final GetQueriesResponse superUserResult =
+        (GetQueriesResponse) nativeResource.doGetRunningQueries(null, null, makeSuperUserReq()).getEntity();
+    Assertions.assertEquals(2, superUserResult.getQueries().size());
+
+    // Other users see only their own running queries.
+    final GetQueriesResponse regularUserResult =
+        (GetQueriesResponse) nativeResource.doGetRunningQueries(null, null, makeExpectedReq(regularUser)).getEntity();
+    Assertions.assertEquals(1, regularUserResult.getQueries().size());
+    Assertions.assertEquals("query-1", regularUserResult.getQueries().get(0).executionId());
   }
 
   private MockHttpServletRequest makeSuperUserReq()
