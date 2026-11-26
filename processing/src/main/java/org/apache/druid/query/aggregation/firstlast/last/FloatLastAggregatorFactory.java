@@ -59,31 +59,37 @@ import java.util.Objects;
 public class FloatLastAggregatorFactory extends AggregatorFactory
 {
   public static final ColumnType TYPE = ColumnType.ofComplex(SerializablePairLongFloatComplexMetricSerde.TYPE_NAME);
-  private static final Aggregator NIL_AGGREGATOR = new FloatLastAggregator(
-      NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance(),
-      false
-  )
+  private static final Aggregator NIL_AGGREGATOR = new NilFloatLastAggregator();
+
+  private static class NilFloatLastAggregator extends FloatLastAggregator
   {
+    NilFloatLastAggregator()
+    {
+      super(NilColumnValueSelector.instance(), NilColumnValueSelector.instance(), false);
+    }
+
     @Override
     public void aggregate()
     {
       // no-op
     }
-  };
+  }
 
-  private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new FloatLastBufferAggregator(
-      NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance(),
-      false
-  )
+  private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new NilFloatLastBufferAggregator();
+
+  private static class NilFloatLastBufferAggregator extends FloatLastBufferAggregator
   {
+    NilFloatLastBufferAggregator()
+    {
+      super(NilColumnValueSelector.instance(), NilColumnValueSelector.instance(), false);
+    }
+
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
       // no-op
     }
-  };
+  }
 
   private final String fieldName;
   private final String timeColumn;
