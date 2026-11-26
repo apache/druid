@@ -25,8 +25,8 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.transform.BaseTransformSpec;
 import org.apache.druid.segment.transform.Transform;
-import org.apache.druid.segment.transform.TransformSpec;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -71,7 +71,7 @@ public class InputRowSchemas
   public static ColumnsFilter createColumnsFilter(
       final TimestampSpec timestampSpec,
       final DimensionsSpec dimensionsSpec,
-      final TransformSpec transformSpec,
+      final BaseTransformSpec transformSpec,
       final AggregatorFactory[] aggregators
   )
   {

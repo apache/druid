@@ -31,8 +31,14 @@ import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
@@ -368,6 +374,38 @@ public class TransformerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testInputRowListPlusRawValuesTransformWithScanTransformExpandsRowsAndRawValues()
+  {
+    final BaseTransformer transformer = new ScanTransformSpec(
+        Druids.newScanQueryBuilder()
+              .dataSource(UnnestDataSource.create(
+                  new TableDataSource("__input__"),
+                  new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+                  null
+              ))
+              .eternityInterval()
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .build()
+    ).toTransformer();
+
+    final InputRow inputRow = new MapBasedInputRow(
+        DateTimes.nowUtc(),
+        ImmutableList.of("user", "tags"),
+        ImmutableMap.of("user", "alice", "tags", ImmutableList.of("a", "b"))
+    );
+    final Map<String, Object> rawValues = ImmutableMap.of("user", "alice", "tags", ImmutableList.of("a", "b"));
+
+    final InputRowListPlusRawValues transformed = transformer.transform(InputRowListPlusRawValues.of(inputRow, rawValues));
+    Assertions.assertNotNull(transformed);
+    Assertions.assertEquals(2, transformed.getInputRows().size());
+    Assertions.assertEquals(2, transformed.getRawValuesList().size());
+    Assertions.assertEquals(rawValues, transformed.getRawValuesList().get(0));
+    Assertions.assertEquals(rawValues, transformed.getRawValuesList().get(1));
+    Assertions.assertEquals("a", transformed.getInputRows().get(0).getRaw("tag"));
+    Assertions.assertEquals("b", transformed.getInputRows().get(1).getRaw("tag"));
+  }
+
+  @Test
   public void testTransformWithArrayStringInputsExpr()
   {
     final Transformer transformer = new Transformer(
@@ -540,7 +578,7 @@ public class TransformerTest extends InitializedNullHandlingTest
         ImmutableMap.of("dim", "value")
     );
 
-    Transformer transformer = transformSpec.toTransformer();
+    BaseTransformer transformer = transformSpec.toTransformer();
     InputRow transformed = transformer.transform(row);
 
     Assertions.assertNotNull(transformed);
