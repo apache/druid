@@ -39,6 +39,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
@@ -89,6 +90,16 @@ import java.util.function.Consumer;
  * in-memory. No temporary files are used. Each direct merger reads *all* frames, but only rows corresponding to a
  * single output partition.
  *
+ * With a row limit, the sorter compacts the {@link #inputBuffer} to extend direct mode to inputs that do not fit in
+ * it. When the {@link #inputBuffer} fills its share of the buffer (see {@link #getRoomForInput()}),
+ * {@link #runNextTruncatingMerge()} merges it in memory, keeping only the first rowLimit rows, and puts the output
+ * frames (the "retained run") back into the {@link #inputBuffer}. Each of those frames is individually sorted, so later
+ * merges treat them like any other input frame. Each truncating merge's output is capped at
+ * {@link #getMaxRetainedRunFrames()}, so that memory use stays within the buffer. The sorter stops compacting and
+ * switches to external mode if, before the first truncating merge, the row limit is unlikely to fit within the cap, or
+ * if a truncating merge's output exceeds the cap. In the latter case, the merge's input frames go back into the
+ * {@link #inputBuffer}.
+ *
  * Otherwise, the sorter operates in "external mode". In this mode, {@link #totalMergingLevels} is 2 or more. Logic
  * for external mode is:
  *
@@ -111,13 +122,13 @@ import java.util.function.Consumer;
  * Outputs for this level are written to channels provided by {@link #outputChannelFactory}, rather than scratch files.
  *
  * At all points, higher level processing is preferred over lower-level processing. Writing to final output files
- * is preferred over intermediate, and writing to intermediate files is preferred over reading inputs. These
- * preferences ensure that the amount of data buffered up in memory does not grow too large.
+ * is preferred over intermediate, and writing to intermediate files, or running a truncating merge, is preferred over
+ * reading inputs. These preferences ensure that the amount of data buffered up in memory does not grow too large.
  *
  * Potential future work (things we could optimize if necessary):
  *
  * - Identify sorted runs of frames in the {@link #inputBuffer}, group them into smaller sets of channels.
- * - Combine (for example: aggregate) while merging.
+ * - Compact the {@link #inputBuffer} in other ways, such as by running the combiner, to extend direct mode further.
  */
 public class SuperSorter
 {
@@ -138,6 +149,7 @@ public class SuperSorter
   private final FrameType outputFrameType;
   private final int maxChannelsPerMerger;
   private final int maxActiveProcessors;
+  private final int frameSize;
   private final String cancellationId;
   private final boolean removeNullBytes;
   @Nullable
@@ -173,6 +185,31 @@ public class SuperSorter
 
   @GuardedBy("runWorkersLock")
   private long inputFramesReadSoFar = 0;
+
+  /**
+   * Net frames removed by truncating merges: the frames each one consumed, less the frames it produced. Later merging
+   * levels process {@link #inputFramesReadSoFar} less this many frames.
+   */
+  @GuardedBy("runWorkersLock")
+  private long framesDroppedByTruncatingMerges = 0;
+
+  /**
+   * Whether {@link #runNextTruncatingMerge()} may compact the {@link #inputBuffer}. Once false, stays false.
+   */
+  @GuardedBy("runWorkersLock")
+  private boolean inMemoryTopKEnabled;
+
+  @GuardedBy("runWorkersLock")
+  private boolean truncatingMergeRunning = false;
+
+  /**
+   * Number of frames from the {@link #inputBuffer} held by the running truncating merge.
+   */
+  @GuardedBy("runWorkersLock")
+  private int framesInTruncatingMerge = 0;
+
+  @GuardedBy("runWorkersLock")
+  private long truncatingMergesRunSoFar = 0;
 
   @GuardedBy("runWorkersLock")
   private long levelZeroMergersRunSoFar = 0;
@@ -221,6 +258,8 @@ public class SuperSorter
    * @param maxChannelsPerMerger             maximum number of channels to merge at once, for regular mergers
    *                                         (does not apply to direct mergers; see
    *                                         {@link #getMaxInputBufferFramesForDirectMerging()})
+   * @param frameSize                        size in bytes of frames written by mergers that keep their output in
+   *                                         memory, rather than in channels from intermediateOutputChannelFactory
    * @param rowLimit                         limit to apply during sorting. The limit is applied across all partitions,
    *                                         not to each partition individually. Use {@link #UNLIMITED} if there is
    *                                         no limit.
@@ -240,6 +279,7 @@ public class SuperSorter
       final FrameType outputFrameType,
       final int maxActiveProcessors,
       final int maxChannelsPerMerger,
+      final int frameSize,
       final long rowLimit,
       @Nullable final String cancellationId,
       final SuperSorterProgressTracker superSorterProgressTracker,
@@ -258,11 +298,13 @@ public class SuperSorter
     this.outputFrameType = outputFrameType;
     this.maxChannelsPerMerger = maxChannelsPerMerger;
     this.maxActiveProcessors = maxActiveProcessors;
+    this.frameSize = frameSize;
     this.rowLimit = rowLimit;
     this.cancellationId = cancellationId;
     this.superSorterProgressTracker = superSorterProgressTracker;
     this.removeNullBytes = removeNullBytes;
     this.combinerFactory = combinerFactory;
+    this.inMemoryTopKEnabled = rowLimit != UNLIMITED && getMaxRetainedRunFrames() > 0;
 
     for (int i = 0; i < inputChannels.size(); i++) {
       inputChannelsToRead.add(i);
@@ -274,6 +316,10 @@ public class SuperSorter
 
     if (maxChannelsPerMerger < 2) {
       throw new IAE("maxChannelsPerMerger[%d] < 2", maxChannelsPerMerger);
+    }
+
+    if (frameSize <= 0) {
+      throw new IAE("frameSize[%d] must be positive", frameSize);
     }
 
     if (rowLimit != UNLIMITED && rowLimit <= 0) {
@@ -378,6 +424,7 @@ public class SuperSorter
              && (runNextDirectMerger()
                  || runNextUltimateMerger()
                  || runNextMiddleMerger()
+                 || runNextTruncatingMerge()
                  || runNextLevelZeroMerger()
                  || runNextBatcher())) {
         activeProcessors += 1;
@@ -466,24 +513,28 @@ public class SuperSorter
   {
     if (batcherIsRunning || inputChannelsToRead.isEmpty()) {
       return false;
+    }
+
+    final int maxFrames = Math.min(maxChannelsPerMerger, getRoomForInput());
+    if (maxFrames <= 0) {
+      return false;
     } else {
       batcherIsRunning = true;
 
       runWorker(
-          new FrameChannelBatcher(inputChannels, maxChannelsPerMerger),
+          new FrameChannelBatcher(inputChannels, maxFrames),
           result -> {
             final List<Frame> batch = result.lhs;
             final IntSet keepReading = result.rhs;
 
             synchronized (runWorkersLock) {
-              inputBuffer.addAll(batch);
+              addToInputBuffer(batch);
               inputFramesReadSoFar += batch.size();
               inputChannelsToRead = keepReading;
 
               if (inputChannelsToRead.isEmpty()) {
                 inputChannels.forEach(ReadableFrameChannel::close);
-                setTotalInputFrames(inputFramesReadSoFar);
-                setTotalMergingLevelsIfPossible();
+                finishInputIfPossible();
                 runWorkersIfPossible();
               } else if (inputBuffer.size() >= maxChannelsPerMerger) {
                 runWorkersIfPossible();
@@ -529,6 +580,115 @@ public class SuperSorter
   }
 
   /**
+   * Launch a truncating merge: merge the full {@link #inputBuffer} in memory, keeping only the first {@link #rowLimit}
+   * rows. The output frames go back into the {@link #inputBuffer}.
+   */
+  @GuardedBy("runWorkersLock")
+  private boolean runNextTruncatingMerge()
+  {
+    if (!inMemoryTopKEnabled
+        || truncatingMergeRunning
+        || inputChannelsToRead.isEmpty()
+        || inputBuffer.isEmpty()
+        || getRoomForInput() > 0) {
+      // Otherwise, the direct merger handles the inputBuffer once all input is read.
+      return false;
+    }
+
+    if (truncatingMergesRunSoFar == 0 && !isRowLimitLikelyToFitInRetainedRun()) {
+      inMemoryTopKEnabled = false;
+      return false;
+    }
+
+    final List<ReadableFrameChannel> in = new ArrayList<>();
+    final List<Frame> mergeInput = new ArrayList<>(inputBuffer);
+    for (final Frame frame : mergeInput) {
+      in.add(singleReadableFrameChannel(frame));
+    }
+    inputBuffer.clear();
+    framesInTruncatingMerge = mergeInput.size();
+    truncatingMergeRunning = true;
+    truncatingMergesRunSoFar++;
+
+    final ListWritableFrameChannel out = new ListWritableFrameChannel(getMaxRetainedRunFrames());
+    final FrameChannelMerger worker = new FrameChannelMerger(
+        in,
+        frameReader,
+        out,
+        FrameWriters.makeFrameWriterFactory(
+            outputFrameType,
+            new SingleMemoryAllocatorFactory(ArenaMemoryAllocator.createOnHeap(frameSize)),
+            frameReader.signature(),
+            // No sortColumns, because FrameChannelMerger generates frames that are sorted all on its own
+            Collections.emptyList(),
+            removeNullBytes
+        ),
+        sortKey,
+        combinerFactory != null ? combinerFactory.newCombiner() : null,
+        null,
+        rowLimit
+    );
+
+    runWorker(worker, ignored -> {
+      synchronized (runWorkersLock) {
+        framesInTruncatingMerge = 0;
+        truncatingMergeRunning = false;
+
+        if (out.isOverflowed()) {
+          addToInputBuffer(mergeInput);
+          inMemoryTopKEnabled = false;
+        } else {
+          final List<Frame> retainedRun = out.getFrames();
+          final int framesDropped = mergeInput.size() - retainedRun.size();
+          framesDroppedByTruncatingMerges += framesDropped;
+          superSorterProgressTracker.addTruncatingMerge(framesDropped);
+          addToInputBuffer(retainedRun);
+        }
+
+        finishInputIfPossible();
+      }
+    });
+
+    return true;
+  }
+
+  /**
+   * Adds frames to the {@link #inputBuffer}, verifying that it and the running truncating merge stay within
+   * {@link #getMaxInputBufferFramesForDirectMerging()} frames.
+   */
+  @GuardedBy("runWorkersLock")
+  private void addToInputBuffer(final List<Frame> frames)
+  {
+    inputBuffer.addAll(frames);
+
+    final int bufferedFrames = inputBuffer.size() + framesInTruncatingMerge;
+    if (bufferedFrames > getMaxInputBufferFramesForDirectMerging()) {
+      throw DruidException.defensive(
+          "Buffered input frames[%d] exceed max[%d]",
+          bufferedFrames,
+          getMaxInputBufferFramesForDirectMerging()
+      );
+    }
+  }
+
+  /**
+   * Estimates whether {@link #rowLimit} rows fit in {@link #getMaxRetainedRunFrames()} frames, based on the average
+   * row size in the current {@link #inputBuffer} frames.
+   */
+  @GuardedBy("runWorkersLock")
+  private boolean isRowLimitLikelyToFitInRetainedRun()
+  {
+    long bytes = 0;
+    long rows = 0;
+    for (final Frame frame : inputBuffer) {
+      bytes += frame.numBytes();
+      rows += frame.numRows();
+    }
+
+    return rows == 0 || (double) rowLimit * bytes / rows <= (double) getMaxRetainedRunFrames() * frameSize;
+  }
+
+  /**
    * Level zero mergers read batches of frames from the "inputBuffer". These frames are individually sorted, but there
    * is no ordering between the frames. Their output is a sorted sequence of frames.
    */
@@ -537,6 +697,11 @@ public class SuperSorter
   {
     if (totalMergingLevels == 1) {
       // When there's just one merging level, the inputBuffer is merged by runNextDirectMerger, not this method.
+      return false;
+    }
+
+    if (inMemoryTopKEnabled) {
+      // The inputBuffer is merged by runNextTruncatingMerge, not this method.
       return false;
     }
 
@@ -850,6 +1015,19 @@ public class SuperSorter
     );
   }
 
+  /**
+   * Records the total number of input frames once all input channels are read and no truncating merge is running,
+   * since a truncating merge changes {@link #framesDroppedByTruncatingMerges}.
+   */
+  @GuardedBy("runWorkersLock")
+  private void finishInputIfPossible()
+  {
+    if (inputChannelsToRead.isEmpty() && !truncatingMergeRunning && totalInputFrames == UNKNOWN_TOTAL) {
+      setTotalInputFrames(inputFramesReadSoFar - framesDroppedByTruncatingMerges);
+      setTotalMergingLevelsIfPossible();
+    }
+  }
+
   // This also updates the progressTracker's number of total levels, and total mergers for levels. Therefore, if the
   // progressTracker is present, calling this multiple times will throw an error.
   @GuardedBy("runWorkersLock")
@@ -1054,6 +1232,31 @@ public class SuperSorter
     return maxChannelsPerMerger * maxActiveProcessors;
   }
 
+  /**
+   * Maximum number of frames in a truncating merge's output (the retained run).
+   * <p>
+   * A truncating merge holds the previous retained run, its other input, and its output together, so capping the run
+   * at a quarter of the buffer leaves at least half the buffer for other input. Returns zero if the buffer is too small
+   * for truncating merges at all.
+   */
+  private int getMaxRetainedRunFrames()
+  {
+    return getMaxInputBufferFramesForDirectMerging() / 4;
+  }
+
+  /**
+   * Number of frames the batcher may read without exceeding {@link #getMaxInputBufferFramesForDirectMerging()}.
+   */
+  @GuardedBy("runWorkersLock")
+  private int getRoomForInput()
+  {
+    int room = getMaxInputBufferFramesForDirectMerging() - inputBuffer.size();
+    if (inMemoryTopKEnabled) {
+      room -= getMaxRetainedRunFrames() + framesInTruncatingMerge;
+    }
+    return room;
+  }
+
   @GuardedBy("runWorkersLock")
   private boolean isLimited()
   {
@@ -1068,6 +1271,7 @@ public class SuperSorter
     synchronized (runWorkersLock) {
       return "frames-in=" + inputFramesReadSoFar + "/" + totalInputFrames
              + " frames-buffered=" + inputBuffer.size()
+             + " frames-dropped=" + framesDroppedByTruncatingMerges
              + " lvls=" + totalMergingLevels
              + " parts=" +
              (outputPartitionsFuture.isDone() ? FutureUtils.getUncheckedImmediately(outputPartitionsFuture).size() : -1)

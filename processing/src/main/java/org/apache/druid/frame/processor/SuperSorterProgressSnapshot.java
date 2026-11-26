@@ -37,6 +37,8 @@ public class SuperSorterProgressSnapshot
   private final Map<Integer, Long> levelToMergedBatches;
   private final long totalMergersForUltimateLevel;
   private final boolean isTriviallyComplete;
+  private final long truncatingMerges;
+  private final long framesDroppedByTruncatingMerges;
 
   @JsonCreator
   public SuperSorterProgressSnapshot(
@@ -44,7 +46,9 @@ public class SuperSorterProgressSnapshot
       @JsonProperty("levelToTotalBatches") final Map<Integer, Long> levelToTotalBatches,
       @JsonProperty("levelToMergedBatches") final Map<Integer, Long> levelToMergedBatches,
       @JsonProperty("totalMergersForUltimateLevel") final long totalMergersForUltimateLevel,
-      @JsonProperty("triviallyComplete") final boolean isTriviallyComplete
+      @JsonProperty("triviallyComplete") final boolean isTriviallyComplete,
+      @JsonProperty("truncatingMerges") final long truncatingMerges,
+      @JsonProperty("framesDroppedByTruncatingMerges") final long framesDroppedByTruncatingMerges
   )
   {
     this.totalMergingLevels = totalMergingLevels;
@@ -52,6 +56,8 @@ public class SuperSorterProgressSnapshot
     this.levelToMergedBatches = levelToMergedBatches;
     this.totalMergersForUltimateLevel = totalMergersForUltimateLevel;
     this.isTriviallyComplete = isTriviallyComplete;
+    this.truncatingMerges = truncatingMerges;
+    this.framesDroppedByTruncatingMerges = framesDroppedByTruncatingMerges;
   }
 
   @JsonProperty(value = "totalMergingLevels")
@@ -83,6 +89,26 @@ public class SuperSorterProgressSnapshot
   public boolean isTriviallyComplete()
   {
     return isTriviallyComplete;
+  }
+
+  /**
+   * Number of truncating merges that completed without overflowing. See {@link SuperSorter}.
+   */
+  @JsonProperty("truncatingMerges")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public long getTruncatingMerges()
+  {
+    return truncatingMerges;
+  }
+
+  /**
+   * Net number of frames removed by truncating merges. See {@link SuperSorter}.
+   */
+  @JsonProperty("framesDroppedByTruncatingMerges")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public long getFramesDroppedByTruncatingMerges()
+  {
+    return framesDroppedByTruncatingMerges;
   }
 
   @Nullable
@@ -129,6 +155,8 @@ public class SuperSorterProgressSnapshot
     return totalMergingLevels == that.totalMergingLevels
            && totalMergersForUltimateLevel == that.totalMergersForUltimateLevel
            && isTriviallyComplete == that.isTriviallyComplete
+           && truncatingMerges == that.truncatingMerges
+           && framesDroppedByTruncatingMerges == that.framesDroppedByTruncatingMerges
            && Objects.equals(levelToTotalBatches, that.levelToTotalBatches)
            && Objects.equals(levelToMergedBatches, that.levelToMergedBatches);
   }
@@ -141,7 +169,9 @@ public class SuperSorterProgressSnapshot
         levelToTotalBatches,
         levelToMergedBatches,
         totalMergersForUltimateLevel,
-        isTriviallyComplete
+        isTriviallyComplete,
+        truncatingMerges,
+        framesDroppedByTruncatingMerges
     );
   }
 }
