@@ -303,6 +303,48 @@ public class ControllerQueryKernelUtilsTest
   }
 
   @Test
+  public void test_computeStageGroups_hashLocalSort_pipeline_twoAtOnce()
+  {
+    // 0 [hash local sort, several partitions] -> 1 [mix]
+    final QueryDefinition queryDef = new MockQueryDefinitionBuilder(2)
+        .addEdge(0, 1)
+        .defineStage(0, ShuffleKind.HASH_LOCAL_SORT, 1, 32)
+        .defineStage(1, ShuffleKind.MIX)
+        .getQueryDefinitionBuilder()
+        .build();
+
+    Assertions.assertEquals(
+        // The hash shuffle sorts its partitions one at a time, so it needs buffered output. Stage 1 still uses MEMORY.
+        ImmutableList.of(
+            makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0),
+            makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 1)
+        ),
+        ControllerQueryKernelUtils.computeStageGroups(queryDef, makePipelinedConfig())
+    );
+  }
+
+  @Test
+  public void test_computeStageGroups_hashLocalSortOnePartition_pipeline_twoAtOnce()
+  {
+    // 0 [hash local sort, one partition] -> 1 [mix]
+    final QueryDefinition queryDef = new MockQueryDefinitionBuilder(2)
+        .addEdge(0, 1)
+        .defineStage(0, ShuffleKind.HASH_LOCAL_SORT, 1, 1)
+        .defineStage(1, ShuffleKind.MIX)
+        .getQueryDefinitionBuilder()
+        .build();
+
+    Assertions.assertEquals(
+        // With one partition there is only one sort, so MEMORY output works.
+        ImmutableList.of(
+            makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 0),
+            makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 1)
+        ),
+        ControllerQueryKernelUtils.computeStageGroups(queryDef, makePipelinedConfig())
+    );
+  }
+
+  @Test
   public void test_computeStageGroups_linearWithLeafInput_pipeline_threeAtOnce()
   {
     // 0 -> 1 (with leaf input) -> 2
@@ -574,6 +616,18 @@ public class ControllerQueryKernelUtilsTest
         .addEdge(4, 6)
         .addEdge(5, 6)
         .getQueryDefinitionBuilder()
+        .build();
+  }
+
+  private static ControllerQueryKernelConfig makePipelinedConfig()
+  {
+    return ControllerQueryKernelConfig
+        .builder()
+        .maxRetainedPartitionSketchBytes(1)
+        .maxConcurrentStages(2)
+        .pipeline(true)
+        .faultTolerance(false)
+        .destination(TaskReportMSQDestination.instance())
         .build();
   }
 

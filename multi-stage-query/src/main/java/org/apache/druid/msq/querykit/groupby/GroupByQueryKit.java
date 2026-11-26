@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
+import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -43,6 +44,7 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.query.DimensionComparisonUtils;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.AlwaysHavingSpec;
@@ -150,12 +152,26 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
       partitionBoost = true;
     } else {
-      shuffleSpecFactoryPreAggregation = doLimitOrOffset || intermediateClusterBy.isEmpty()
-                                         ? ShuffleSpecFactories.singlePartition()
-                                         : resultShuffleSpecFactory;
+      if (!doLimitOrOffset
+          && !intermediateClusterBy.isEmpty()
+          && shouldHashPartitionAggregation(queryToRun, resultShuffleSpecFactory, intermediateClusterBy)) {
+        // Each group's partial aggregates land in one partition, so the post-aggregation stage can finish the groups
+        // on many workers.
+        shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.hashWithTargetPartitions();
 
-      // null: retain partitions from input (i.e. from preAggregation).
-      shuffleSpecFactoryPostAggregation = null;
+        // Mix the finished groups into one partition, so the reader takes rows from every worker as they arrive.
+        // Keeping the hash partitions would have the reader read them in partition order, one after another, and
+        // each partition's aggregation would wait until its turn.
+        shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.mix();
+      } else {
+        shuffleSpecFactoryPreAggregation = doLimitOrOffset || intermediateClusterBy.isEmpty()
+                                           ? ShuffleSpecFactories.singlePartition()
+                                           : resultShuffleSpecFactory;
+
+        // null: retain partitions from input (i.e. from preAggregation).
+        shuffleSpecFactoryPostAggregation = null;
+      }
+
       partitionBoost = false;
     }
 
@@ -323,6 +339,42 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
     // Note: ignoring time because we assume granularity = all.
     return new ClusterBy(columns, 0);
+  }
+
+  /**
+   * Whether a query with no LIMIT or OFFSET should hash-partition its partial aggregates instead of using the result
+   * shuffle. True when the query has no ORDER BY, asks for more than one non-leaf worker, and the result shuffle would
+   * put every partial aggregate in one fixed partition, as SELECT destinations do, which leaves the whole aggregation
+   * to one worker. Hash partitions spread the aggregation across workers without key statistics, but are not in key
+   * order.
+   *
+   * Other result shuffles already spread the aggregation and are kept: subqueries get adjustable range partitions,
+   * and ingestion, export and durable-storage destinations get partitions of a target size.
+   */
+  private static boolean shouldHashPartitionAggregation(
+      final GroupByQuery query,
+      final ShuffleSpecFactory resultShuffleSpecFactory,
+      final ClusterBy intermediateClusterBy
+  )
+  {
+    if (query.context().getOrDefault(QueryContextParameters.MAX_NON_LEAF_WORKERS) <= 1 || hasOrderBy(query)) {
+      return false;
+    }
+
+    final ShuffleSpec resultShuffleSpec = resultShuffleSpecFactory.build(intermediateClusterBy, true);
+    return !resultShuffleSpec.isAdjustable()
+           && resultShuffleSpec instanceof GlobalSortMaxCountShuffleSpec
+           && ((GlobalSortMaxCountShuffleSpec) resultShuffleSpec).getMaxPartitions() == 1;
+  }
+
+  /**
+   * Whether the query has an ORDER BY. An ORDER BY that matches the GROUP BY order relies on the result shuffle's key
+   * order instead of sorting again.
+   */
+  private static boolean hasOrderBy(final GroupByQuery query)
+  {
+    return query.getLimitSpec() instanceof DefaultLimitSpec
+           && !((DefaultLimitSpec) query.getLimitSpec()).getColumns().isEmpty();
   }
 
   /**
