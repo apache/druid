@@ -109,7 +109,7 @@ class PartialSegmentFileMapperV10Test
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
 
     try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
-      mapper.ensureAllDownloaded();
+      mapper.ensureAllDownloaded(() -> true);
       for (int i = 0; i < 20; ++i) {
         ByteBuffer buf = mapper.mapFile(String.valueOf(i));
         Assertions.assertNotNull(buf);
@@ -722,7 +722,7 @@ class PartialSegmentFileMapperV10Test
     final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(baseDir);
 
     try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
-      mapper.ensureAllDownloaded();
+      mapper.ensureAllDownloaded(() -> true);
       for (int i = 0; i < 5; ++i) {
         ByteBuffer buf = mapper.mapFile(StringUtils.format("myProjection/col_%d", i));
         Assertions.assertNotNull(buf);
@@ -758,7 +758,7 @@ class PartialSegmentFileMapperV10Test
     try (SegmentFileMapperV10 eager = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER, List.of(externalName));
          PartialSegmentFileMapperV10 lazy = createMapperWithExternal(rangeReader, cacheDir, externalName)
     ) {
-      lazy.ensureAllDownloaded();
+      lazy.ensureAllDownloaded(() -> true);
       // verify main files match
       for (int i = 0; i < 5; ++i) {
         ByteBuffer eagerBuf = eager.mapFile(String.valueOf(i));
@@ -1155,7 +1155,7 @@ class PartialSegmentFileMapperV10Test
       Assertions.assertEquals(numBundles * filesPerBundle, numFiles);
 
       rangeReader.resetCount();
-      mapper.ensureAllDownloaded();
+      mapper.ensureAllDownloaded(() -> true);
 
       // one range read per container, not one per internal file
       Assertions.assertEquals(numContainers, rangeReader.getReadCount());
@@ -1165,7 +1165,7 @@ class PartialSegmentFileMapperV10Test
 
       // a second pass is a no-op: every container is already fully downloaded
       rangeReader.resetCount();
-      mapper.ensureAllDownloaded();
+      mapper.ensureAllDownloaded(() -> true);
       Assertions.assertEquals(0, rangeReader.getReadCount());
     }
 
@@ -1173,11 +1173,51 @@ class PartialSegmentFileMapperV10Test
     final DirectoryBackedRangeReader freshReader = new DirectoryBackedRangeReader(segmentFile.getParentFile());
     try (SegmentFileMapperV10 eager = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER);
          PartialSegmentFileMapperV10 lazy = createMapper(freshReader, newCacheDir("ensure_all_bulk_match"))) {
-      lazy.ensureAllDownloaded();
+      lazy.ensureAllDownloaded(() -> true);
       Assertions.assertEquals(eager.getInternalFilenames(), lazy.getInternalFilenames());
       for (String name : eager.getInternalFilenames()) {
         Assertions.assertEquals(eager.mapFile(name), lazy.mapFile(name), "file[" + name + "]");
       }
+    }
+  }
+
+  @Test
+  void testEnsureAllDownloadedStopsBetweenContainersWhenAbandoned() throws IOException
+  {
+    final int numBundles = 3;
+    final int filesPerBundle = 4;
+    final File segmentFile = buildMultiBundleSegment(numBundles, filesPerBundle);
+    final File cacheDir = newCacheDir("ensure_all_abandoned");
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      final int numContainers = mapper.getSegmentFileMetadata().getContainers().size();
+      Assertions.assertEquals(numBundles, numContainers, "each tiny bundle should be its own container");
+
+      // the supplier is consulted before each container fetch; permit exactly one fetch, then report abandonment
+      final AtomicInteger checks = new AtomicInteger();
+      rangeReader.resetCount();
+      Assertions.assertFalse(
+          mapper.ensureAllDownloaded(() -> checks.getAndIncrement() < 1),
+          "an abandoned download must report that it did not finish"
+      );
+      Assertions.assertEquals(1, rangeReader.getReadCount(), "only the permitted container fetch may run");
+      Assertions.assertFalse(mapper.isFullyDownloaded());
+
+      // a download abandoned before the first check fetches nothing at all
+      rangeReader.resetCount();
+      Assertions.assertFalse(mapper.ensureAllDownloaded(() -> false));
+      Assertions.assertEquals(0, rangeReader.getReadCount());
+
+      // nothing is poisoned: a later non-abandoned download picks up exactly the remaining containers
+      rangeReader.resetCount();
+      Assertions.assertTrue(mapper.ensureAllDownloaded(() -> true));
+      Assertions.assertEquals(
+          numContainers - 1,
+          rangeReader.getReadCount(),
+          "already-resident containers must not be re-fetched"
+      );
+      Assertions.assertTrue(mapper.isFullyDownloaded());
     }
   }
 
@@ -1195,7 +1235,7 @@ class PartialSegmentFileMapperV10Test
       mapper.fetchFiles(Set.of("b1/col_1"));
       rangeReader.resetCount();
 
-      mapper.ensureAllDownloaded();
+      mapper.ensureAllDownloaded(() -> true);
 
       // b0 and b2 fetch in one read each; b1's resident file splits it into two reads, and its 4 bytes
       // are not re-fetched

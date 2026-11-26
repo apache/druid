@@ -266,7 +266,7 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
     final ExecutorService rawExec = Execs.singleThreaded("partial-cursor-resident-%d");
     final ListeningExecutorService gatedExec = MoreExecutors.listeningDecorator(rawExec);
     try (IndexAndMapper opened = openIndex(rangeReader, "resident_hop")) {
-      opened.mapper().ensureAllDownloaded();
+      opened.mapper().ensureAllDownloaded(() -> true);
       final PartialQueryableIndex index = opened.index();
       final PartialQueryableIndexCursorFactory factory = new PartialQueryableIndexCursorFactory(
           index,
