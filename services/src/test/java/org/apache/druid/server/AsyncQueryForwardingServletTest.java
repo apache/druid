@@ -72,6 +72,7 @@ import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.initialization.BaseJettyTest;
+import org.apache.druid.server.initialization.HttpServerCompression;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -137,7 +138,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.zip.Deflater;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
@@ -1171,10 +1171,10 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
       final Handler.Sequence handlerList = new Handler.Sequence();
       handlerList.setHandlers(
-          JettyServerInitUtils.wrapWithDefaultGzipHandler(
+          JettyServerInitUtils.wrapWithCompressionHandler(
               root,
-              ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
-              Deflater.DEFAULT_COMPRESSION
+              HttpServerCompression.DEFAULT,
+              List.of()
           )
       );
       server.setHandler(handlerList);

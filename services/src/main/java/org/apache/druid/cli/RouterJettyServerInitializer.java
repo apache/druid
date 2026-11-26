@@ -153,10 +153,10 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     final Handler.Sequence handlerList = new Handler.Sequence(
         rewriteHandler,
-        JettyServerInitUtils.wrapWithDefaultGzipHandler(
+        JettyServerInitUtils.wrapWithCompressionHandler(
             root,
-            serverConfig.getInflateBufferSize(),
-            serverConfig.getCompressionLevel()
+            serverConfig.getHttpServerCompression(),
+            serverConfig.getAllowedHttpMethods()
         )
     );
     server.setHandler(handlerList);

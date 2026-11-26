@@ -60,10 +60,10 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.zip.Deflater;
 
 public abstract class BaseJettyTest
 {
@@ -154,10 +154,10 @@ public abstract class BaseJettyTest
       root.addFilter(GuiceFilter.class, "/*", null);
 
       final Handler.Sequence handlerList = new Handler.Sequence(
-          JettyServerInitUtils.wrapWithDefaultGzipHandler(
+          JettyServerInitUtils.wrapWithCompressionHandler(
               root,
-              ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
-              Deflater.DEFAULT_COMPRESSION
+              HttpServerCompression.DEFAULT,
+              List.of()
           )
       );
       server.setHandler(handlerList);

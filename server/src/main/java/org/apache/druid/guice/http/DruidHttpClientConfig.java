@@ -23,11 +23,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Min;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.HttpClientConfig.CompressionCodec;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,7 +38,6 @@ import java.util.concurrent.TimeUnit;
 
 public class DruidHttpClientConfig
 {
-  private static final String DEFAULT_COMPRESSION_CODEC = "gzip";
   private static final double DEFAULT_MAX_QUEUED_BYTES_HEAP_FRACTION = 0.02; // Per query, so 2% is reasonably safe
   private static final Logger LOG = new Logger(DruidHttpClientConfig.class);
 
@@ -55,8 +56,13 @@ public class DruidHttpClientConfig
   @Min(1)
   private int numRequestsQueued = 1024;
 
+  /**
+   * Single response encoding to ask for, such as "gzip" or "identity". If null, the client asks for zstd first and
+   * gzip second.
+   */
   @JsonProperty
-  private String compressionCodec = DEFAULT_COMPRESSION_CODEC;
+  @Nullable
+  private CompressionCodec compressionCodec = null;
 
   @JsonProperty
   private int requestBuffersize = 8 * 1024;
@@ -112,7 +118,8 @@ public class DruidHttpClientConfig
     return numMaxThreads;
   }
 
-  public String getCompressionCodec()
+  @Nullable
+  public CompressionCodec getCompressionCodec()
   {
     return compressionCodec;
   }

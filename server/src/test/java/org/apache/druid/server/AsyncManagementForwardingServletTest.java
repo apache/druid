@@ -36,6 +36,7 @@ import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.BaseJettyTest;
+import org.apache.druid.server.initialization.HttpServerCompression;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -63,8 +64,8 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
-import java.util.zip.Deflater;
 
 public class AsyncManagementForwardingServletTest extends BaseJettyTest
 {
@@ -539,10 +540,10 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
       final Handler.Sequence handlerList = new Handler.Sequence(
-          JettyServerInitUtils.wrapWithDefaultGzipHandler(
+          JettyServerInitUtils.wrapWithCompressionHandler(
               root,
-              ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
-              Deflater.DEFAULT_COMPRESSION
+              HttpServerCompression.DEFAULT,
+              List.of()
           )
       );
       server.setHandler(handlerList);

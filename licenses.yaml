@@ -2409,6 +2409,8 @@ libraries:
   - org.eclipse.jetty: jetty-util
   - org.eclipse.jetty.compression: jetty-compression-common
   - org.eclipse.jetty.compression: jetty-compression-gzip
+  - org.eclipse.jetty.compression: jetty-compression-server
+  - org.eclipse.jetty.compression: jetty-compression-zstandard
   - org.eclipse.jetty.ee8: jetty-ee8-nested
   - org.eclipse.jetty.ee8: jetty-ee8-proxy
   - org.eclipse.jetty.ee8: jetty-ee8-security

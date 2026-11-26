@@ -28,6 +28,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.netty.HttpClientChannelInitializer;
 import org.apache.druid.java.util.http.client.pool.ChannelResourceFactory;
@@ -39,6 +40,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
 import java.security.KeyStore;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -76,13 +78,46 @@ public class HttpClientInit
                   config.isEagerInitialization()
               ),
               config.getReadTimeout(),
-              config.getCompressionCodec()
+              toAcceptEncoding(
+                  config.getCompressionCodecs() == null
+                  ? HttpClientConfig.DEFAULT_COMPRESSION_CODECS
+                  : config.getCompressionCodecs()
+              )
           )
       );
     }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Builds an {@code Accept-Encoding} header value that lists the given codecs in order of preference. The first codec
+   * has no quality value, which means {@code q=1}. Each later codec gets a lower quality value, so a server that honors
+   * quality values picks the earliest codec it supports. For example, {@code [ZSTD, GZIP]} gives
+   * {@code "zstd, gzip;q=0.5"}. An empty list gives {@code "identity"}.
+   */
+  public static String toAcceptEncoding(final List<HttpClientConfig.CompressionCodec> codecs)
+  {
+    if (codecs.isEmpty()) {
+      return HttpClientConfig.CompressionCodec.IDENTITY.getEncodingString();
+    }
+
+    final StringBuilder builder = new StringBuilder(codecs.get(0).getEncodingString());
+    final int numCodecs = codecs.size();
+    for (int i = 1; i < numCodecs; i++) {
+      // Quality values have at most three decimal places (RFC 9110, section 12.4.2).
+      final String quality = StringUtils.format("%03d", (numCodecs - i) * 1000 / numCodecs);
+      int length = quality.length();
+      while (length > 1 && quality.charAt(length - 1) == '0') {
+        length--;
+      }
+      builder.append(", ")
+             .append(codecs.get(i).getEncodingString())
+             .append(";q=0.")
+             .append(quality, 0, length);
+    }
+    return builder.toString();
   }
 
   public static SSLContext sslContextWithTrustedKeyStore(final String keyStorePath, final String keyStorePassword)

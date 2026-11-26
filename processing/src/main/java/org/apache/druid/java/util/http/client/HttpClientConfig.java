@@ -19,14 +19,21 @@
 
 package org.apache.druid.java.util.http.client;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.collect.ImmutableList;
 import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBufAllocator;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 /**
  */
@@ -48,12 +55,11 @@ public class HttpClientConfig
         return "gzip";
       }
     },
-    @SuppressWarnings("unused") //TODO test this CompressionCodec (it counts as usage)
-    DEFLATE {
+    ZSTD {
       @Override
       public String getEncodingString()
       {
-        return "deflate";
+        return "zstd";
       }
     };
 
@@ -66,9 +72,35 @@ public class HttpClientConfig
      * @return encoding name
      */
     public abstract String getEncodingString();
+
+    /**
+     * Parses an encoding name such as "gzip", ignoring case and surrounding whitespace.
+     *
+     * @throws org.apache.druid.error.DruidException if the name is not a known encoding
+     */
+    @JsonCreator
+    public static CompressionCodec fromString(@Nullable final String name)
+    {
+      final String trimmed = name == null ? null : name.trim();
+      for (final CompressionCodec codec : values()) {
+        if (codec.getEncodingString().equalsIgnoreCase(trimmed)) {
+          return codec;
+        }
+      }
+      throw InvalidInput.exception(
+          "Invalid compression codec[%s]. Supported codecs are: %s.",
+          name,
+          Arrays.stream(values()).map(CompressionCodec::getEncodingString).toList()
+      );
+    }
   }
 
-  public static final CompressionCodec DEFAULT_COMPRESSION_CODEC = CompressionCodec.GZIP;
+  /**
+   * Response encodings the client accepts when {@link Builder#withCompressionCodecs} is not called, most preferred
+   * first. Servers that do not support zstd, or have it disabled, respond with gzip.
+   */
+  public static final List<CompressionCodec> DEFAULT_COMPRESSION_CODECS =
+      List.of(CompressionCodec.ZSTD, CompressionCodec.GZIP);
 
   // Default from SelectorUtil.DEFAULT_IO_THREADS, which is private:
   private static final int DEFAULT_WORKER_COUNT = JvmUtils.getRuntimeInfo().getAvailableProcessors() * 2;
@@ -97,7 +129,8 @@ public class HttpClientConfig
   private final Duration sslHandshakeTimeout;
   private final Duration connectTimeout;
   private final int workerPoolSize;
-  private final CompressionCodec compressionCodec;
+  @Nullable
+  private final List<CompressionCodec> compressionCodecs;
   private final Duration unusedConnectionTimeoutDuration;
   private final ByteBufAllocator byteBufAllocator;
 
@@ -111,7 +144,7 @@ public class HttpClientConfig
       Duration sslHandshakeTimeout,
       Duration connectTimeout,
       int workerPoolSize,
-      CompressionCodec compressionCodec,
+      @Nullable List<CompressionCodec> compressionCodecs,
       Duration unusedConnectionTimeoutDuration,
       ByteBufAllocator byteBufAllocator
   )
@@ -125,7 +158,7 @@ public class HttpClientConfig
     this.sslHandshakeTimeout = sslHandshakeTimeout;
     this.connectTimeout = connectTimeout;
     this.workerPoolSize = workerPoolSize;
-    this.compressionCodec = compressionCodec;
+    this.compressionCodecs = compressionCodecs;
     this.unusedConnectionTimeoutDuration = unusedConnectionTimeoutDuration;
     this.byteBufAllocator = byteBufAllocator;
   }
@@ -175,9 +208,14 @@ public class HttpClientConfig
     return workerPoolSize;
   }
 
-  public CompressionCodec getCompressionCodec()
+  /**
+   * Response encodings the client accepts, most preferred first, or null if not set, in which case the client accepts
+   * {@link #DEFAULT_COMPRESSION_CODECS}.
+   */
+  @Nullable
+  public List<CompressionCodec> getCompressionCodecs()
   {
-    return compressionCodec;
+    return compressionCodecs;
   }
 
   public Duration getUnusedConnectionTimeoutDuration()
@@ -201,7 +239,8 @@ public class HttpClientConfig
     private Duration sslHandshakeTimeout = null;
     private Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT_DURATION;
     private int workerCount = DEFAULT_WORKER_COUNT;
-    private CompressionCodec compressionCodec = DEFAULT_COMPRESSION_CODEC;
+    @Nullable
+    private List<CompressionCodec> compressionCodecs = null;
     private Duration unusedConnectionTimeoutDuration = DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION;
     private ByteBufAllocator byteBufAllocator = DEFAULT_BYTE_BUF_ALLOCATOR;
 
@@ -268,9 +307,26 @@ public class HttpClientConfig
       return this;
     }
 
-    public Builder withCompressionCodec(CompressionCodec compressionCodec)
+    /**
+     * Sets the only response encoding the client accepts. Null uses {@link #DEFAULT_COMPRESSION_CODECS}.
+     */
+    public Builder withCompressionCodec(@Nullable CompressionCodec compressionCodec)
     {
-      this.compressionCodec = compressionCodec;
+      this.compressionCodecs = compressionCodec == null ? null : ImmutableList.of(compressionCodec);
+      return this;
+    }
+
+    /**
+     * Sets the response encodings the client accepts, most preferred first.
+     * Duplicates are dropped, keeping the first occurrence.
+     * An empty list makes the client ask for uncompressed responses.
+     * Null uses {@link #DEFAULT_COMPRESSION_CODECS}.
+     */
+    public Builder withCompressionCodecs(@Nullable List<CompressionCodec> compressionCodecs)
+    {
+      this.compressionCodecs = compressionCodecs == null
+                               ? null
+                               : ImmutableList.copyOf(new LinkedHashSet<>(compressionCodecs));
       return this;
     }
 
@@ -304,7 +360,7 @@ public class HttpClientConfig
           sslHandshakeTimeout,
           connectTimeout,
           workerCount,
-          compressionCodec,
+          compressionCodecs,
           unusedConnectionTimeoutDuration,
           byteBufAllocator
       );
