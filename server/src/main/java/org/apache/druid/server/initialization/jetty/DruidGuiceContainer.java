@@ -32,6 +32,12 @@ import org.apache.druid.guice.DruidScopes;
 import org.apache.druid.guice.annotations.JSR311Resource;
 
 import javax.annotation.Nonnull;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
+import java.io.IOException;
+import java.net.URI;
 import java.util.Map;
 import java.util.Set;
 
@@ -89,5 +95,52 @@ public class DruidGuiceContainer extends GuiceContainer
   public WebApplication getWebApplication()
   {
     return webapp;
+  }
+
+  @Override
+  public int service(URI baseUri, URI requestUri, HttpServletRequest request, HttpServletResponse response)
+      throws ServletException, IOException
+  {
+    return super.service(baseUri, requestUri, request, new JerseyResponse(request, response));
+  }
+
+  /**
+   * The response as Jersey sees it. Jersey knows nothing of asynchronous processing: when a resource method returns
+   * without a response, it sets the status 204 on the request thread. If the method has put the request in
+   * asynchronous mode, the response is no longer Jersey's to answer, and that 204 would replace the status of the
+   * real answer whenever it lands after that status is set and before the response is committed: the client would
+   * get 204 and no body.
+   */
+  private static class JerseyResponse extends HttpServletResponseWrapper
+  {
+    private final HttpServletRequest request;
+
+    JerseyResponse(HttpServletRequest request, HttpServletResponse response)
+    {
+      super(response);
+      this.request = request;
+    }
+
+    @Override
+    public void setStatus(int sc)
+    {
+      if (!isNoResponseOfAsyncRequest(sc)) {
+        super.setStatus(sc);
+      }
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void setStatus(int sc, String sm)
+    {
+      if (!isNoResponseOfAsyncRequest(sc)) {
+        super.setStatus(sc, sm);
+      }
+    }
+
+    private boolean isNoResponseOfAsyncRequest(int sc)
+    {
+      return sc == SC_NO_CONTENT && request.isAsyncStarted();
+    }
   }
 }
