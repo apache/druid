@@ -41,21 +41,19 @@ public class FilteredCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    if (filter == null) {
-      return delegate.makeCursorHolder(spec);
-    } else {
-      return delegate.makeCursorHolder(specWithFilter(spec));
-    }
+    return delegate.makeCursorHolder(delegateSpec(spec));
   }
 
   @Override
   public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
   {
-    if (filter == null) {
-      return delegate.makeCursorHolderAsync(spec);
-    } else {
-      return delegate.makeCursorHolderAsync(specWithFilter(spec));
-    }
+    return delegate.makeCursorHolderAsync(delegateSpec(spec));
+  }
+
+  @Override
+  public CursorPrefetch prefetch(CursorBuildSpec spec)
+  {
+    return delegate.prefetch(delegateSpec(spec));
   }
 
   @Override
@@ -71,8 +69,11 @@ public class FilteredCursorFactory implements CursorFactory
     return delegate.getColumnCapabilities(column);
   }
 
-  private CursorBuildSpec specWithFilter(final CursorBuildSpec spec)
+  private CursorBuildSpec delegateSpec(final CursorBuildSpec spec)
   {
+    if (filter == null) {
+      return spec;
+    }
     return CursorBuildSpec.builder(spec).andBaseFilter(Filters.toFilter(filter)).build();
   }
 }

@@ -42,15 +42,49 @@ import java.util.List;
 public class FilteredCursorFactoryTest extends InitializedNullHandlingTest
 {
   private static final Closer CLOSER = Closer.create();
+  private static CursorFactory base;
   private static FilteredCursorFactory filtered;
 
   @BeforeAll
   public static void setUpClass(@TempDir final File tempDir)
   {
-    filtered = new FilteredCursorFactory(
-        new QueryableIndexCursorFactory(CLOSER.register(SmallSegmentTestHelper.makeIndex(tempDir))),
-        new EqualityFilter("dim", ColumnType.STRING, "b", null)
-    );
+    base = new QueryableIndexCursorFactory(CLOSER.register(SmallSegmentTestHelper.makeIndex(tempDir)));
+    filtered = new FilteredCursorFactory(base, new EqualityFilter("dim", ColumnType.STRING, "b", null));
+  }
+
+  @Test
+  public void test_prefetch_delegatesSameSpecAsAsyncBuild()
+  {
+    final DeferredCursorFactory deferred = new DeferredCursorFactory(base);
+    final FilteredCursorFactory factory =
+        new FilteredCursorFactory(deferred, new EqualityFilter("dim", ColumnType.STRING, "b", null));
+    final CursorBuildSpec spec = spec("v");
+
+    factory.makeCursorHolderAsync(spec).close();
+    final CursorPrefetch prefetch = factory.prefetch(spec);
+    try {
+      Assertions.assertEquals(deferred.getPendingSpec(), deferred.getPrefetchSpec());
+      Assertions.assertNotEquals(spec, deferred.getPrefetchSpec(), "the filter is folded into the delegate's spec");
+      Assertions.assertFalse(prefetch.isReady());
+      deferred.completePrefetch();
+      Assertions.assertTrue(prefetch.isReady());
+    }
+    finally {
+      prefetch.close();
+    }
+  }
+
+  @Test
+  public void test_prefetch_withoutFilterPassesSpecThrough()
+  {
+    final DeferredCursorFactory deferred = new DeferredCursorFactory(base);
+    final FilteredCursorFactory factory = new FilteredCursorFactory(deferred, null);
+    final CursorBuildSpec spec = spec("v");
+
+    final CursorPrefetch prefetch = factory.prefetch(spec);
+    Assertions.assertSame(spec, deferred.getPrefetchSpec());
+    prefetch.close();
+    Assertions.assertTrue(deferred.prefetchCanceled.get(), "closing before ready cancels the delegate's prefetch");
   }
 
   @AfterAll
