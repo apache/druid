@@ -243,6 +243,7 @@
   "task/run/time": [],
   "task/running/count": [],
   "task/segmentAvailability/wait/time": [],
+  "task/status/persistFailed/count": [],
   "task/success/count": [],
   "task/waiting/count": [],
   "tier/historical/count": [],

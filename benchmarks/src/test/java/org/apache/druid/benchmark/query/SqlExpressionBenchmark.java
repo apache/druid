@@ -206,7 +206,20 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "SELECT SUM(COSH(double1)) FROM expressions",
       "SELECT SUM(COSH(long1)) FROM expressions",
       "SELECT SUM(TANH(double1)) FROM expressions",
-      "SELECT SUM(TANH(long1)) FROM expressions"
+      "SELECT SUM(TANH(long1)) FROM expressions",
+      // 97-108: VO_MATHLIB binary ops exposed via SQL and covered by SIMD dispatch.
+      "SELECT SUM(POWER(double1, double2)) FROM expressions",
+      "SELECT SUM(POWER(double1, long1)) FROM expressions",
+      "SELECT SUM(POWER(long1, double1)) FROM expressions",
+      "SELECT SUM(POWER(long1, long2)) FROM expressions",
+      "SELECT SUM(ATAN2(double1, double2)) FROM expressions",
+      "SELECT SUM(ATAN2(double1, long1)) FROM expressions",
+      "SELECT SUM(ATAN2(long1, double1)) FROM expressions",
+      "SELECT SUM(ATAN2(long1, long2)) FROM expressions",
+      "SELECT SUM(HYPOT(double1, double2)) FROM expressions",
+      "SELECT SUM(HYPOT(double1, long1)) FROM expressions",
+      "SELECT SUM(HYPOT(long1, double1)) FROM expressions",
+      "SELECT SUM(HYPOT(long1, long2)) FROM expressions"
   );
 
   @Param({
@@ -319,7 +332,19 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "93",
       "94",
       "95",
-      "96"
+      "96",
+      "97",
+      "98",
+      "99",
+      "100",
+      "101",
+      "102",
+      "103",
+      "104",
+      "105",
+      "106",
+      "107",
+      "108"
   })
   private String query;
 

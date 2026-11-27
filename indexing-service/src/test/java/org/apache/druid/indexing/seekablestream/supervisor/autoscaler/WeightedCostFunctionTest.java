@@ -98,7 +98,7 @@ public class WeightedCostFunctionTest
     // aggregateLag = 100000 * 100 = 10,000,000; lagPerPartition = 100,000
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.3);
     double aggregateLag = 100000.0 * 100;
-    double amplification = 1.0 + WeightedCostFunction.LAG_AMPLIFICATION_MULTIPLIER * Math.log(aggregateLag / 100);
+    double amplification = 1.0;
 
     double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig).totalCost();
     Assertions.assertEquals(
@@ -402,7 +402,7 @@ public class WeightedCostFunctionTest
 
     double lagPerPartition = aggregateLag / partitionCount;
     double highLagCostFactor =
-        1.0 + WeightedCostFunction.DEFAULT_HIGH_LAG_COST_FACTOR * Math.log(lagPerPartition);
+        1.0 + CostBasedAutoScalerConfig.DEFAULT_HIGH_LAG_COST_FACTOR * Math.log(lagPerPartition);
     double costAtTier1 = costFunction.computeCost(metrics, proposedTaskCount, atTier1).totalCost();
     Assertions.assertEquals(
         aggregateLag * highLagCostFactor / (proposedTaskCount * WeightedCostFunction.MIN_PROCESSING_RATE),

@@ -50,6 +50,11 @@ public class ClientProperties
   public static final String AUTHENTICATION_BASIC_RAW = "basicRaw";
 
   /**
+   * Sends {@link #PASSWORD} verbatim as a bearer token, with no encoding.
+   */
+  public static final String AUTHENTICATION_BEARER = "bearer";
+
+  /**
    * Set of all recognized client-side property names. All others are sent to the Druid server.
    */
   private static final Set<String> CLIENT_SIDE_PROPERTY_NAMES = Set.of(

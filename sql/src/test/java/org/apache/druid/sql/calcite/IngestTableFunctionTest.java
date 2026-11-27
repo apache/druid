@@ -421,6 +421,48 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testHttpFnSkipHeaderRows()
+  {
+    final int skipHeaderRows = 3;
+
+    testIngestionQuery()
+        .sql(StringUtils.format(
+            """
+            INSERT INTO dst SELECT * FROM TABLE(http(
+                userName => 'bob',
+                password => 'secret',
+                uris => ARRAY['http://foo.com/bar.csv'],
+                format => 'csv',
+                skipHeaderRows => %d
+            )) EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
+            PARTITIONED BY ALL TIME
+            """,
+            skipHeaderRows))
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", httpDataSource.getSignature())
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(new ExternalDataSource(
+                    httpDataSource.getInputSource(),
+                    new CsvInputFormat(ImmutableList.of("x", "y", "z"),
+                                       null,
+                                       false,
+                                       false,
+                                       skipHeaderRows,
+                                       null),
+                    httpDataSource.getSignature()
+                ))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
+  @Test
   public void testHttpFn2()
   {
     final ExternalDataSource httpDataSource = new ExternalDataSource(

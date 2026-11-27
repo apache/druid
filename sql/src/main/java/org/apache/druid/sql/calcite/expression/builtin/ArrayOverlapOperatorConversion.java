@@ -155,7 +155,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
           }
           return new EqualityFilter(
               column,
-              ExpressionType.toColumnType(exprEval.type()),
+              ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
               elementValue,
               null
           );

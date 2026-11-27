@@ -1921,33 +1921,25 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   /**
-   * Returns the effective segment info directory based on the configuration settings.
-   * The directory is selected based on the following configurations injected into this class:
-   * <ul>
-   *   <li>{@link SegmentLoaderConfig#getInfoDir()} - If {@code infoDir} is set, it is used as the info directory.</li>
-   *   <li>{@link SegmentLoaderConfig#getLocations()} - If the info directory is not set, the first location from this list is used.</li>
-   *   <li>List of {@link StorageLocation}s injected - If both the info directory and locations list are not set, the
-   *   first storage location is used.</li>
-   * </ul>
+   * Returns the segment info directory: {@link SegmentLoaderConfig#getEffectiveInfoDir()} if the config determines
+   * one, otherwise {@code info_dir} under the first injected {@link StorageLocation}. The fallback covers processes
+   * whose storage locations are not in the config, such as peons, which use task-local broadcast storage.
    *
-   * @throws DruidException if none of the configurations are set, and the info directory cannot be determined.
+   * @throws DruidException if neither the config nor the injected storage locations determine the info directory.
    */
   private File getEffectiveInfoDir()
   {
-    final File infoDir;
-    if (config.getInfoDir() != null) {
-      infoDir = config.getInfoDir();
-    } else if (!config.getLocations().isEmpty()) {
-      infoDir = new File(config.getLocations().get(0).getPath(), "info_dir");
+    final File configInfoDir = config.getEffectiveInfoDir();
+    if (configInfoDir != null) {
+      return configInfoDir;
     } else if (!locations.isEmpty()) {
-      infoDir = new File(locations.get(0).getPath(), "info_dir");
+      return new File(locations.get(0).getPath(), "info_dir");
     } else {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.NOT_FOUND)
                           .build("Could not determine infoDir. Make sure 'druid.segmentCache.infoDir' "
                                  + "or 'druid.segmentCache.locations' is set correctly.");
     }
-    return infoDir;
   }
 
   /**

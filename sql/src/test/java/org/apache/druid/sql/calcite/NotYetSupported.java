@@ -148,7 +148,7 @@ public @interface NotYetSupported
     {
       return name() + "{" + regex + "}";
     }
-  };
+  }
 
   /**
    * Processes {@link NotYetSupported} annotations.
