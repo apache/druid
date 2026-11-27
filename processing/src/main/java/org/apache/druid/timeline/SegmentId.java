@@ -34,6 +34,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -170,23 +171,29 @@ public final class SegmentId implements Comparable<SegmentId>
    * implicit partitionNum of 0 and the version that ends with '_[any positive number]' (the second element in the
    * returned list).
    */
+
   public static List<SegmentId> iteratePossibleParsingsWithDataSource(String dataSource, String segmentId)
   {
     if (!segmentId.startsWith(dataSource) || segmentId.charAt(dataSource.length()) != DELIMITER) {
       return Collections.emptyList();
     }
 
-    String remaining = segmentId.substring(dataSource.length() + 1);
-    List<String> splits = DELIMITER_SPLITTER.splitToList(remaining);
-    if (splits.size() < 3) {
+    final int remainingStart = dataSource.length() + 1;
+
+    final int firstDelimiter = segmentId.indexOf(DELIMITER, remainingStart);
+    if (firstDelimiter < 0) {
+      return Collections.emptyList();
+    }
+    final int secondDelimiter = segmentId.indexOf(DELIMITER, firstDelimiter + 1);
+    if (secondDelimiter < 0) {
       return Collections.emptyList();
     }
 
     DateTime start;
     DateTime end;
     try {
-      start = DateTimes.ISO_DATE_TIME.parse(splits.get(0));
-      end = DateTimes.ISO_DATE_TIME.parse(splits.get(1));
+      start = parseSegmentDateTime(segmentId.substring(remainingStart, firstDelimiter));
+      end = parseSegmentDateTime(segmentId.substring(firstDelimiter + 1, secondDelimiter));
     }
     catch (IllegalArgumentException e) {
       return Collections.emptyList();
@@ -194,18 +201,95 @@ public final class SegmentId implements Comparable<SegmentId>
     if (start.compareTo(end) >= 0) {
       return Collections.emptyList();
     }
-    List<SegmentId> possibleParsings = new ArrayList<>(2);
-    String version = DELIMITER_JOINER.join(splits.subList(2, Math.max(splits.size() - 1, 3)));
-    String trail = splits.size() > 3 ? splits.get(splits.size() - 1) : null;
-    if (trail != null) {
+
+    final List<SegmentId> possibleParsings = new ArrayList<>(2);
+    final int lastDelimiter = segmentId.lastIndexOf(DELIMITER);
+    if (lastDelimiter <= secondDelimiter) {
+      // Exactly 3 parts after dataSource: start, end, version. No trailing partition-number candidate.
+      String version = segmentId.substring(secondDelimiter + 1);
+      possibleParsings.add(of(dataSource, new Interval(start, end), version, 0));
+    } else {
+      // More than 3 parts: the last part is a candidate partition number, and the ambiguous case where it's
+      // actually part of the version is also returned (matching the original Splitter/Joiner-based behavior).
+      String version = segmentId.substring(secondDelimiter + 1, lastDelimiter);
+      String trail = segmentId.substring(lastDelimiter + 1);
       Integer possiblePartitionNum = Ints.tryParse(trail);
       if (possiblePartitionNum != null && possiblePartitionNum > 0) {
         possibleParsings.add(of(dataSource, new Interval(start, end), version, possiblePartitionNum));
       }
-      version = version + '_' + trail;
+      possibleParsings.add(of(dataSource, new Interval(start, end), version + '_' + trail, 0));
     }
-    possibleParsings.add(of(dataSource, new Interval(start, end), version, 0));
     return possibleParsings;
+  }
+
+  /**
+   * Parses one interval endpoint from a segment id string. Fast path for the canonical UTC timestamp format Druid
+   * always writes when serializing a SegmentId ("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", exactly 24 characters): all digit
+   * extraction and validation is inlined here, with no helper-method calls, so the JIT has a single flat method to
+   * compile rather than a chain of small call frames. Falls back to the slower, more lenient
+   * {@link DateTimes#ISO_DATE_TIME} parser for any input that doesn't match this exact shape (no millis, a
+   * non-'Z' offset, date-only, etc.), so behavior for non-canonical input is unchanged.
+   */
+  private static DateTime parseSegmentDateTime(String s)
+  {
+    if (s.length() == 24
+        && s.charAt(4) == '-'
+        && s.charAt(7) == '-'
+        && s.charAt(10) == 'T'
+        && s.charAt(13) == ':'
+        && s.charAt(16) == ':'
+        && s.charAt(19) == '.'
+        && s.charAt(23) == 'Z') {
+      final char c0 = s.charAt(0);
+      final char c1 = s.charAt(1);
+      final char c2 = s.charAt(2);
+      final char c3 = s.charAt(3);
+      final char c5 = s.charAt(5);
+      final char c6 = s.charAt(6);
+      final char c8 = s.charAt(8);
+      final char c9 = s.charAt(9);
+      final char c11 = s.charAt(11);
+      final char c12 = s.charAt(12);
+      final char c14 = s.charAt(14);
+      final char c15 = s.charAt(15);
+      final char c17 = s.charAt(17);
+      final char c18 = s.charAt(18);
+      final char c20 = s.charAt(20);
+      final char c21 = s.charAt(21);
+      final char c22 = s.charAt(22);
+      if (c0 >= '0' && c0 <= '9'
+          && c1 >= '0' && c1 <= '9'
+          && c2 >= '0' && c2 <= '9'
+          && c3 >= '0' && c3 <= '9'
+          && c5 >= '0' && c5 <= '9'
+          && c6 >= '0' && c6 <= '9'
+          && c8 >= '0' && c8 <= '9'
+          && c9 >= '0' && c9 <= '9'
+          && c11 >= '0' && c11 <= '9'
+          && c12 >= '0' && c12 <= '9'
+          && c14 >= '0' && c14 <= '9'
+          && c15 >= '0' && c15 <= '9'
+          && c17 >= '0' && c17 <= '9'
+          && c18 >= '0' && c18 <= '9'
+          && c20 >= '0' && c20 <= '9'
+          && c21 >= '0' && c21 <= '9'
+          && c22 >= '0' && c22 <= '9') {
+        final int year = (c0 - '0') * 1000 + (c1 - '0') * 100 + (c2 - '0') * 10 + (c3 - '0');
+        final int month = (c5 - '0') * 10 + (c6 - '0');
+        final int day = (c8 - '0') * 10 + (c9 - '0');
+        final int hour = (c11 - '0') * 10 + (c12 - '0');
+        final int minute = (c14 - '0') * 10 + (c15 - '0');
+        final int second = (c17 - '0') * 10 + (c18 - '0');
+        final int millis = (c20 - '0') * 100 + (c21 - '0') * 10 + (c22 - '0');
+        try {
+          return new DateTime(year, month, day, hour, minute, second, millis, ISOChronology.getInstanceUTC());
+        }
+        catch (IllegalArgumentException e) {
+          // Out-of-range field (e.g. month 13): fall through to the lenient parser below.
+        }
+      }
+    }
+    return DateTimes.ISO_DATE_TIME.parse(s);
   }
 
   /**

@@ -134,6 +134,65 @@ public final class DateTimes
 
   public static DateTime of(String instant)
   {
+    if (instant != null
+        && instant.length() == 24
+        && instant.charAt(4) == '-'
+        && instant.charAt(7) == '-'
+        && instant.charAt(10) == 'T'
+        && instant.charAt(13) == ':'
+        && instant.charAt(16) == ':'
+        && instant.charAt(19) == '.'
+        && instant.charAt(23) == 'Z') {
+      final char c0 = instant.charAt(0);
+      final char c1 = instant.charAt(1);
+      final char c2 = instant.charAt(2);
+      final char c3 = instant.charAt(3);
+      final char c5 = instant.charAt(5);
+      final char c6 = instant.charAt(6);
+      final char c8 = instant.charAt(8);
+      final char c9 = instant.charAt(9);
+      final char c11 = instant.charAt(11);
+      final char c12 = instant.charAt(12);
+      final char c14 = instant.charAt(14);
+      final char c15 = instant.charAt(15);
+      final char c17 = instant.charAt(17);
+      final char c18 = instant.charAt(18);
+      final char c20 = instant.charAt(20);
+      final char c21 = instant.charAt(21);
+      final char c22 = instant.charAt(22);
+      if (c0 >= '0' && c0 <= '9'
+          && c1 >= '0' && c1 <= '9'
+          && c2 >= '0' && c2 <= '9'
+          && c3 >= '0' && c3 <= '9'
+          && c5 >= '0' && c5 <= '9'
+          && c6 >= '0' && c6 <= '9'
+          && c8 >= '0' && c8 <= '9'
+          && c9 >= '0' && c9 <= '9'
+          && c11 >= '0' && c11 <= '9'
+          && c12 >= '0' && c12 <= '9'
+          && c14 >= '0' && c14 <= '9'
+          && c15 >= '0' && c15 <= '9'
+          && c17 >= '0' && c17 <= '9'
+          && c18 >= '0' && c18 <= '9'
+          && c20 >= '0' && c20 <= '9'
+          && c21 >= '0' && c21 <= '9'
+          && c22 >= '0' && c22 <= '9') {
+        final int year = (c0 - '0') * 1000 + (c1 - '0') * 100 + (c2 - '0') * 10 + (c3 - '0');
+        final int month = (c5 - '0') * 10 + (c6 - '0');
+        final int day = (c8 - '0') * 10 + (c9 - '0');
+        final int hour = (c11 - '0') * 10 + (c12 - '0');
+        final int minute = (c14 - '0') * 10 + (c15 - '0');
+        final int second = (c17 - '0') * 10 + (c18 - '0');
+        final int millis = (c20 - '0') * 100 + (c21 - '0') * 10 + (c22 - '0');
+        try {
+          return new DateTime(year, month, day, hour, minute, second, millis, ISOChronology.getInstanceUTC());
+        }
+        catch (IllegalArgumentException e) {
+          // Out-of-range field (e.g. month 13): fall through below.
+        }
+      }
+    }
+
     try {
       return new DateTime(instant, ISOChronology.getInstanceUTC());
     }
@@ -146,7 +205,7 @@ public final class DateTimes
       }
     }
   }
-
+  
   public static DateTime of(
       int year,
       int monthOfYear,
