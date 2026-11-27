@@ -112,6 +112,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   {
     EasyMock.expect(plannerConfig.isEnableSysQueriesTable()).andReturn(false).anyTimes();
     EasyMock.expect(plannerConfig.isAuthorizeTableVisibility()).andReturn(false).anyTimes();
+    EasyMock.expect(plannerConfig.isAuthorizeSystemTablesDirectly()).andReturn(false).anyTimes();
     EasyMock.replay(plannerConfig);
     injector = Guice.createInjector(
         binder -> {

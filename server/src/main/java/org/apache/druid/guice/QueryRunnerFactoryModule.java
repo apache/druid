@@ -19,7 +19,9 @@
 
 package org.apache.druid.guice;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Provides;
@@ -52,6 +54,7 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -70,6 +73,32 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
                   .put(WindowOperatorQuery.class, WindowOperatorQueryQueryRunnerFactory.class)
                   .build();
 
+  private static final Set<Class<? extends Query>> SUPPORTED_QUERY_TYPES =
+      ImmutableSet.<Class<? extends Query>>builder()
+                  .addAll(MAPPINGS.keySet())
+                  .add(UnionQuery.class)
+                  .build();
+
+  private final Set<Class<? extends Query>> queryTypes;
+
+  public QueryRunnerFactoryModule()
+  {
+    this(SUPPORTED_QUERY_TYPES);
+  }
+
+  public QueryRunnerFactoryModule(final Set<? extends Class<? extends Query>> queryTypes)
+  {
+    super(queryTypes);
+    Preconditions.checkArgument(
+        SUPPORTED_QUERY_TYPES.containsAll(queryTypes),
+        "Unsupported query types[%s]",
+        ImmutableSet.copyOf(queryTypes).stream()
+                    .filter(queryType -> !SUPPORTED_QUERY_TYPES.contains(queryType))
+                    .toList()
+    );
+    this.queryTypes = ImmutableSet.copyOf(queryTypes);
+  }
+
   @Override
   public void configure(Binder binder)
   {
@@ -86,12 +115,18 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
     );
 
     for (Map.Entry<Class<? extends Query<?>>, Class<? extends QueryRunnerFactory<?, ?>>> entry : MAPPINGS.entrySet()) {
-      queryFactoryBinder.addBinding(entry.getKey()).to(entry.getValue());
-      binder.bind(entry.getValue()).in(LazySingleton.class);
+      if (queryTypes.contains(entry.getKey())) {
+        queryFactoryBinder.addBinding(entry.getKey()).to(entry.getValue());
+        binder.bind(entry.getValue()).in(LazySingleton.class);
+      }
     }
 
-    DruidBinders.queryBinder(binder)
-        .bindQueryLogic(UnionQuery.class, UnionQueryLogic.class);
+    if (queryTypes.contains(UnionQuery.class)) {
+      DruidBinders.queryBinder(binder)
+                   .bindQueryLogic(UnionQuery.class, UnionQueryLogic.class);
+    } else {
+      DruidBinders.queryBinder(binder);
+    }
   }
 
   @LazySingleton

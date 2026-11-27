@@ -32,8 +32,10 @@ import org.apache.druid.server.broker.QueryConfigSnapshot;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.system.table.SystemTableDescriptor;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 @LazySingleton
 public class QueryLifecycleFactory
@@ -48,6 +50,7 @@ public class QueryLifecycleFactory
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
+  private final Map<String, SystemTableDescriptor> systemTableDescriptors;
 
   @Inject
   public QueryLifecycleFactory(
@@ -60,6 +63,7 @@ public class QueryLifecycleFactory
       final PolicyEnforcer policyEnforcer,
       final AuthorizerMapper authorizerMapper,
       final QueryConfigProvider queryConfigProvider,
+      final Map<String, SystemTableDescriptor> systemTableDescriptors,
       @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
   )
   {
@@ -70,6 +74,7 @@ public class QueryLifecycleFactory
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
     this.queryConfigProvider = queryConfigProvider;
+    this.systemTableDescriptors = systemTableDescriptors;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
     this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
@@ -93,6 +98,7 @@ public class QueryLifecycleFactory
         authConfig,
         policyEnforcer,
         configSnapshot,
+        systemTableDescriptors,
         System.currentTimeMillis(),
         System.nanoTime()
     );

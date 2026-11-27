@@ -1835,7 +1835,8 @@ public class SystemSchemaTest extends CalciteTestBase
                     authMapper,
                     httpClient,
                     MAPPER,
-                    createAuthResult(Users.SUPER)
+                    createAuthResult(Users.SUPER),
+                    false
                 )
                 .createMock();
 
@@ -1948,7 +1949,8 @@ public class SystemSchemaTest extends CalciteTestBase
         authMapper,
         httpClient,
         MAPPER,
-        createAuthResult(Users.SUPER)
+        createAuthResult(Users.SUPER),
+        false
     );
 
     mockAllNodeRolesWithCoordinator(coordinator);
@@ -1993,7 +1995,8 @@ public class SystemSchemaTest extends CalciteTestBase
         authMapper,
         httpClient,
         MAPPER,
-        createAuthResult(Users.SUPER)
+        createAuthResult(Users.SUPER),
+        false
     );
 
     mockAllNodeRolesWithCoordinator(coordinator);
@@ -2033,7 +2036,8 @@ public class SystemSchemaTest extends CalciteTestBase
         authMapper,
         httpClient,
         MAPPER,
-        createAuthResult(Users.SUPER)
+        createAuthResult(Users.SUPER),
+        false
     );
 
     mockAllNodeRolesWithCoordinator(coordinator, coordinator2);
@@ -2078,7 +2082,8 @@ public class SystemSchemaTest extends CalciteTestBase
         authMapper,
         httpClient,
         MAPPER,
-        createAuthResult(Users.SUPER)
+        createAuthResult(Users.SUPER),
+        false
     );
 
     mockAllNodeRolesWithCoordinator(coordinator, coordinator2);
@@ -2119,7 +2124,8 @@ public class SystemSchemaTest extends CalciteTestBase
         authMapper,
         httpClient,
         MAPPER,
-        createAuthResult(Users.SUPER)
+        createAuthResult(Users.SUPER),
+        false
     );
 
     mockAllNodeRolesWithCoordinator(coordinator, coordinator2);
@@ -2188,7 +2194,8 @@ public class SystemSchemaTest extends CalciteTestBase
         authMapper,
         httpClient,
         MAPPER,
-        createAuthResult(Users.SUPER)
+        createAuthResult(Users.SUPER),
+        false
     );
 
     final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
@@ -2272,7 +2279,8 @@ public class SystemSchemaTest extends CalciteTestBase
         authMapper,
         httpClient,
         MAPPER,
-        createAuthResult(Users.SUPER)
+        createAuthResult(Users.SUPER),
+        false
     );
 
     // Same host:port under two roles
@@ -2347,7 +2355,8 @@ public class SystemSchemaTest extends CalciteTestBase
         authMapper,
         httpClient,
         MAPPER,
-        createAuthResult(Users.SUPER)
+        createAuthResult(Users.SUPER),
+        false
     );
 
     mockAllNodeRolesWithCoordinator(coordinator);
@@ -2381,7 +2390,8 @@ public class SystemSchemaTest extends CalciteTestBase
         authMapper,
         httpClient,
         MAPPER,
-        createAuthResult(Users.SUPER)
+        createAuthResult(Users.SUPER),
+        false
     );
 
     mockAllNodeRolesWithCoordinator(coordinator);

@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -193,6 +194,14 @@ public class NativeQueryMaker implements QueryMaker
     }
 
     query = query.withSqlQueryId(plannerContext.getSqlQueryId());
+
+    if (SystemTableDataSource.readsSystemTable(query.getDataSource())) {
+      // System tables planned by SQL read the rows of every service that serves them, which the Broker gathers once
+      // the query is authorized.
+      query = query.withDataSource(
+          SystemTableDataSource.withScope(query.getDataSource(), SystemTableDataSource.Scope.CLUSTER)
+      );
+    }
 
     final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
     final AuthorizationResult authorizationResult = plannerContext.getAuthorizationResult();

@@ -44,6 +44,8 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.Resource;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -82,14 +84,15 @@ public class QueryScheduler implements QueryWatcher
    * This map is synchronized as there are 2 threads, query execution thread and query canceling thread,
    * that can access the map at the same time.
    *
-   * The updates (additions and removals) on this and {@link #queryDatasources} are racy
+   * The updates (additions and removals) on this and {@link #queryResources} are racy
    * as those updates are not being done atomically on those 2 maps,
    * but it is OK in most cases since they will be cleaned up once the query is done.
    */
   private final SetMultimap<String, ListenableFuture<?>> queryFutures;
 
   /**
-   * mapping of query id to set of datasource names that are being queried, used for authorization.
+   * mapping of query id to set of datasource and system table resources that are being queried, used for
+   * authorization.
    * This map is synchronized as there are 2 threads, query execution thread and query canceling thread,
    * that can access the map at the same time.
    *
@@ -97,7 +100,7 @@ public class QueryScheduler implements QueryWatcher
    * as those updates are not being done atomically on those 2 maps,
    * but it is OK in most cases since they will be cleaned up once the query is done.
    */
-  private final SetMultimap<String, String> queryDatasources;
+  private final SetMultimap<String, Resource> queryResources;
   private final ServiceEmitter emitter;
 
   public QueryScheduler(
@@ -111,7 +114,7 @@ public class QueryScheduler implements QueryWatcher
     this.prioritizationStrategy = prioritizationStrategy;
     this.laningStrategy = laningStrategy;
     this.queryFutures = Multimaps.synchronizedSetMultimap(HashMultimap.create());
-    this.queryDatasources = Multimaps.synchronizedSetMultimap(HashMultimap.create());
+    this.queryResources = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     // if totalNumThreads is above 0 and less than druid.server.http.numThreads and
     // requests are not being queued by Jetty, enforce total limit
     final boolean limitTotal;
@@ -146,14 +149,14 @@ public class QueryScheduler implements QueryWatcher
   public void registerQueryFuture(Query<?> query, ListenableFuture<?> future)
   {
     final String id = query.getId();
-    final Set<String> datasources = query.getDataSource().getTableNames();
+    final Set<Resource> resources = AuthorizationUtils.getDataSourceResources(query.getDataSource());
     queryFutures.put(id, future);
-    queryDatasources.putAll(id, datasources);
+    queryResources.putAll(id, resources);
     future.addListener(
         () -> {
           queryFutures.remove(id, future);
-          for (String datasource : datasources) {
-            queryDatasources.remove(id, datasource);
+          for (Resource resource : resources) {
+            queryResources.remove(id, resource);
           }
         },
         Execs.directExecutor()
@@ -233,7 +236,7 @@ public class QueryScheduler implements QueryWatcher
   {
     // if multiple independent queries from the same or different users share a query id, all will be cancelled due
     // to the collision
-    queryDatasources.removeAll(id);
+    queryResources.removeAll(id);
     Set<ListenableFuture<?>> futures = queryFutures.removeAll(id);
     boolean success = true;
     for (ListenableFuture<?> future : futures) {
@@ -243,12 +246,12 @@ public class QueryScheduler implements QueryWatcher
   }
 
   /**
-   * Get a {@link Set} of datasource names for a {@link Query} id, used by {@link QueryResource#cancelQuery} to
-   * authorize that a user may call {@link #cancelQuery} for the given id and datasources
+   * Get a {@link Set} of the datasource and system table resources for a {@link Query} id, used by
+   * {@link QueryResource#cancelQuery} to authorize that a user may call {@link #cancelQuery} for the given id
    */
-  public Set<String> getQueryDatasources(final String queryId)
+  public Set<Resource> getQueryResources(final String queryId)
   {
-    return queryDatasources.get(queryId);
+    return queryResources.get(queryId);
   }
 
   /**

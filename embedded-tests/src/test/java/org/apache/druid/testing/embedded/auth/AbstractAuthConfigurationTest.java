@@ -37,8 +37,11 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -48,6 +51,7 @@ import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
@@ -262,7 +266,8 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         .addCommonProperty("druid.auth.unsecuredPaths", "[\"/druid/coordinator/v1/loadqueue\"]")
         .addCommonProperty("druid.auth.authorizeQueryContextParams", "true")
         .addCommonProperty("druid.msq.dart.enabled", "true")
-        .addCommonProperty("druid.sql.planner.authorizeSystemTablesDirectly", "true")
+        .addCommonProperty("druid.auth.authorizeSystemTablesDirectly", "true")
+        .addCommonProperty("druid.query.enableDruidEngineForSystemTables", "true")
         .addCommonProperty("druid.server.http.allowedHttpMethods", "[\"OPTIONS\"]")
         .addServer(coordinator)
         .addServer(overlord)
@@ -639,6 +644,48 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   public void test_groupMappings_invalidAuthName_fails()
   {
     verifyGroupMappingsInvalidAuthNameFails();
+  }
+
+  /**
+   * Native {@code systemTable} queries sent to {@code /druid/v2/} authorize the caller on the Broker, the Router, the
+   * Coordinator and the Overlord.
+   */
+  @Test
+  public void test_nativeSystemTableQuery_authorizedOnEveryService()
+  {
+    assertNativeSystemTableQueryStatus(getHttpClient(User.ADMIN), HttpResponseStatus.OK);
+
+    // Neither user has SYSTEM_TABLE READ on server_properties, so both are denied before the table's own STATE READ
+    // check runs.
+    for (final User user : List.of(User.DATASOURCE_ONLY_USER, User.DATASOURCE_AND_SYS_USER)) {
+      assertNativeSystemTableQueryStatus(getHttpClient(user), HttpResponseStatus.FORBIDDEN);
+    }
+  }
+
+  /**
+   * Sends a native {@code sys.server_properties} Scan to {@code /druid/v2/} on the Broker, the Router, the Coordinator
+   * and the Overlord, each of which reads its own rows of the table, and checks every response status.
+   */
+  protected void assertNativeSystemTableQueryStatus(final HttpClient client, final HttpResponseStatus expectedStatus)
+  {
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                  .dataSource(new SystemTableDataSource("server_properties"))
+                                  .eternityInterval()
+                                  .columns("server", "property")
+                                  .limit(5)
+                                  .build();
+    for (final EmbeddedDruidServer<?> server : List.of(broker, router, coordinator, overlord)) {
+      final StatusResponseHolder response = HttpUtil.makeRequest(
+          client,
+          HttpMethod.POST,
+          getServerUrl(server) + "/druid/v2/",
+          query,
+          expectedStatus
+      );
+      if (HttpResponseStatus.OK.equals(expectedStatus)) {
+        Assertions.assertTrue(response.getContent().contains("\"events\""), response.getContent());
+      }
+    }
   }
 
   @Test
