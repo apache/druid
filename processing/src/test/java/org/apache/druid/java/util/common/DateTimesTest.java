@@ -156,4 +156,36 @@ public class DateTimesTest
     Assertions.assertEquals(jan15, DateTimes.laterOf(jan15, jan14));
     Assertions.assertEquals(jan15, DateTimes.laterOf(jan14, jan15));
   }
+
+  @Test
+  public void testOfFastPathBoundaryValues()
+  {
+    // Exercises the fast-path parser's digit arithmetic at the edges of each field's valid range.
+    Assertions.assertEquals("0000-01-01T00:00:00.000Z", DateTimes.of("0000-01-01T00:00:00.000Z").toString());
+    Assertions.assertEquals("9999-12-31T23:59:59.999Z", DateTimes.of("9999-12-31T23:59:59.999Z").toString());
+    Assertions.assertEquals("2024-02-29T12:34:56.007Z", DateTimes.of("2024-02-29T12:34:56.007Z").toString());
+  }
+
+  @Test
+  public void testOfFallbackForNonCanonicalOffset()
+  {
+    // Not the canonical 'Z' form, so the fast path must decline and the existing lenient parser must handle it.
+    DateTime viaOffset = DateTimes.of("2018-01-30T11:30:00.000+05:30");
+    Assertions.assertEquals("2018-01-30T06:00:00.000Z", viaOffset.withZone(DateTimes.inferTzFromString("UTC")).toString());
+  }
+
+  @Test
+  public void testOfFallbackForMissingMillis()
+  {
+    // 20 characters, not the canonical 24-character shape, so this must fall back correctly.
+    Assertions.assertEquals("2018-01-30T06:00:00.000Z", DateTimes.of("2018-01-30T06:00:00Z").toString());
+  }
+
+  @Test
+  public void testOfFallbackForMalformedCanonicalLengthString()
+  {
+    // 24 characters with delimiters in the right positions, but non-digit content: the fast path must decline
+    // rather than silently parse garbage, and the fallback must throw the same way the old lenient parser did.
+    Assertions.assertThrows(IllegalArgumentException.class, () -> DateTimes.of("aaaa-aa-aaTaa:aa:aa.aaaZ"));
+  }
 }

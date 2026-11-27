@@ -228,4 +228,26 @@ public class SegmentIdTest
     Assertions.assertEquals(2, possibleParsings.size());
     Assertions.assertEquals(expected, ImmutableSet.copyOf(possibleParsings));
   }
+
+  @Test
+  public void testTryParseWithNonCanonicalOffsetFormat()
+  {
+    // Interval endpoints use an explicit offset instead of 'Z', so the fast path must decline and the existing
+    // ISO_DATE_TIME fallback parser must still successfully round-trip this.
+    String dataSource = "datasource";
+    String segmentId = "datasource_2015-01-02T00:00:00.000+00:00_2015-01-03T00:00:00.000+00:00_ver";
+    SegmentId parsed = SegmentId.tryParse(dataSource, segmentId);
+    Assertions.assertNotNull(parsed);
+    Assertions.assertEquals(dataSource, parsed.getDataSource());
+    Assertions.assertEquals("ver", parsed.getVersion());
+  }
+
+  @Test
+  public void testTryParseFastPathBoundaryValues()
+  {
+    // Exercises the fast-path parser's digit arithmetic for the interval endpoints at the edges of valid ranges.
+    String dataSource = "datasource";
+    SegmentId desc = SegmentId.of(dataSource, Intervals.of("9999-12-30T23:59:59.999Z/9999-12-31T23:59:59.999Z"), "ver", 0);
+    Assertions.assertEquals(desc, SegmentId.tryParse(dataSource, desc.toString()));
+  }
 }
