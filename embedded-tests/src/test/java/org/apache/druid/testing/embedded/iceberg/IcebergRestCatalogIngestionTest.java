@@ -33,10 +33,17 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
+import org.apache.iceberg.DataFile;
+import org.apache.iceberg.DeleteFile;
+import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.TableProperties;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.parquet.GenericParquetWriter;
+import org.apache.iceberg.deletes.EqualityDeleteWriter;
+import org.apache.iceberg.deletes.PositionDelete;
+import org.apache.iceberg.deletes.PositionDeleteWriter;
 import org.apache.iceberg.io.DataWriter;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
@@ -46,6 +53,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -58,6 +66,7 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
 {
   private static final String ICEBERG_NAMESPACE = "default";
   private static final String ICEBERG_TABLE_NAME = "test_events";
+  private static final String ICEBERG_V2_TABLE_NAME = "test_events_v2_deletes";
   private static final Logger log = new Logger(IcebergRestCatalogIngestionTest.class);
 
   private static final Schema ICEBERG_SCHEMA = new Schema(
@@ -133,6 +142,7 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
   public void tearDownIceberg()
   {
     icebergCatalog.dropTable(ICEBERG_NAMESPACE, ICEBERG_TABLE_NAME);
+    icebergCatalog.dropTable(ICEBERG_NAMESPACE, ICEBERG_V2_TABLE_NAME);
     icebergCatalog.dropNamespace(ICEBERG_NAMESPACE);
   }
 
@@ -148,7 +158,155 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
     ingestFromIcebergRestCatalog(dataSource + "_arrow", true);
   }
 
+  /**
+   * Ingests an Iceberg format-version-2 table that has position and equality delete files, through MSQ. This goes
+   * through the delete-aware native reader: MSQ slices the V2 splits, ships them to the worker, and the worker reads
+   * data files and applies the deletes.
+   */
+  @Test
+  public void testIngestFromIcebergRestCatalogWithV2DeleteFiles() throws IOException
+  {
+    final Table table = icebergCatalog.createTable(
+        ICEBERG_NAMESPACE,
+        ICEBERG_V2_TABLE_NAME,
+        ICEBERG_SCHEMA,
+        ImmutableMap.of(TableProperties.FORMAT_VERSION, "2")
+    );
+
+    // Two data files so that MSQ has more than one V2 split to slice.
+    final DataFile dataFile1 = writeDataFile(
+        table,
+        ImmutableList.of(
+            ImmutableList.of("2024-01-01T00:00:00.000Z", "alice", 100L),
+            ImmutableList.of("2024-01-01T01:00:00.000Z", "bob", 200L),
+            ImmutableList.of("2024-01-01T02:00:00.000Z", "charlie", 300L)
+        )
+    );
+    final DataFile dataFile2 = writeDataFile(
+        table,
+        ImmutableList.of(
+            ImmutableList.of("2024-01-01T03:00:00.000Z", "dave", 400L),
+            ImmutableList.of("2024-01-01T04:00:00.000Z", "erin", 500L),
+            ImmutableList.of("2024-01-01T05:00:00.000Z", "frank", 600L)
+        )
+    );
+    table.newAppend().appendFile(dataFile1).appendFile(dataFile2).commit();
+
+    // Position deletes: bob (position 1 of file 1) and dave (position 0 of file 2).
+    final DeleteFile positionDeletes1 = writePositionDeleteFile(table, dataFile1.location(), 1L);
+    final DeleteFile positionDeletes2 = writePositionDeleteFile(table, dataFile2.location(), 0L);
+    // Equality delete: any row with name = erin.
+    final DeleteFile equalityDeletes = writeEqualityDeleteFile(table, "erin");
+    table.newRowDelta()
+         .addDeletes(positionDeletes1)
+         .addDeletes(positionDeletes2)
+         .addDeletes(equalityDeletes)
+         .commit();
+
+    final String targetDataSource = dataSource + "_v2";
+    ingestFromIcebergRestCatalog(targetDataSource, ICEBERG_V2_TABLE_NAME, false);
+
+    cluster.callApi().verifySqlQuery(
+        "SELECT __time, \"name\", \"value\" FROM %s ORDER BY __time",
+        targetDataSource,
+        "2024-01-01T00:00:00.000Z,alice,100\n"
+        + "2024-01-01T02:00:00.000Z,charlie,300\n"
+        + "2024-01-01T05:00:00.000Z,frank,600"
+    );
+  }
+
+  private static DataFile writeDataFile(final Table table, final List<List<Object>> rows) throws IOException
+  {
+    final String filepath = table.location() + "/data/" + UUID.randomUUID() + ".parquet";
+    final OutputFile file = table.io().newOutputFile(filepath);
+    final DataWriter<GenericRecord> writer;
+    try (DataWriter<GenericRecord> w = Parquet.writeData(file)
+                                              .schema(ICEBERG_SCHEMA)
+                                              .createWriterFunc(GenericParquetWriter::create)
+                                              .overwrite()
+                                              .withSpec(table.spec())
+                                              .build()) {
+      for (final List<Object> row : rows) {
+        final GenericRecord record = GenericRecord.create(ICEBERG_SCHEMA);
+        record.set(0, row.get(0));
+        record.set(1, row.get(1));
+        record.set(2, row.get(2));
+        w.write(record);
+      }
+      writer = w;
+    }
+    return writer.toDataFile();
+  }
+
+  private static DeleteFile writePositionDeleteFile(
+      final Table table,
+      final String dataFilePath,
+      final long position
+  ) throws IOException
+  {
+    final String path = table.location() + "/delete-files/" + UUID.randomUUID() + ".parquet";
+    final PositionDeleteWriter<GenericRecord> writer =
+        Parquet.writeDeletes(table.io().newOutputFile(path))
+               .createWriterFunc(GenericParquetWriter::create)
+               .overwrite()
+               .withSpec(PartitionSpec.unpartitioned())
+               .buildPositionWriter();
+    try {
+      final PositionDelete<GenericRecord> positionDelete = PositionDelete.create();
+      positionDelete.set(dataFilePath, position);
+      writer.write(positionDelete);
+    }
+    finally {
+      writer.close();
+    }
+    return writer.toDeleteFile();
+  }
+
+  private static DeleteFile writeEqualityDeleteFile(final Table table, final String name) throws IOException
+  {
+    final String path = table.location() + "/delete-files/" + UUID.randomUUID() + ".parquet";
+    final Schema deleteSchema = ICEBERG_SCHEMA.select("name");
+    final EqualityDeleteWriter<GenericRecord> writer =
+        Parquet.writeDeletes(table.io().newOutputFile(path))
+               .createWriterFunc(GenericParquetWriter::create)
+               .overwrite()
+               .withSpec(PartitionSpec.unpartitioned())
+               .rowSchema(deleteSchema)
+               .equalityFieldIds(ICEBERG_SCHEMA.findField("name").fieldId())
+               .buildEqualityWriter();
+    try {
+      final GenericRecord record = GenericRecord.create(deleteSchema);
+      record.setField("name", name);
+      writer.write(record);
+    }
+    finally {
+      writer.close();
+    }
+    return writer.toDeleteFile();
+  }
+
   private void ingestFromIcebergRestCatalog(final String targetDataSource, final boolean useArrowReader)
+  {
+    ingestFromIcebergRestCatalog(targetDataSource, ICEBERG_TABLE_NAME, useArrowReader);
+    verifyIngestedRows(targetDataSource);
+  }
+
+  private void verifyIngestedRows(final String targetDataSource)
+  {
+    cluster.callApi().verifySqlQuery(
+        "SELECT __time, \"name\", \"value\" FROM %s ORDER BY __time",
+        targetDataSource,
+        "2024-01-01T00:00:00.000Z,alice,100\n"
+        + "2024-01-01T01:00:00.000Z,bob,200\n"
+        + "2024-01-01T02:00:00.000Z,charlie,300"
+    );
+  }
+
+  private void ingestFromIcebergRestCatalog(
+      final String targetDataSource,
+      final String tableName,
+      final boolean useArrowReader
+  )
   {
     final long startNanos = System.nanoTime();
     final String catalogUri = icebergCatalog.getCatalogUri();
@@ -179,7 +337,7 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
         + ")\n"
         + "PARTITIONED BY ALL TIME",
         targetDataSource,
-        ICEBERG_TABLE_NAME,
+        tableName,
         ICEBERG_NAMESPACE,
         catalogUri,
         warehouseSource,
@@ -189,14 +347,6 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
     final SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql);
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
     cluster.callApi().waitForAllSegmentsToBeAvailable(targetDataSource, coordinator, broker);
-
-    cluster.callApi().verifySqlQuery(
-        "SELECT __time, \"name\", \"value\" FROM %s ORDER BY __time",
-        targetDataSource,
-        "2024-01-01T00:00:00.000Z,alice,100\n"
-        + "2024-01-01T01:00:00.000Z,bob,200\n"
-        + "2024-01-01T02:00:00.000Z,charlie,300"
-    );
 
     log.info(
         "Iceberg REST catalog ingestion timing: useArrowReader[%s], dataSource[%s], elapsedMs[%d]",
