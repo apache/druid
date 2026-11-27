@@ -23,6 +23,8 @@ import com.google.common.base.Optional;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.DiscoveryDruidNode;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -40,6 +42,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
@@ -72,6 +75,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -541,12 +545,25 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
   }
 
+  /**
+   * Waits, for each Broker, for a metadata cache sync that began after this method was called, since a SQL query
+   * may be served by any of them. Earlier syncs are skipped because the HTTP emitter can deliver their events late.
+   */
   protected void waitForNextBrokerCacheSync()
   {
-    eventCollector.latchableEmitter().waitForNextEvent(
-        event -> event.hasMetricName("segment/metadataCache/sync/time")
-                      .hasService("druid/broker")
-    );
+    final DateTime waitStart = DateTimes.nowUtc();
+    final Collection<DiscoveryDruidNode> brokers =
+        broker.bindings().nodeDiscovery().getForNodeRole(NodeRole.BROKER).getAllNodes();
+    for (final DiscoveryDruidNode brokerNode : brokers) {
+      ServiceMetricEvent syncEvent;
+      do {
+        syncEvent = eventCollector.latchableEmitter().waitForNextEvent(
+            event -> event.hasMetricName("segment/metadataCache/sync/time")
+                          .hasService("druid/broker")
+                          .hasHost(brokerNode.getDruidNode().getHostAndPortToUse())
+        );
+      } while (!syncEvent.getCreatedTime().minus(syncEvent.getValue().longValue()).isAfter(waitStart));
+    }
   }
 
   /**
