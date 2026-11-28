@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Namespace;
@@ -147,6 +148,15 @@ public class IcebergRestCatalogResource extends TestcontainerResource<GenericCon
   {
     final TableIdentifier tableId = TableIdentifier.of(namespace, tableName);
     return getClientCatalog().createTable(tableId, schema);
+  }
+
+  /**
+   * Creates an unpartitioned table with the given table properties (e.g. {@code format-version}) and returns it.
+   */
+  public Table createTable(String namespace, String tableName, Schema schema, Map<String, String> properties)
+  {
+    final TableIdentifier tableId = TableIdentifier.of(namespace, tableName);
+    return getClientCatalog().createTable(tableId, schema, PartitionSpec.unpartitioned(), properties);
   }
 
   /**
