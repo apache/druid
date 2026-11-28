@@ -349,7 +349,11 @@ Note that the timestamp for each bucket starts at the 30th minute.
 
 Period granularities are specified as arbitrary period combinations of years, months, weeks, hours, minutes and seconds (e.g. P2W, P3M, PT1H30M, PT0.750S) in [ISO8601](https://en.wikipedia.org/wiki/ISO_8601) format. They support specifying a time zone which determines where period boundaries start as well as the timezone of the returned timestamps. By default, years start on the first of January, months start on the first of the month and weeks start on Mondays unless an origin is specified.
 
-Time zone is optional (defaults to UTC). Origin is optional (defaults to 1970-01-01T00:00:00 in the given time zone).
+Time zone is optional (defaults to UTC). Origin is optional. For hour-only periods such as `PT1H` or `PT6H`, omitting `origin` preserves local clock-hour alignment. Specifying `origin` preserves its exact alignment, even when bucket boundaries fall partway through a local hour.
+
+An omitted origin can therefore produce different hourly buckets than an explicit origin of `1970-01-01T00:00:00` in the given time zone. For example, `Asia/Kuala_Lumpur` was UTC+07:30 in 1970 and is now UTC+08:00. With `PT1H`, an explicit origin of `1970-01-01T00:00:00+07:30` produces modern buckets starting at `:30` local time. Omitting `origin` produces buckets starting at `:00`. The same distinction applies to `Asia/Singapore` (`:30`) and `Asia/Kathmandu` (`:15`).
+
+For other periods, the default alignment is described above. Multi-unit periods use `1970-01-01T00:00:00` in the given time zone as the default origin.
 
 ```javascript
 {"type": "period", "period": "P2D", "timeZone": "America/Los_Angeles"}

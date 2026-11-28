@@ -864,12 +864,7 @@ public class GranularityTest
     Assertions.assertEquals(Intervals.of("2011-01-12/P1d"), intervals.next());
     Assertions.assertEquals(Intervals.of("2011-01-13/P1d"), intervals.next());
 
-    try {
-      intervals.next();
-    }
-    catch (NoSuchElementException e) {
-      Assertions.assertTrue(true);
-    }
+    Assertions.assertThrows(NoSuchElementException.class, intervals::next);
   }
 
   @Test
